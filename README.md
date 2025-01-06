@@ -20,8 +20,8 @@ Concretely, we:
 4. regression results = time series forecasting results
 
 
-For details, please refer to our [paper](TODO link to paper) and [poster](TODO link to poster).
 
+For details, please refer to our [paper](TODO link to paper) and our [poster](docs/tabpfn-ts-poster.pdf) (presented at NeurIPS 2024 workshops).
 ## 👉 **Why gives us a try?**
 - **Zero-shot forecasting**: this method is extremely fast and requires no training, making it highly accessible for experimenting with your own problems.
 - **Point and probabilistic forecasting**: this method provides accurate both point and probabilistic forecasts.
