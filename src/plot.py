@@ -118,6 +118,7 @@ def plot_pred_and_actual_ts(
     train: TimeSeriesDataFrame,
     test: TimeSeriesDataFrame,
     item_ids: list[int] | None = None,
+    show_quantiles: bool = True,
     show_points: bool = False,
 ):
     if item_ids is None:
@@ -156,6 +157,22 @@ def plot_pred_and_actual_ts(
         if show_points:
             ax.scatter(
                 ground_truth.index, ground_truth, color="lightblue", s=8, alpha=0.8
+            )
+
+        if show_quantiles:
+            # Plot the lower and upper bound of the quantile predictions
+            quantile_config = sorted(
+                pred_item.columns.drop(["target"]).tolist(), key=lambda x: float(x)
+            )
+            lower_quantile = quantile_config[0]
+            upper_quantile = quantile_config[-1]
+            ax.fill_between(
+                pred_item.index,
+                pred_item[lower_quantile],
+                pred_item[upper_quantile],
+                color="gray",
+                alpha=0.2,
+                label=f"{lower_quantile}-{upper_quantile} Quantile Range",
             )
 
         train_item_length = train.xs(item_id, level="item_id").iloc[-1].name
