@@ -2,8 +2,4 @@ tqdm
 pandas
 gluonts
 autogluon.timeseries
-datasets
 tabpfn-client
-
-ruff
-pre-commit

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tabpfn_time_series"
+version = "0.1.1"
+authors = [
+  { name="Liam Shi Bin Hoo", email="hoos@tf.uni-freiburg.de" },
+]
+description = "Zero-shot time series forecasting with TabPFN"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies", "optional-dependencies"]
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+dev = ["requirements-dev.txt"]
+
+[tool.hatch.build.targets.wheel]
+exclude = ["docs"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["docs"]
+
+[project.urls]
+"Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
+"Bug Tracker" = "https://github.com/liam-sbhoo/tabpfn-time-series/issues"

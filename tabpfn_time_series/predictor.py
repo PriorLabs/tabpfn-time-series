@@ -3,8 +3,11 @@ from enum import Enum
 
 from autogluon.timeseries import TimeSeriesDataFrame
 
-from src.tabpfn_worker import TabPFNClient, LocalTabPFN
-from src.defaults import TABPFN_DEFAULT_QUANTILE_CONFIG, TABPFN_DEFAULT_CONFIG
+from tabpfn_time_series.tabpfn_worker import TabPFNClient, LocalTabPFN
+from tabpfn_time_series.defaults import (
+    TABPFN_DEFAULT_QUANTILE_CONFIG,
+    TABPFN_DEFAULT_CONFIG,
+)
 
 logger = logging.getLogger(__name__)
 
