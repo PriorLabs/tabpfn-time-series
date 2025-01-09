@@ -2,10 +2,10 @@
 
 [![colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/liam-sbhoo/tabpfn-time-series/blob/main/demo.ipynb)
 [![Discord](https://img.shields.io/discord/1285598202732482621?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
-[![arXiv](https://img.shields.io/badge/arXiv-<INDEX>-<COLOR>.svg)](https://arxiv.org/abs/2501.02945)
+[![arXiv](https://img.shields.io/badge/arXiv-2501.02945-<COLOR>.svg)](https://arxiv.org/abs/2501.02945)
 
 
-We demonstrate that the tabular foundation model **TabPFN**, when paired with minimal featurization, can perform zero-shot time series forecasting. Its performance on point forecasting matches or even slightly outperforms state-of-the-art methods.
+We demonstrate that the tabular foundation model **[TabPFN](https://github.com/PriorLabs/TabPFN)**, when paired with minimal featurization, can perform zero-shot time series forecasting. Its performance on point forecasting matches or even slightly outperforms state-of-the-art methods.
 
 ## 📖 How does it work?
 
@@ -26,7 +26,7 @@ For more details, please refer to our [paper](https://arxiv.org/abs/2501.02945) 
 - **Point and probabilistic forecasting**: it provides accurate point forecasts as well as probabilistic forecasts.
 - **Support for exogenous variables**: if you have exogenous variables, this method can seemlessly incorporate them into the forecasting model.
 
-On top of that, thanks to [tabpfn-client](https://github.com/automl/tabpfn-client) from [Prior Labs](https://priorlabs.ai), you won’t even need your own GPU to run fast inference with TabPFN. 😉 We have included `tabpfn-client` as the default engine in our implementation.
+On top of that, thanks to **[tabpfn-client](https://github.com/automl/tabpfn-client)** from **[Prior Labs](https://priorlabs.ai)**, you won’t even need your own GPU to run fast inference with TabPFN. 😉 We have included `tabpfn-client` as the default engine in our implementation.
 
 ## How to use it?
 

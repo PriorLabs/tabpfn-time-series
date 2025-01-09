@@ -8,7 +8,7 @@ from scipy.stats import norm
 from autogluon.timeseries import TimeSeriesDataFrame
 
 from tabpfn_time_series.data_preparation import split_time_series_to_X_y
-from tabpfn_time_series.defaults import TABPFN_DEFAULT_QUANTILE_CONFIG
+from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_QUANTILE_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 class TabPFNWorker(ABC):
     def __init__(
         self,
-        tabpfn_config: dict = {},
+        config: dict = {},
         num_workers: int = 1,
     ):
-        self.tabpfn_config = tabpfn_config
+        self.config = config
         self.num_workers = num_workers
 
     def predict(
@@ -28,6 +28,12 @@ class TabPFNWorker(ABC):
         test_tsdf: TimeSeriesDataFrame,
         quantile_config: list[float],
     ):
+        if not set(quantile_config).issubset(set(TABPFN_TS_DEFAULT_QUANTILE_CONFIG)):
+            raise NotImplementedError(
+                f"We currently only supports {TABPFN_TS_DEFAULT_QUANTILE_CONFIG} for quantile prediction,"
+                f" but got {quantile_config}."
+            )
+
         predictions = Parallel(
             n_jobs=self.num_workers,
             backend="loky",
@@ -67,12 +73,16 @@ class TabPFNWorker(ABC):
                 single_train_tsdf, single_test_tsdf, quantile_config
             )
         else:
-            # Call worker-specific prediction routine
-            result = self._worker_specific_prediction_routine(
-                train_X,
-                train_y,
-                test_X,
-                quantile_config,
+            tabpfn = self._get_tabpfn_engine()
+            tabpfn.fit(train_X, train_y)
+            full_pred = tabpfn.predict(test_X, output_type="main")
+
+            result = {"target": full_pred[self.config["tabpfn_output_selection"]]}
+            result.update(
+                {
+                    q: q_pred
+                    for q, q_pred in zip(quantile_config, full_pred["quantiles"])
+                }
             )
 
         result = pd.DataFrame(result, index=test_index)
@@ -81,13 +91,7 @@ class TabPFNWorker(ABC):
         return result
 
     @abstractmethod
-    def _worker_specific_prediction_routine(
-        self,
-        train_X: pd.DataFrame,
-        train_y: pd.Series,
-        test_X: pd.DataFrame,
-        quantile_config: list[float],
-    ) -> pd.DataFrame:
+    def _get_tabpfn_engine(self):
         pass
 
     def _predict_on_constant_train_target(
@@ -117,108 +121,37 @@ class TabPFNWorker(ABC):
 class TabPFNClient(TabPFNWorker):
     def __init__(
         self,
-        tabpfn_config: dict = {},
+        config: dict = {},
         num_workers: int = 2,
     ):
-        super().__init__(tabpfn_config, num_workers)
+        super().__init__(config, num_workers)
 
         # Initialize the TabPFN client (e.g. sign up, login, etc.)
         from tabpfn_client import init
 
         init()
 
-    def predict(
-        self,
-        train_tsdf: TimeSeriesDataFrame,
-        test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
-    ):
-        if not set(quantile_config).issubset(set(TABPFN_DEFAULT_QUANTILE_CONFIG)):
-            raise NotImplementedError(
-                f"TabPFNClient currently only supports {TABPFN_DEFAULT_QUANTILE_CONFIG} for quantile prediction,"
-                f" but got {quantile_config}."
-            )
-
-        return super().predict(train_tsdf, test_tsdf, quantile_config)
-
-    def _worker_specific_prediction_routine(
-        self,
-        train_X: pd.DataFrame,
-        train_y: pd.Series,
-        test_X: pd.DataFrame,
-        quantile_config: list[float],
-    ) -> pd.DataFrame:
+    def _get_tabpfn_engine(self):
         from tabpfn_client import TabPFNRegressor
 
-        tabpfn = TabPFNRegressor(**self.tabpfn_config)
-        tabpfn.fit(train_X, train_y)
-        full_pred = tabpfn.predict_full(test_X)
-
-        result = {"target": full_pred[self._get_optimization_mode()]}
-        result.update({q: full_pred[f"quantile_{q:.2f}"] for q in quantile_config})
-
-        return result
-
-    def _get_optimization_mode(self):
-        if (
-            "optimize_metric" not in self.tabpfn_config
-            or self.tabpfn_config["optimize_metric"] is None
-        ):
-            return "mean"
-        elif self.tabpfn_config["optimize_metric"] in ["rmse", "mse", "r2", "mean"]:
-            return "mean"
-        elif self.tabpfn_config["optimize_metric"] in ["mae", "median"]:
-            return "median"
-        elif self.tabpfn_config["optimize_metric"] in ["mode", "exact_match"]:
-            return "mode"
-        else:
-            raise ValueError(f"Unknown metric {self.tabpfn_config['optimize_metric']}")
+        return TabPFNRegressor(**self.config["tabpfn_internal"])
 
 
 class LocalTabPFN(TabPFNWorker):
     def __init__(
         self,
-        tabpfn_config: dict = {},
+        config: dict = {},
     ):
-        # Local TabPFN has a different interface for declaring the model
-        if "model" in tabpfn_config:
-            config = tabpfn_config.copy()
-            config["model_path"] = self._parse_model_path(config["model"])
-            del config["model"]
-            tabpfn_config = config
+        super().__init__(config, num_workers=1)
 
-        super().__init__(tabpfn_config, num_workers=1)
-
-    def _worker_specific_prediction_routine(
-        self,
-        train_X: pd.DataFrame,
-        train_y: pd.Series,
-        test_X: pd.DataFrame,
-        quantile_config: list[float],
-    ) -> pd.DataFrame:
+    def _get_tabpfn_engine(self):
         from tabpfn import TabPFNRegressor
 
-        tabpfn = TabPFNRegressor(**self.tabpfn_config)
-        tabpfn.fit(train_X, train_y)
-        full_pred = tabpfn.predict_full(test_X)
+        if "model_path" in self.config["tabpfn_internal"]:
+            config = self.config["tabpfn_internal"].copy()
+            config["model_path"] = self._parse_model_path(config["model_path"])
 
-        result = {"target": full_pred[tabpfn.get_optimization_mode()]}
-        if set(quantile_config).issubset(set(TABPFN_DEFAULT_QUANTILE_CONFIG)):
-            result.update({q: full_pred[f"quantile_{q:.2f}"] for q in quantile_config})
-        else:
-            import torch
-
-            criterion = full_pred["criterion"]
-            logits = torch.tensor(full_pred["logits"])
-            result.update({q: criterion.icdf(logits, q) for q in quantile_config})
-
-        return result
+        return TabPFNRegressor(**config)
 
     def _parse_model_path(self, model_name: str) -> str:
-        from pathlib import Path
-        import importlib.util
-
-        tabpfn_path = Path(importlib.util.find_spec("tabpfn").origin).parent
-        return str(
-            tabpfn_path / "model_cache" / f"model_hans_regression_{model_name}.ckpt"
-        )
+        return f"tabpfn-v2-regressor-{model_name}.ckpt"

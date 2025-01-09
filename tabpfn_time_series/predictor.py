@@ -5,8 +5,8 @@ from autogluon.timeseries import TimeSeriesDataFrame
 
 from tabpfn_time_series.tabpfn_worker import TabPFNClient, LocalTabPFN
 from tabpfn_time_series.defaults import (
-    TABPFN_DEFAULT_QUANTILE_CONFIG,
-    TABPFN_DEFAULT_CONFIG,
+    TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
+    TABPFN_TS_DEFAULT_CONFIG,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,11 +25,11 @@ class TabPFNTimeSeriesPredictor:
     def __init__(
         self,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
-        tabpfn_config: dict = TABPFN_DEFAULT_CONFIG,
+        config: dict = TABPFN_TS_DEFAULT_CONFIG,
     ) -> None:
         worker_mapping = {
-            TabPFNMode.CLIENT: lambda: TabPFNClient(tabpfn_config),
-            TabPFNMode.LOCAL: lambda: LocalTabPFN(tabpfn_config),
+            TabPFNMode.CLIENT: lambda: TabPFNClient(config),
+            TabPFNMode.LOCAL: lambda: LocalTabPFN(config),
         }
         self.tabpfn_worker = worker_mapping[tabpfn_mode]()
 
@@ -37,14 +37,14 @@ class TabPFNTimeSeriesPredictor:
         self,
         train_tsdf: TimeSeriesDataFrame,  # with features and target
         test_tsdf: TimeSeriesDataFrame,  # with features only
-        quantile_config: list[float] = TABPFN_DEFAULT_QUANTILE_CONFIG,
+        quantile_config: list[float] = TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
     ) -> TimeSeriesDataFrame:
         """
         Predict on each time series individually (local forecasting).
         """
 
         logger.info(
-            f"Predicting {len(train_tsdf.item_ids)} time series with config{self.tabpfn_worker.tabpfn_config}"
+            f"Predicting {len(train_tsdf.item_ids)} time series with config{self.tabpfn_worker.config}"
         )
 
         return self.tabpfn_worker.predict(train_tsdf, test_tsdf, quantile_config)
