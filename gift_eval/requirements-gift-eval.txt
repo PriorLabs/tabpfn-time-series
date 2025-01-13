@@ -1,0 +1,6 @@
+gluonts~=0.15.1
+pandas==2.0.0
+python-dotenv==1.0.0
+
+huggingface_hub[cli]
+jupyter
