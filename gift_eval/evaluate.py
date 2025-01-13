@@ -185,14 +185,12 @@ def append_results_to_csv(
                 res["NRMSE[mean]"][0],
                 res["ND[0.5]"][0],
                 res["mean_weighted_sum_quantile_loss"][0],
-                DATASET_PROPERTIES_MAP[dataset_metadata["full_name"]]["domain"],
-                DATASET_PROPERTIES_MAP[dataset_metadata["full_name"]]["num_variates"],
+                DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
+                DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
             ]
         )
 
-    print(
-        f"Results for {dataset_metadata['full_name']} have been written to {csv_file_path}"
-    )
+    print(f"Results for {dataset_metadata['key']} have been written to {csv_file_path}")
 
 
 def main(args):
@@ -202,18 +200,29 @@ def main(args):
 
     # Check if the dataset storage path exists
     if not Path(args.dataset_storage_path).exists():
-        raise ValueError(f"Dataset storage path {args.dataset_storage_path} does not exist")
+        raise ValueError(
+            f"Dataset storage path {args.dataset_storage_path} does not exist"
+        )
 
-    output_dir = args.output_dir / args.dataset
+    output_dir = args.output_dir / args.model_name / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     output_csv_path = output_dir / "results.csv"
+
+    # Create CSV file
+    create_csv_file(output_csv_path)
 
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
     sub_datasets = construct_evaluation_data(args.dataset, args.dataset_storage_path)
 
     # Evaluate model
-    for sub_dataset, dataset_metadata in sub_datasets:
+    for i, (sub_dataset, dataset_metadata) in enumerate(sub_datasets):
+        logger.info(f"Evaluating {i+1}/{len(sub_datasets)} dataset {sub_dataset.name}")
+        logger.info(f"Dataset size: {len(sub_dataset.test_data)}")
+        logger.info(f"Dataset freq: {sub_dataset.freq}")
+        logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")
+        logger.info(f"Dataset target dim: {sub_dataset.target_dim}")
+
         tabpfn_predictor = TabPFNTSPredictor(
             ds_prediction_length=sub_dataset.prediction_length,
             ds_freq=sub_dataset.freq,
@@ -233,18 +242,23 @@ def main(args):
 
         # Write results to csv
         append_results_to_csv(
-            res,
-            output_csv_path,
-            dataset_metadata,
-            "tabpfn-ts-paper",
+            res=res,
+            csv_file_path=output_csv_path,
+            dataset_metadata=dataset_metadata,
+            model_name=args.model_name,
         )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, default="tabpfn-ts-paper")
     parser.add_argument("--dataset", type=str, required=True)
-    parser.add_argument("--output_dir", type=str, default=str(Path(__file__).parent / "results"))
-    parser.add_argument("--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data"))
+    parser.add_argument(
+        "--output_dir", type=str, default=str(Path(__file__).parent / "results")
+    )
+    parser.add_argument(
+        "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
+    )
     args = parser.parse_args()
 
     args.dataset_storage_path = Path(args.dataset_storage_path)

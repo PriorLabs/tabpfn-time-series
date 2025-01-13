@@ -69,8 +69,6 @@ class TabPFNTSPredictor:
         forecasts = []
         for item_id in pred.item_ids:
             forecast_start_date = pred.loc[item_id].index[0].to_period(self.ds_freq)
-            print(f"pred.loc[item_id]: {pred.loc[item_id].values.T}")
-
             forecasts.append(
                 QuantileForecast(
                     forecast_arrays=pred.loc[item_id].values.T,
