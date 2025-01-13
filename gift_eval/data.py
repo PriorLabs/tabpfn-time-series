@@ -105,12 +105,11 @@ class Dataset:
     def __init__(
         self,
         name: str,
+        storage_path: Path,
         term: Term | str = Term.SHORT,
         to_univariate: bool = False,
-        storage_env_var: str = "GIFT_EVAL",
     ):
         load_dotenv()
-        storage_path = Path(os.getenv(storage_env_var))
         self.hf_dataset = datasets.load_from_disk(str(storage_path / name)).with_format(
             "numpy"
         )

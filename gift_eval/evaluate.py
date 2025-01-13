@@ -1,3 +1,10 @@
+import os
+import sys
+
+# Add parent directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 import csv
 import logging
 import argparse
@@ -72,7 +79,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def construct_evaluation_data(dataset_name: str) -> List[Tuple[Dataset, dict]]:
+def construct_evaluation_data(
+    dataset_name: str,
+    dataset_storage_path: Path,
+) -> List[Tuple[Dataset, dict]]:
     sub_datasets = []
 
     # Construct evaluation data
@@ -97,11 +107,21 @@ def construct_evaluation_data(dataset_name: str) -> List[Tuple[Dataset, dict]]:
         # Initialize the dataset
         to_univariate = (
             False
-            if Dataset(name=dataset_name, term=term, to_univariate=False).target_dim
+            if Dataset(
+                name=dataset_name,
+                term=term,
+                to_univariate=False,
+                storage_path=dataset_storage_path,
+            ).target_dim
             == 1
             else True
         )
-        dataset = Dataset(name=dataset_name, term=term, to_univariate=to_univariate)
+        dataset = Dataset(
+            name=dataset_name,
+            term=term,
+            to_univariate=to_univariate,
+            storage_path=dataset_storage_path,
+        )
         season_length = get_seasonality(dataset.freq)
 
         dataset_metadata = {
@@ -180,20 +200,25 @@ def main(args):
         raise ValueError(f"Invalid dataset: {args.dataset}")
     logger.info(f"Evaluating dataset {args.dataset}")
 
-    output_dir = Path(args.output_dir) / args.dataset
+    # Check if the dataset storage path exists
+    if not Path(args.dataset_storage_path).exists():
+        raise ValueError(f"Dataset storage path {args.dataset_storage_path} does not exist")
+
+    output_dir = args.output_dir / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     output_csv_path = output_dir / "results.csv"
 
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
-    sub_datasets = construct_evaluation_data(args.dataset)
+    sub_datasets = construct_evaluation_data(args.dataset, args.dataset_storage_path)
 
     # Evaluate model
     for sub_dataset, dataset_metadata in sub_datasets:
         tabpfn_predictor = TabPFNTSPredictor(
             ds_prediction_length=sub_dataset.prediction_length,
             ds_freq=sub_dataset.freq,
-            tabpfn_mode=TabPFNMode.LOCAL,
+            # tabpfn_mode=TabPFNMode.LOCAL,
+            tabpfn_mode=TabPFNMode.CLIENT,
         )
 
         res = evaluate_model(
@@ -218,7 +243,11 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True)
-    parser.add_argument("--output_dir", type=str, default="./results")
+    parser.add_argument("--output_dir", type=str, default=str(Path(__file__).parent / "results"))
+    parser.add_argument("--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data"))
     args = parser.parse_args()
+
+    args.dataset_storage_path = Path(args.dataset_storage_path)
+    args.output_dir = Path(args.output_dir)
 
     main(args)
