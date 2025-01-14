@@ -63,7 +63,7 @@ class TabPFNWorker(ABC):
         quantile_config: list[float],
     ) -> pd.DataFrame:
         logger.debug(f"Predicting on item_id: {item_id}")
-        
+
         test_index = single_test_tsdf.index
         train_X, train_y = split_time_series_to_X_y(single_train_tsdf.copy())
         test_X, _ = split_time_series_to_X_y(single_test_tsdf.copy())
@@ -147,9 +147,10 @@ class LocalTabPFN(TabPFNWorker):
     ):
         # Only support GPU for now (inference on CPU takes too long)
         import torch
+
         if not torch.cuda.is_available():
             raise ValueError("GPU is required for local TabPFN inference")
-        
+
         super().__init__(config, num_workers=torch.cuda.device_count())
 
     def predict(
@@ -163,7 +164,7 @@ class LocalTabPFN(TabPFNWorker):
                 f"We currently only supports {TABPFN_TS_DEFAULT_QUANTILE_CONFIG} for quantile prediction,"
                 f" but got {quantile_config}."
             )
-        
+
         # Split data into chunks for parallel inference on each GPU
         # Since the time series are of different lengths, we shuffle
         # the item_ids s.t. the workload is distributed evenly across GPUs
@@ -200,7 +201,7 @@ class LocalTabPFN(TabPFNWorker):
 
     def _parse_model_path(self, model_name: str) -> str:
         return f"tabpfn-v2-regressor-{model_name}.ckpt"
-    
+
     def _prediction_routine_per_gpu(
         self,
         train_tsdf: TimeSeriesDataFrame,
@@ -211,7 +212,10 @@ class LocalTabPFN(TabPFNWorker):
         all_pred = []
         for item_id in tqdm(train_tsdf.item_ids, desc=f"GPU {gpu_id}:"):
             predictions = self._prediction_routine(
-                item_id, train_tsdf.loc[item_id], test_tsdf.loc[item_id], quantile_config
+                item_id,
+                train_tsdf.loc[item_id],
+                test_tsdf.loc[item_id],
+                quantile_config,
             )
             all_pred.append(predictions)
 

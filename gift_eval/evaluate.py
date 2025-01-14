@@ -217,7 +217,9 @@ def main(args):
 
     # Evaluate model
     for i, (sub_dataset, dataset_metadata) in enumerate(sub_datasets):
-        logger.info(f"Evaluating {i+1}/{len(sub_datasets)} dataset {sub_dataset.name}")
+        logger.info(
+            f"Evaluating {i + 1}/{len(sub_datasets)} dataset {sub_dataset.name}"
+        )
         logger.info(f"Dataset size: {len(sub_dataset.test_data)}")
         logger.info(f"Dataset freq: {sub_dataset.freq}")
         logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")

@@ -64,9 +64,7 @@ class TabPFNTSPredictor:
             logger.info(
                 f"Slicing train_tsdf to {self.context_length} timesteps for each time series"
             )
-            train_tsdf = train_tsdf.slice_by_timestep(
-                -self.context_length, None
-            )
+            train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
         test_tsdf = generate_test_X(
             train_tsdf, prediction_length=self.ds_prediction_length
