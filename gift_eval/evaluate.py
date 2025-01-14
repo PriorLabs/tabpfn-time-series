@@ -226,8 +226,8 @@ def main(args):
         tabpfn_predictor = TabPFNTSPredictor(
             ds_prediction_length=sub_dataset.prediction_length,
             ds_freq=sub_dataset.freq,
-            # tabpfn_mode=TabPFNMode.LOCAL,
-            tabpfn_mode=TabPFNMode.CLIENT,
+            tabpfn_mode=TabPFNMode.LOCAL,
+            context_length=1024,
         )
 
         res = evaluate_model(
@@ -259,9 +259,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
     )
+    parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
     args.dataset_storage_path = Path(args.dataset_storage_path)
     args.output_dir = Path(args.output_dir)
+
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    print(args)
 
     main(args)

@@ -1,4 +1,5 @@
 from typing import Iterator
+import logging
 
 import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
@@ -13,6 +14,8 @@ from tabpfn_time_series import (
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class TabPFNTSPredictor:
     SELECTED_FEATURES = [
@@ -25,13 +28,14 @@ class TabPFNTSPredictor:
         ds_prediction_length: int,
         ds_freq: str,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
+        context_length: int = -1,
     ):
         self.ds_prediction_length = ds_prediction_length
         self.ds_freq = ds_freq
         self.tabpfn_predictor = TabPFNTimeSeriesPredictor(
             tabpfn_mode=tabpfn_mode,
-            # max_context_length=1024,
         )
+        self.context_length = context_length
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         time_series = []
@@ -55,6 +59,15 @@ class TabPFNTSPredictor:
 
         time_series = pd.concat(time_series)
         train_tsdf = TimeSeriesDataFrame(time_series)
+
+        if self.context_length > 0:
+            logger.info(
+                f"Slicing train_tsdf to {self.context_length} timesteps for each time series"
+            )
+            train_tsdf = train_tsdf.slice_by_timestep(
+                -self.context_length, None
+            )
+
         test_tsdf = generate_test_X(
             train_tsdf, prediction_length=self.ds_prediction_length
         )
