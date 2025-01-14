@@ -166,10 +166,12 @@ class LocalTabPFN(TabPFNWorker):
             )
 
         # Split data into chunks for parallel inference on each GPU
-        # Since the time series are of different lengths, we shuffle
-        # the item_ids s.t. the workload is distributed evenly across GPUs
+        #   since the time series are of different lengths, we shuffle
+        #   the item_ids s.t. the workload is distributed evenly across GPUs
+        # Also, using 'min' since num_workers could be larger than the number of time series
         item_ids_chunks = np.array_split(
-            np.random.permutation(train_tsdf.item_ids), self.num_workers
+            np.random.permutation(train_tsdf.item_ids),
+            min(self.num_workers, len(train_tsdf.item_ids)),
         )
 
         # Run predictions in parallel
