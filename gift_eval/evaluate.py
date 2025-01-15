@@ -1,8 +1,8 @@
-import os
 import sys
+from pathlib import Path
 
 # Add parent directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).parent))
 
 
 import csv
@@ -75,7 +75,6 @@ gts_logger.addFilter(
 
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -265,12 +264,15 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
+    print(args)
+
     args.dataset_storage_path = Path(args.dataset_storage_path)
     args.output_dir = Path(args.output_dir)
 
     if args.debug:
-        logger.setLevel(logging.DEBUG)
-
-    print(args)
+        logging.basicConfig(level=logging.DEBUG)
+        logger.debug("Debug mode enabled")
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     main(args)

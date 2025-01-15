@@ -3,6 +3,7 @@ import logging
 
 import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
+from gluonts.itertools import batcher
 from autogluon.timeseries import TimeSeriesDataFrame
 
 from tabpfn_time_series.data_preparation import generate_test_X
@@ -40,6 +41,17 @@ class TabPFNTSPredictor:
         self.debug = debug
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
+        logger.debug(f"len(test_data_input): {len(test_data_input)}")
+
+        forecasts = []
+        for batch in batcher(test_data_input, batch_size=1024):
+            forecasts.extend(self._predict_batch(batch))
+
+        return forecasts
+
+    def _predict_batch(self, test_data_input):
+        logger.debug(f"batch len(test_data_input): {len(test_data_input)}")
+
         time_series = []
         for i, item in enumerate(test_data_input):
             time_series.append(
