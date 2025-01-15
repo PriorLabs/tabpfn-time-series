@@ -69,6 +69,11 @@ class TabPFNWorker(ABC):
         test_X, _ = split_time_series_to_X_y(single_test_tsdf.copy())
         train_y = train_y.squeeze()
 
+        # Drop rows with NaN values in train_y
+        train_mask = ~train_y.isna()
+        train_X = train_X[train_mask]
+        train_y = train_y[train_mask]
+
         train_y_has_constant_value = train_y.nunique() == 1
         if train_y_has_constant_value:
             logger.info("Found time-series with constant target")
@@ -169,6 +174,7 @@ class LocalTabPFN(TabPFNWorker):
         #   since the time series are of different lengths, we shuffle
         #   the item_ids s.t. the workload is distributed evenly across GPUs
         # Also, using 'min' since num_workers could be larger than the number of time series
+        np.random.seed(0)
         item_ids_chunks = np.array_split(
             np.random.permutation(train_tsdf.item_ids),
             min(self.num_workers, len(train_tsdf.item_ids)),
@@ -199,7 +205,7 @@ class LocalTabPFN(TabPFNWorker):
             config = self.config["tabpfn_internal"].copy()
             config["model_path"] = self._parse_model_path(config["model_path"])
 
-        return TabPFNRegressor(**config)
+        return TabPFNRegressor(**config, random_state=0)
 
     def _parse_model_path(self, model_name: str) -> str:
         return f"tabpfn-v2-regressor-{model_name}.ckpt"

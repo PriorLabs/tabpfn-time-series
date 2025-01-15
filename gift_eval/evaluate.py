@@ -230,6 +230,7 @@ def main(args):
             ds_freq=sub_dataset.freq,
             tabpfn_mode=TabPFNMode.LOCAL,
             context_length=1024,
+            debug=args.debug,
         )
 
         res = evaluate_model(

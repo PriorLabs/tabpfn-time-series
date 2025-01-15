@@ -29,6 +29,7 @@ class TabPFNTSPredictor:
         ds_freq: str,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         context_length: int = -1,
+        debug: bool = False,
     ):
         self.ds_prediction_length = ds_prediction_length
         self.ds_freq = ds_freq
@@ -36,6 +37,7 @@ class TabPFNTSPredictor:
             tabpfn_mode=tabpfn_mode,
         )
         self.context_length = context_length
+        self.debug = debug
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         time_series = []
@@ -76,6 +78,12 @@ class TabPFNTSPredictor:
 
         pred: TimeSeriesDataFrame = self.tabpfn_predictor.predict(train_tsdf, test_tsdf)
         pred = pred.drop(columns=["target"])
+
+        if self.debug:
+            print("Saving debug_pred.csv")
+            pd.DataFrame(train_tsdf).to_csv("debug_train_tsdf.csv")
+            pd.DataFrame(test_tsdf).to_csv("debug_test_tsdf.csv")
+            pd.DataFrame(pred).to_csv("debug_pred.csv")
 
         forecasts = []
         for item_id in pred.item_ids:
