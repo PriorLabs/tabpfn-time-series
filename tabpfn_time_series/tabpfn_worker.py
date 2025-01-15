@@ -69,11 +69,6 @@ class TabPFNWorker(ABC):
         test_X, _ = split_time_series_to_X_y(single_test_tsdf.copy())
         train_y = train_y.squeeze()
 
-        # Drop rows with NaN values in train_y
-        train_mask = ~train_y.isna()
-        train_X = train_X[train_mask]
-        train_y = train_y[train_mask]
-
         train_y_has_constant_value = train_y.nunique() == 1
         if train_y_has_constant_value:
             logger.info("Found time-series with constant target")

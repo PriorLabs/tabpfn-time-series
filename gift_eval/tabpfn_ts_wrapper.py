@@ -72,8 +72,13 @@ class TabPFNTSPredictor:
         assert len(time_series) == len(test_data_input)
 
         time_series = pd.concat(time_series)
+
+        # Drop all rows with NaN values in "target" column
+        time_series = time_series[~time_series["target"].isna()]
+
         train_tsdf = TimeSeriesDataFrame(time_series)
 
+        # If context_length is set, slice the train_tsdf to the last context_length timesteps
         if self.context_length > 0:
             logger.info(
                 f"Slicing train_tsdf to {self.context_length} timesteps for each time series"
@@ -88,13 +93,17 @@ class TabPFNTSPredictor:
             train_tsdf, test_tsdf, self.SELECTED_FEATURES
         )
 
+        if self.debug:
+            print("Saving debug_train_tsdf.csv")
+            pd.DataFrame(train_tsdf).to_csv("debug_train_tsdf.csv")
+            print("Saving debug_test_tsdf.csv")
+            pd.DataFrame(test_tsdf).to_csv("debug_test_tsdf.csv")
+
         pred: TimeSeriesDataFrame = self.tabpfn_predictor.predict(train_tsdf, test_tsdf)
         pred = pred.drop(columns=["target"])
 
         if self.debug:
             print("Saving debug_pred.csv")
-            pd.DataFrame(train_tsdf).to_csv("debug_train_tsdf.csv")
-            pd.DataFrame(test_tsdf).to_csv("debug_test_tsdf.csv")
             pd.DataFrame(pred).to_csv("debug_pred.csv")
 
         forecasts = []
