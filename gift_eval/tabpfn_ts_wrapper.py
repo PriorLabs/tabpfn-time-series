@@ -83,24 +83,32 @@ class TabPFNTSPredictor:
         Preprocess includes:
         - Turn the test_data_input into a TimeSeriesDataFrame
         - Drop rows with NaN values in "target" column
-            - If the time series has all NaN target, replace NaN with 0
+            - If time series has all NaN or only 1 valid value, fill with 0s
             - Else, drop the NaN values within the time series
         - If context_length is set, slice the train_tsdf to the last context_length timesteps
         """
 
         # Pre-allocate list with known size
         time_series = [None] * len(test_data_input)
-        item_ids_with_all_nan = []
-        item_ids_with_nan = []
+        ts_with_0_or_1_valid_value = []
+        ts_with_nan = []
 
         for i, item in enumerate(test_data_input):
             target = item["target"]
-            if np.isnan(target).all():
-                item_ids_with_all_nan.append(i)
-                target = np.zeros_like(target)
+
+            # If there are 0 or 1 valid values, consider this an "all NaN" time series
+            # and replace NaN with 0
+            valid_value_count = np.count_nonzero(~np.isnan(target))
+            if valid_value_count <= 1:
+                ts_with_0_or_1_valid_value.append(i)
+                target = np.where(np.isnan(target), 0, target)
+
+            # Else (i.e. there are more than 1 valid values),
+            # drop NaN values within the time series
             elif np.isnan(target).any():
-                item_ids_with_nan.append(i)
+                ts_with_nan.append(i)
                 target = target[~np.isnan(target)]
+
             # Create timestamp index once
             timestamp = pd.date_range(
                 start=item["start"].to_timestamp(),
@@ -118,14 +126,14 @@ class TabPFNTSPredictor:
                 ),
             )
 
-        if item_ids_with_all_nan:
+        if ts_with_0_or_1_valid_value:
             logger.warning(
-                f"Found time-series with **all** NaN targets, item_ids: {item_ids_with_all_nan}"
+                f"Found time-series with 0 or 1 valid values, item_ids: {ts_with_0_or_1_valid_value}"
             )
 
-        if item_ids_with_nan:
+        if ts_with_nan:
             logger.warning(
-                f"Found time-series with NaN targets, item_ids: {item_ids_with_nan}"
+                f"Found time-series with NaN targets, item_ids: {ts_with_nan}"
             )
 
         # Concat pre-allocated list

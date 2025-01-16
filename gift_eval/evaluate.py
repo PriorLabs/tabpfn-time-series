@@ -221,6 +221,7 @@ def main(args):
         )
         logger.info(f"Dataset size: {len(sub_dataset.test_data)}")
         logger.info(f"Dataset freq: {sub_dataset.freq}")
+        logger.info(f"Dataset term: {dataset_metadata['term']}")
         logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")
         logger.info(f"Dataset target dim: {sub_dataset.target_dim}")
 
