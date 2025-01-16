@@ -3,7 +3,7 @@ from enum import Enum
 
 from autogluon.timeseries import TimeSeriesDataFrame
 
-from tabpfn_time_series.tabpfn_worker import TabPFNClient, LocalTabPFN
+from tabpfn_time_series.tabpfn_worker import TabPFNClient, LocalTabPFN, MockTabPFN
 from tabpfn_time_series.defaults import (
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
     TABPFN_TS_DEFAULT_CONFIG,
@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class TabPFNMode(Enum):
     LOCAL = "tabpfn-local"
     CLIENT = "tabpfn-client"
+    MOCK = "tabpfn-mock"
 
 
 class TabPFNTimeSeriesPredictor:
@@ -30,6 +31,7 @@ class TabPFNTimeSeriesPredictor:
         worker_mapping = {
             TabPFNMode.CLIENT: lambda: TabPFNClient(config),
             TabPFNMode.LOCAL: lambda: LocalTabPFN(config),
+            TabPFNMode.MOCK: lambda: MockTabPFN(config),
         }
         self.tabpfn_worker = worker_mapping[tabpfn_mode]()
 

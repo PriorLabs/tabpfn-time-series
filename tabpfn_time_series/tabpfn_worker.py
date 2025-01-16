@@ -62,7 +62,7 @@ class TabPFNWorker(ABC):
         single_test_tsdf: TimeSeriesDataFrame,
         quantile_config: list[float],
     ) -> pd.DataFrame:
-        logger.debug(f"Predicting on item_id: {item_id}")
+        # logger.debug(f"Predicting on item_id: {item_id}")
 
         test_index = single_test_tsdf.index
         train_X, train_y = split_time_series_to_X_y(single_train_tsdf.copy())
@@ -223,3 +223,40 @@ class LocalTabPFN(TabPFNWorker):
             all_pred.append(predictions)
 
         return pd.concat(all_pred)
+
+
+class MockTabPFN(TabPFNWorker):
+    """
+    Mock TabPFN worker that returns random values for predictions.
+    Can be used for testing or debugging.
+    """
+
+    class MockTabPFNRegressor:
+        TABPFN_QUANTILE = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def fit(self, *args, **kwargs):
+            pass
+
+        def predict(self, test_X, output_type="main", **kwargs):
+            if output_type != "main":
+                raise NotImplementedError(
+                    "Only main output is supported for mock TabPFN"
+                )
+
+            return {
+                "mean": np.random.rand(len(test_X)),
+                "median": np.random.rand(len(test_X)),
+                "mode": np.random.rand(len(test_X)),
+                "quantiles": [
+                    np.random.rand(len(test_X)) for _ in self.TABPFN_QUANTILE
+                ],
+            }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _get_tabpfn_engine(self):
+        return self.MockTabPFNRegressor()
