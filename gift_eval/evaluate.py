@@ -81,12 +81,12 @@ logger = logging.getLogger(__name__)
 def construct_evaluation_data(
     dataset_name: str,
     dataset_storage_path: Path,
+    terms: List[str] = ["short", "medium", "long"],
 ) -> List[Tuple[Dataset, dict]]:
     sub_datasets = []
 
     # Construct evaluation data
     ds_key = dataset_name.split("/")[0]
-    terms = ["short", "medium", "long"]
     for term in terms:
         if (
             term == "medium" or term == "long"
@@ -212,7 +212,9 @@ def main(args):
 
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
-    sub_datasets = construct_evaluation_data(args.dataset, args.dataset_storage_path)
+    sub_datasets = construct_evaluation_data(
+        args.dataset, args.dataset_storage_path, args.terms
+    )
 
     # Evaluate model
     for i, (sub_dataset, dataset_metadata) in enumerate(sub_datasets):
@@ -229,7 +231,7 @@ def main(args):
             ds_prediction_length=sub_dataset.prediction_length,
             ds_freq=sub_dataset.freq,
             tabpfn_mode=TabPFNMode.LOCAL,
-            context_length=1024,
+            context_length=4096,
             debug=args.debug,
         )
 
@@ -260,20 +262,26 @@ if __name__ == "__main__":
         "--output_dir", type=str, default=str(Path(__file__).parent / "results")
     )
     parser.add_argument(
+        "--terms",
+        type=str,
+        default="short,medium,long",
+        help="Comma-separated list of terms to evaluate",
+    )
+    parser.add_argument(
         "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
     )
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
-
-    print(args)
-
     args.dataset_storage_path = Path(args.dataset_storage_path)
     args.output_dir = Path(args.output_dir)
+    args.terms = args.terms.split(",")
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
         logger.debug("Debug mode enabled")
     else:
         logging.basicConfig(level=logging.INFO)
+
+    logger.info(f"Command Line Arguments: {vars(args)}")
 
     main(args)
