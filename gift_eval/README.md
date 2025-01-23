@@ -4,6 +4,12 @@ This repository provides a structured workflow for evaluating **TabPFN-TS** on [
 
 Follow the steps below to set up your environment, run evaluations, and aggregate results!  
 
+## ⚙️ Model Configurations
+
+The model used for the evaluation builds upon our [paper](https://arxiv.org/abs/2501.02945), with some adjustments in the preprocessing steps:
+1. **Handling Missing Values**: We drop the data points containing NaN values.
+2. **Context Length**: We limit the context length to a maximum of 4096 data points.
+
 ## 📌 Setup
 
 Getting started is easy! We’ve included a setup script that will:
