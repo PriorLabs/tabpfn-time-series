@@ -5,6 +5,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
+import torch
 from scipy.stats import norm
 from autogluon.timeseries import TimeSeriesDataFrame
 
@@ -144,14 +145,17 @@ class LocalTabPFN(TabPFNWorker):
     def __init__(
         self,
         config: dict = {},
+        num_workers_per_gpu: int = 4,  # per GPU
     ):
-        # Only support GPU for now (inference on CPU takes too long)
-        import torch
+        self.num_workers_per_gpu = num_workers_per_gpu
 
+        # Only support GPU for now (inference on CPU takes too long)
         if not torch.cuda.is_available():
             raise ValueError("GPU is required for local TabPFN inference")
 
-        super().__init__(config, num_workers=torch.cuda.device_count())
+        super().__init__(
+            config, num_workers=torch.cuda.device_count() * self.num_workers_per_gpu
+        )
 
     def predict(
         self,
@@ -165,6 +169,8 @@ class LocalTabPFN(TabPFNWorker):
                 f" but got {quantile_config}."
             )
 
+        total_num_workers = torch.cuda.device_count() * self.num_workers_per_gpu
+
         # Split data into chunks for parallel inference on each GPU
         #   since the time series are of different lengths, we shuffle
         #   the item_ids s.t. the workload is distributed evenly across GPUs
@@ -172,7 +178,7 @@ class LocalTabPFN(TabPFNWorker):
         np.random.seed(0)
         item_ids_chunks = np.array_split(
             np.random.permutation(train_tsdf.item_ids),
-            min(self.num_workers, len(train_tsdf.item_ids)),
+            min(total_num_workers, len(train_tsdf.item_ids)),
         )
 
         # Run predictions in parallel
@@ -181,9 +187,10 @@ class LocalTabPFN(TabPFNWorker):
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
                 quantile_config,
-                gpu_id,
+                gpu_id=i
+                % torch.cuda.device_count(),  # Alternate between available GPUs
             )
-            for gpu_id, chunk in enumerate(item_ids_chunks)
+            for i, chunk in enumerate(item_ids_chunks)
         )
 
         predictions = pd.concat(predictions)
@@ -212,6 +219,9 @@ class LocalTabPFN(TabPFNWorker):
         quantile_config: list[float],
         gpu_id: int,
     ):
+        # Set GPU
+        torch.cuda.set_device(gpu_id)
+
         all_pred = []
         for item_id in tqdm(train_tsdf.item_ids, desc=f"GPU {gpu_id}:"):
             predictions = self._prediction_routine(
