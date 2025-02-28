@@ -232,6 +232,9 @@ class LocalTabPFN(TabPFNWorker):
             )
             all_pred.append(predictions)
 
+        # Clear GPU cache
+        torch.cuda.empty_cache()
+
         return pd.concat(all_pred)
 
 
