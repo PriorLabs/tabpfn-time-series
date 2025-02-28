@@ -28,14 +28,7 @@ class TabPFNWorker(ABC):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
     ):
-        if not set(quantile_config).issubset(set(TABPFN_TS_DEFAULT_QUANTILE_CONFIG)):
-            raise NotImplementedError(
-                f"We currently only supports {TABPFN_TS_DEFAULT_QUANTILE_CONFIG} for quantile prediction,"
-                f" but got {quantile_config}."
-            )
-
         predictions = Parallel(
             n_jobs=self.num_workers,
             backend="loky",
@@ -44,7 +37,6 @@ class TabPFNWorker(ABC):
                 item_id,
                 train_tsdf.loc[item_id],
                 test_tsdf.loc[item_id],
-                quantile_config,
             )
             for item_id in tqdm(train_tsdf.item_ids, desc="Predicting time series")
         )
@@ -61,7 +53,6 @@ class TabPFNWorker(ABC):
         item_id: str,
         single_train_tsdf: TimeSeriesDataFrame,
         single_test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
     ) -> pd.DataFrame:
         # logger.debug(f"Predicting on item_id: {item_id}")
 
@@ -74,7 +65,7 @@ class TabPFNWorker(ABC):
         if train_y_has_constant_value:
             logger.info("Found time-series with constant target")
             result = self._predict_on_constant_train_target(
-                single_train_tsdf, single_test_tsdf, quantile_config
+                single_train_tsdf, single_test_tsdf
             )
         else:
             tabpfn = self._get_tabpfn_engine()
@@ -85,7 +76,7 @@ class TabPFNWorker(ABC):
             result.update(
                 {
                     q: q_pred
-                    for q, q_pred in zip(quantile_config, full_pred["quantiles"])
+                    for q, q_pred in zip(TABPFN_TS_DEFAULT_QUANTILE_CONFIG, full_pred["quantiles"])
                 }
             )
 
@@ -102,7 +93,6 @@ class TabPFNWorker(ABC):
         self,
         single_train_tsdf: TimeSeriesDataFrame,
         single_test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
     ) -> pd.DataFrame:
         # If train_y is constant, we return the constant value from the training set
         mean_constant = single_train_tsdf.target.iloc[0]
@@ -110,12 +100,12 @@ class TabPFNWorker(ABC):
 
         # For quantile prediction, we assume that the uncertainty follows a standard normal distribution
         quantile_pred_with_uncertainty = norm.ppf(
-            quantile_config, loc=mean_constant, scale=1
+            TABPFN_TS_DEFAULT_QUANTILE_CONFIG, loc=mean_constant, scale=1
         )
         result.update(
             {
                 q: np.full(len(single_test_tsdf), v)
-                for q, v in zip(quantile_config, quantile_pred_with_uncertainty)
+                for q, v in zip(TABPFN_TS_DEFAULT_QUANTILE_CONFIG, quantile_pred_with_uncertainty)
             }
         )
 
@@ -161,14 +151,7 @@ class LocalTabPFN(TabPFNWorker):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
     ):
-        if not set(quantile_config).issubset(set(TABPFN_TS_DEFAULT_QUANTILE_CONFIG)):
-            raise NotImplementedError(
-                f"We currently only supports {TABPFN_TS_DEFAULT_QUANTILE_CONFIG} for quantile prediction,"
-                f" but got {quantile_config}."
-            )
-
         total_num_workers = torch.cuda.device_count() * self.num_workers_per_gpu
 
         # Split data into chunks for parallel inference on each GPU
@@ -186,7 +169,6 @@ class LocalTabPFN(TabPFNWorker):
             delayed(self._prediction_routine_per_gpu)(
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
-                quantile_config,
                 gpu_id=i
                 % torch.cuda.device_count(),  # Alternate between available GPUs
             )
@@ -216,7 +198,6 @@ class LocalTabPFN(TabPFNWorker):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
-        quantile_config: list[float],
         gpu_id: int,
     ):
         # Set GPU
@@ -228,7 +209,6 @@ class LocalTabPFN(TabPFNWorker):
                 item_id,
                 train_tsdf.loc[item_id],
                 test_tsdf.loc[item_id],
-                quantile_config,
             )
             all_pred.append(predictions)
 
