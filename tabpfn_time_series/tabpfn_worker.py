@@ -182,7 +182,7 @@ class LocalTabPFN(TabPFNWorker):
         )
 
         # Run predictions in parallel
-        predictions = Parallel(n_jobs=self.num_workers, backend="loky")(
+        predictions = Parallel(n_jobs=len(item_ids_chunks), backend="loky")(
             delayed(self._prediction_routine_per_gpu)(
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
