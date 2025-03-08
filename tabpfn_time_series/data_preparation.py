@@ -18,7 +18,7 @@ def generate_test_X(
         test_dfs.append(
             pd.DataFrame(
                 {
-                    "target": np.full(prediction_length, np.nan),
+                    # "target": np.full(prediction_length, np.nan),
                     "timestamp": pd.date_range(
                         start=first_test_timestamp,
                         periods=prediction_length,

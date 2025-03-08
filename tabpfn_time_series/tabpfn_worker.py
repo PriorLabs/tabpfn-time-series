@@ -116,7 +116,7 @@ class TabPFNClient(TabPFNWorker):
     def __init__(
         self,
         config: dict = {},
-        num_workers: int = 2,
+        num_workers: int = 4,
     ):
         super().__init__(config, num_workers)
 

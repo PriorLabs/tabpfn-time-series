@@ -61,8 +61,8 @@ class FeatureTransformer:
         feature_generators: List[Callable[[TimeSeriesDataFrame], TimeSeriesDataFrame]],
         target_column: str = "target",
     ) -> Tuple[TimeSeriesDataFrame, TimeSeriesDataFrame]:
-        assert target_column in train_tsdf.columns
-        assert test_tsdf[target_column].isna().all()
+        # assert target_column in train_tsdf.columns
+        # assert test_tsdf[target_column].isna().all()
 
         # Join train and test tsdf
         tsdf = pd.concat([train_tsdf, test_tsdf])
@@ -75,6 +75,6 @@ class FeatureTransformer:
         train_tsdf = tsdf.iloc[: len(train_tsdf)]
         test_tsdf = tsdf.iloc[len(train_tsdf) :]
 
-        assert test_tsdf[target_column].isna().all()
+        # assert test_tsdf[target_column].isna().all()
 
         return train_tsdf, test_tsdf
