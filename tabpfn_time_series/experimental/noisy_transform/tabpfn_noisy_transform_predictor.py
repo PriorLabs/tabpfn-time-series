@@ -27,9 +27,8 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
     ) -> TimeSeriesDataFrame:
-
         original_train_tsdf = train_tsdf.copy()
-        
+
         # Normalize target (must be done before adding noise to be scale-invariant)
         train_tsdf, _ = self.target_normalization_transform(
             train_tsdf=original_train_tsdf,
@@ -38,7 +37,6 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
             inverse=False,
         )
 
-        
         # Add noise to train target
         train_tsdf = self.noise_transform(
             tsdf=train_tsdf,
@@ -50,7 +48,7 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
 
         # Predict on noisy train target
         noisy_pred = super().predict(train_tsdf, test_tsdf)
-        
+
         # Add running index to noisy_pred
         noisy_pred["running_index"] = test_tsdf["running_index"]
 
@@ -75,7 +73,7 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         )
 
         return denoised_pred
-    
+
     @staticmethod
     def noise_transform(
         tsdf: TimeSeriesDataFrame,
@@ -84,18 +82,17 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         inverse: bool = False,
         noise_amplitude: float = 1.0,
     ):
-        
         """
         Apply or remove systematic noise to data based on index parity:
         - For even indices: add noise_amplitude to the value (or subtract if inverse=True)
         - For odd indices: subtract noise_amplitude from the value (or add if inverse=True)
-        
+
         Args:
             tsdf: TimeSeriesDataFrame
             index_column_name: str, name of the index column
             target_column_name: str, name of the target column
             inverse: bool, if True removes the noise instead of adding it
-            
+
         Returns:
             numpy array with systematic noise applied or removed
         """
@@ -106,9 +103,9 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         index_values = tsdf[index_column_name].values
 
         # Vectorized operation based on index parity
-        even_mask = (index_values % 2 == 0)
+        even_mask = index_values % 2 == 0
         odd_mask = ~even_mask
-        
+
         # Apply noise based on parity and inverse flag
         if inverse:
             tsdf.loc[even_mask, target_column_name] -= noise_amplitude
@@ -116,7 +113,7 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         else:
             tsdf.loc[even_mask, target_column_name] += noise_amplitude
             tsdf.loc[odd_mask, target_column_name] -= noise_amplitude
-            
+
         return tsdf
 
     @staticmethod
@@ -127,8 +124,8 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         inverse: bool = False,
     ):
         # Calculate mean and std of target column in train_tsdf
-        target_mean = train_tsdf[target_column_name].groupby('item_id').mean()
-        target_std = train_tsdf[target_column_name].groupby('item_id').std()
+        target_mean = train_tsdf[target_column_name].groupby("item_id").mean()
+        target_std = train_tsdf[target_column_name].groupby("item_id").std()
 
         new_train_tsdf = train_tsdf.copy()
         new_pred_tsdf = pred_tsdf.copy() if pred_tsdf is not None else None
@@ -136,11 +133,15 @@ class TabPFNNoisyTranformPredictor(TabPFNTimeSeriesPredictor):
         if not inverse:
             assert pred_tsdf is None, "We don't normalize prediction"
             # Normalize train_tsdf
-            new_train_tsdf[target_column_name] = (new_train_tsdf[target_column_name] - target_mean) / target_std
+            new_train_tsdf[target_column_name] = (
+                new_train_tsdf[target_column_name] - target_mean
+            ) / target_std
 
         else:
             # Denormalize train_tsdf and pred_tsdf
-            new_train_tsdf[target_column_name] = new_train_tsdf[target_column_name] * target_std + target_mean
+            new_train_tsdf[target_column_name] = (
+                new_train_tsdf[target_column_name] * target_std + target_mean
+            )
 
             # Apply to all columns of pred_tsdf
             for col in new_pred_tsdf.columns:
