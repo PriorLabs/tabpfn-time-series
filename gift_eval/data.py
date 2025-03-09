@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 import datasets
-from dotenv import load_dotenv
 from gluonts.dataset import DataEntry
 from gluonts.dataset.common import ProcessDataEntry
 from gluonts.dataset.split import TestData, TrainingDataset, split
@@ -108,7 +107,6 @@ class Dataset:
         term: Term | str = Term.SHORT,
         to_univariate: bool = False,
     ):
-        load_dotenv()
         self.hf_dataset = datasets.load_from_disk(str(storage_path / name)).with_format(
             "numpy"
         )
