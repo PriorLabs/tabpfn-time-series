@@ -1,5 +1,6 @@
 # for development
 jupyter
+wandb
 ruff
 pre-commit
 twine
