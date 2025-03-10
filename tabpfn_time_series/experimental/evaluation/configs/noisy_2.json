@@ -1,0 +1,11 @@
+{
+    "predictor_name": "TabPFNNoisyTranformPredictor",
+    "predictor_config": {
+        "noise_level": 1.0
+    },
+    "feature_names": [
+        "running_index",
+        "calendar_features"
+    ],
+    "context_length": 4096
+}
