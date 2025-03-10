@@ -53,5 +53,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Tests
+        env:
+          TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
         run: |
           python -m unittest discover -s tests -t tests
