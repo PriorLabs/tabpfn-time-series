@@ -1,5 +1,5 @@
 tqdm
-pandas
+pandas>=2.1.2, <2.2.0
 gluonts==0.16.0
 autogluon.timeseries==1.2
 tabpfn-client==0.1.1
