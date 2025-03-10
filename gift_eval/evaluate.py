@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 import csv
 import logging
 import argparse
+import wandb
 from pathlib import Path
 from typing import Tuple, List
 
@@ -192,6 +193,29 @@ def append_results_to_csv(
     print(f"Results for {dataset_metadata['key']} have been written to {csv_file_path}")
 
 
+def log_results_to_wandb(
+    res,
+    dataset_metadata,
+):
+    wandb_log_data = {
+        "MSE_mean": res["MSE[mean]"][0],
+        "MSE_0.5": res["MSE[0.5]"][0],
+        "MAE_0.5": res["MAE[0.5]"][0],
+        "MASE_0.5": res["MASE[0.5]"][0],
+        "MAPE_0.5": res["MAPE[0.5]"][0],
+        "sMAPE_0.5": res["sMAPE[0.5]"][0],
+        "MSIS": res["MSIS"][0],
+        "RMSE_mean": res["RMSE[mean]"][0],
+        "NRMSE_mean": res["NRMSE[mean]"][0],
+        "ND_0.5": res["ND[0.5]"][0],
+        "mean_weighted_sum_quantile_loss": res["mean_weighted_sum_quantile_loss"][0],
+        "domain": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
+        "num_variates": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
+        "term": dataset_metadata["term"],
+    }
+    wandb.log(wandb_log_data)
+
+
 def main(args):
     if args.dataset not in ALL_DATASETS:
         raise ValueError(f"Invalid dataset: {args.dataset}")
@@ -202,6 +226,14 @@ def main(args):
         raise ValueError(
             f"Dataset storage path {args.dataset_storage_path} does not exist"
         )
+
+    # Initialize wandb
+    wandb.init(
+        project=args.wandb_project,
+        name=f"{args.model_name}/{args.dataset}",
+        config=vars(args),
+        tags=[args.model_name] + args.wandb_tags.split(",") if args.wandb_tags else [],
+    )
 
     output_dir = args.output_dir / args.model_name / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -230,7 +262,8 @@ def main(args):
         tabpfn_predictor = TabPFNTSPredictor(
             ds_prediction_length=sub_dataset.prediction_length,
             ds_freq=sub_dataset.freq,
-            tabpfn_mode=TabPFNMode.LOCAL,
+            # tabpfn_mode=TabPFNMode.LOCAL,
+            tabpfn_mode=TabPFNMode.CLIENT,
             context_length=4096,
             debug=args.debug,
         )
@@ -245,6 +278,12 @@ def main(args):
             seasonality=dataset_metadata["season_length"],
         )
 
+        # Log results to wandb
+        log_results_to_wandb(
+            res=res,
+            dataset_metadata=dataset_metadata,
+        )
+
         # Write results to csv
         append_results_to_csv(
             res=res,
@@ -252,6 +291,9 @@ def main(args):
             dataset_metadata=dataset_metadata,
             model_name=args.model_name,
         )
+
+    # Finish wandb run
+    wandb.finish()
 
 
 if __name__ == "__main__":
@@ -271,6 +313,13 @@ if __name__ == "__main__":
         "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
     )
     parser.add_argument("--debug", action="store_true")
+
+    # Wandb settings
+    parser.add_argument("--wandb_project", type=str, default="tabpfn-ts-experiments")
+    parser.add_argument(
+        "--wandb_tags", type=str, default=""
+    )  # model_name will be added later anyway
+
     args = parser.parse_args()
     args.dataset_storage_path = Path(args.dataset_storage_path)
     args.output_dir = Path(args.output_dir)
