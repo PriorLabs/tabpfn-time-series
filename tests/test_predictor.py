@@ -16,6 +16,20 @@ from tabpfn_time_series.data_preparation import generate_test_X
 
 class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
     def setUp(self):
+        self.train_tsdf, self.test_tsdf = self._create_test_data()
+
+        if os.getenv("GITHUB_ACTIONS"):
+            self._setup_github_actions_tabpfn_client()
+
+    def _setup_github_actions_tabpfn_client(self):
+        from tabpfn_client import set_access_token
+
+        access_token = os.getenv("TABPFN_CLIENT_API_KEY")
+        assert access_token is not None, "TABPFN_CLIENT_API_KEY is not set"
+
+        set_access_token(access_token)
+
+    def _create_test_data(self):
         # Create a simple time series dataframe for testing
         dates = pd.date_range(start="2023-01-01", periods=10, freq="D")
         item_ids = [0, 1]
@@ -32,22 +46,24 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
                     }
                 )
 
-        self.train_tsdf = TimeSeriesDataFrame(
+        train_tsdf = TimeSeriesDataFrame(
             pd.DataFrame(train_data),
             id_column="item_id",
             timestamp_column="timestamp",
         )
 
         # Generate test data and features
-        self.test_tsdf = generate_test_X(self.train_tsdf, prediction_length=5)
-        self.train_tsdf, self.test_tsdf = FeatureTransformer.add_features(
-            self.train_tsdf,
-            self.test_tsdf,
+        test_tsdf = generate_test_X(train_tsdf, prediction_length=5)
+        train_tsdf, test_tsdf = FeatureTransformer.add_features(
+            train_tsdf,
+            test_tsdf,
             [
                 DefaultFeatures.add_running_index,
                 DefaultFeatures.add_calendar_features,
             ],
         )
+
+        return train_tsdf, test_tsdf
 
     def test_init_with_default_mode(self):
         """Test that the predictor initializes with default mode (CLIENT)"""
@@ -72,14 +88,6 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
 
     def test_predict_calls_worker_predict(self):
         """Test that predict method calls the worker's predict method"""
-        if os.getenv("GITHUB_ACTIONS"):
-            access_token = os.getenv("TABPFN_CLIENT_API_KEY")
-            assert access_token is not None, "TABPFN_CLIENT_API_KEY is not set"
-
-            from tabpfn_client import set_access_token
-
-            set_access_token(access_token)
-
         # Create predictor and call predict
         predictor = TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.CLIENT)
         result = predictor.predict(self.train_tsdf, self.test_tsdf)
