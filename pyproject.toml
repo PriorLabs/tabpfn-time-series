@@ -25,10 +25,10 @@ files = ["requirements.txt"]
 dev = ["requirements-dev.txt"]
 
 [tool.hatch.build.targets.wheel]
-exclude = ["docs", "gift_eval"]
+exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs", "gift_eval"]
+exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
 
 [project.urls]
 "Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
