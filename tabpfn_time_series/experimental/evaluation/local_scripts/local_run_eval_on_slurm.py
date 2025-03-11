@@ -62,6 +62,10 @@ def parse_arguments():
         "--fast", action="store_true", help="Run fast evaluation, skip big datasets"
     )
     parser.add_argument("--debug_slurm", action="store_true", help="Debug SLURM jobs")
+    parser.add_argument(
+        "--dry_run", action="store_true", help="Dry run, don't submit any jobs"
+    )
+
     return parser.parse_args()
 
 
@@ -120,6 +124,10 @@ def main():
     print(f" . # GPUS: {num_gpus}")
     print(f" . # DATASETS: {num_datasets}")
     print(f" . DATASETS: {datasets}")
+
+    if args.dry_run:
+        print("Dry run, not submitting any jobs")
+        return
 
     # Setup submitit executor
     executor = submitit.AutoExecutor(folder=f"slurm_logs/{job_name}")
