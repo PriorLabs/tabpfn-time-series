@@ -76,7 +76,9 @@ class TabPFNWorker(ABC):
             result.update(
                 {
                     q: q_pred
-                    for q, q_pred in zip(TABPFN_TS_DEFAULT_QUANTILE_CONFIG, full_pred["quantiles"])
+                    for q, q_pred in zip(
+                        TABPFN_TS_DEFAULT_QUANTILE_CONFIG, full_pred["quantiles"]
+                    )
                 }
             )
 
@@ -105,7 +107,9 @@ class TabPFNWorker(ABC):
         result.update(
             {
                 q: np.full(len(single_test_tsdf), v)
-                for q, v in zip(TABPFN_TS_DEFAULT_QUANTILE_CONFIG, quantile_pred_with_uncertainty)
+                for q, v in zip(
+                    TABPFN_TS_DEFAULT_QUANTILE_CONFIG, quantile_pred_with_uncertainty
+                )
             }
         )
 
