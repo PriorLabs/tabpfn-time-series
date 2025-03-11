@@ -52,23 +52,13 @@ def main(args):
     # Load pipeline config
     pipeline_config = PipelineConfig.from_json(args.config_path)
     logger.info(f"Pipeline config: {pipeline_config}")
+    model_name = pipeline_config.predictor_name
 
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
     sub_datasets = construct_evaluation_data(
         args.dataset, args.dataset_storage_path, args.terms
     )
-
-    # Initialize wandb
-    if args.enable_wandb:
-        wandb.init(
-            project=args.wandb_project,
-            name=f"{pipeline_config.predictor_name}/{args.dataset}",
-            config=vars(args),
-            tags=[args.model_name] + args.wandb_tags.split(",")
-            if args.wandb_tags
-            else [],
-        )
 
     # Create output directory
     output_dir = args.output_dir / pipeline_config.predictor_name / args.dataset
@@ -89,6 +79,24 @@ def main(args):
         logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")
         logger.info(f"Dataset target dim: {sub_dataset.target_dim}")
 
+        # Initialize wandb
+        if args.enable_wandb:
+            wandb.init(
+                project=args.wandb_project,
+                name=f"{model_name}/{dataset_metadata['full_name']}",
+                config=vars(args),
+                tags=[model_name] + args.wandb_tags.split(",")
+                if args.wandb_tags
+                else [],
+            )
+
+            wandb.summary.update(
+                {
+                    "model": model_name,
+                    "dataset_full_name": dataset_metadata["full_name"],
+                }
+            )
+
         # Initialize pipeline
         pipeline = TabPFNTSPipeline(
             config=pipeline_config,
@@ -107,24 +115,24 @@ def main(args):
             seasonality=dataset_metadata["season_length"],
         )
 
-        # Log results to wandb
-        if args.enable_wandb:
-            log_results_to_wandb(
-                res=res,
-                dataset_metadata=dataset_metadata,
-            )
-
         # Write results to csv
         append_results_to_csv(
             res=res,
             csv_file_path=output_csv_path,
             dataset_metadata=dataset_metadata,
-            model_name=pipeline_config.predictor_name,
+            model_name=model_name,
         )
 
-    # Finish wandb run
-    if args.enable_wandb:
-        wandb.finish()
+        # Finish wandb run
+        if args.enable_wandb:
+            if args.enable_wandb:
+                log_results_to_wandb(
+                    model_name=model_name,
+                    res=res,
+                    dataset_metadata=dataset_metadata,
+                )
+
+            wandb.finish()
 
 
 if __name__ == "__main__":

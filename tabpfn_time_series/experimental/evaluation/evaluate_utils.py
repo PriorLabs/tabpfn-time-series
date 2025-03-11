@@ -165,10 +165,13 @@ def append_results_to_csv(
 
 
 def log_results_to_wandb(
+    model_name,
     res,
     dataset_metadata,
 ):
     wandb_log_data = {
+        "model": model_name,
+        "dataset": dataset_metadata["full_name"],
         "MSE_mean": res["MSE[mean]"][0],
         "MSE_0.5": res["MSE[0.5]"][0],
         "MAE_0.5": res["MAE[0.5]"][0],

@@ -185,6 +185,9 @@ class TabPFNTSPipeline:
         # Concat pre-allocated list
         train_tsdf = TimeSeriesDataFrame(pd.concat(time_series))
 
+        # assert no more NaN in train_tsdf target
+        assert not train_tsdf.target.isnull().any()
+
         # Slice if needed
         if self.context_length > 0:
             logger.info(
