@@ -1,6 +1,6 @@
 # for development
 jupyter
-wandb
+wandb>=0.19.8
 ruff
 pre-commit
 twine

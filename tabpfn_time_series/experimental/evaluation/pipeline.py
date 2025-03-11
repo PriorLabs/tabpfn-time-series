@@ -9,6 +9,7 @@ import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
 from gluonts.itertools import batcher
 from autogluon.timeseries import TimeSeriesDataFrame
+from torch.cuda import is_available as torch_cuda_is_available
 
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series import (
@@ -65,7 +66,9 @@ class TabPFNTSPipeline:
         self.ds_freq = ds_freq
         predictor_class = PipelineConfig.get_predictor_class(config.predictor_name)
         self.tabpfn_predictor = predictor_class(
-            tabpfn_mode=TabPFNMode.CLIENT,
+            tabpfn_mode=TabPFNMode.LOCAL
+            if torch_cuda_is_available()
+            else TabPFNMode.CLIENT,
             **config.predictor_config,
         )
         self.context_length = config.context_length
