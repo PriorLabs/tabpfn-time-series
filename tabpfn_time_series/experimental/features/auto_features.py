@@ -82,7 +82,7 @@ class AutoSeasonalFeature(FeatureGenerator):
         ] = "first_diff",
         use_peaks_only: bool = True,
         apply_hann_window: bool = True,
-        zero_padding_factor: int = 3,
+        zero_padding_factor: int = 2,
         round_to_closest_integer: bool = True,
         validate_with_acf: bool = False,
         sampling_interval: float = 1.0,
