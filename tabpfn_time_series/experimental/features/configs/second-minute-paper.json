@@ -1,0 +1,14 @@
+{
+    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_config": {},
+    "features": {
+        "RunningIndexFeature": {},
+        "AdditionalCalendarFeature": {
+            "additional_seasonal_features": {
+                "second_of_minute": [60],
+                "minute_of_hour": [60]
+            }
+        }
+    },
+    "context_length": 4096
+}

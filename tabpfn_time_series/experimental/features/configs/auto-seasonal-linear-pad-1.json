@@ -1,0 +1,15 @@
+{
+    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_config": {},
+    "features": {
+        "RunningIndexFeature": {},
+        "AutoSeasonalFeature": {
+            "config": {
+                "max_top_k": 5,
+                "detrend_type": "linear",
+                "zero_padding_factor": 1
+            }
+        }
+    },
+    "context_length": 4096
+}

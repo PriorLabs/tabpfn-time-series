@@ -22,6 +22,8 @@ HUGE_DATASETS = [
     "LOOP_SEATTLE/5T",
     "LOOP_SEATTLE/H",
     "LOOP_SEATTLE/D",
+    # Big (not huge)
+    "electricity/15T",
 ]
 
 
@@ -50,20 +52,43 @@ def parse_arguments():
         default=None,
         help="Evaluate datasets with this frequency only",
     )
-    parser.add_argument("--ngpus", type=int, default=1, help="Number of GPUs to use")
+    parser.add_argument(
+        "--exclude_freq",
+        default=None,
+        help="Exclude datasets with this frequency only",
+    )
+    parser.add_argument(
+        "--ngpus",
+        type=int,
+        default=1,
+        help="Number of GPUs to use",
+    )
     parser.add_argument(
         "--terms",
         type=str,
         help="Comma-separated list of terms to evaluate",
-        default=None,
-        required=False,
+        default="short,medium,long",
     )
     parser.add_argument(
-        "--fast", action="store_true", help="Run fast evaluation, skip big datasets"
+        "--fast",
+        action="store_true",
+        help="Run fast evaluation, skip big datasets",
     )
-    parser.add_argument("--debug_slurm", action="store_true", help="Debug SLURM jobs")
     parser.add_argument(
-        "--dry_run", action="store_true", help="Dry run, don't submit any jobs"
+        "--debug_slurm",
+        action="store_true",
+        help="Debug SLURM jobs",
+    )
+    parser.add_argument(
+        "--dry_run",
+        action="store_true",
+        help="Dry run, don't submit any jobs",
+    )
+    parser.add_argument(
+        "--experiment_tag",
+        type=str,
+        help="Tag to distinguish the experiment/study",
+        required=True,
     )
 
     return parser.parse_args()
@@ -95,6 +120,12 @@ def get_datasets_to_evaluate(args):
         ), "Cannot specify dataset when frequency is specified"
         datasets = [ds for ds in datasets if ds.endswith(args.freq)]
 
+    if args.exclude_freq:
+        assert is_valid_frequency(
+            args.exclude_freq
+        ), f"Frequency {args.exclude_freq} not supported. Must be a valid pandas frequency string."
+        datasets = [ds for ds in datasets if not ds.endswith(args.exclude_freq)]
+
     return datasets
 
 
@@ -116,7 +147,10 @@ def main():
     num_gpus = args.ngpus
 
     datasets = get_datasets_to_evaluate(args)
+    terms = args.terms.split(",")
     num_datasets = len(datasets)
+    num_terms = len(terms)
+    total_jobs = num_datasets * num_terms
 
     # Report the benchmark parameters
     print("\nRunning evaluation with the following parameters:")
@@ -124,6 +158,8 @@ def main():
     print(f" . # GPUS: {num_gpus}")
     print(f" . # DATASETS: {num_datasets}")
     print(f" . DATASETS: {datasets}")
+    print(f" . TERMS: {terms}")
+    print(f" . TOTAL JOBS: {total_jobs}")
 
     if args.dry_run:
         print("Dry run, not submitting any jobs")
@@ -139,34 +175,40 @@ def main():
         mem_gb=memory,
         slurm_gres=f"gpu:{num_gpus}",
         slurm_partition=args.cluster_partition,
-        slurm_array_parallelism=num_datasets,
+        slurm_array_parallelism=total_jobs,
         slurm_setup=[f"source {os.getenv('ENVIRONMENT_BASHRC_PATH')}"],
         timeout_min=1439,  # 23 hours and 59 minutes
-        slurm_additional_parameters=f"exclude={os.getenv('EXCLUDE_CLUSTER_NODES')}",
+        slurm_additional_parameters={"exclude": os.getenv("EXCLUDE_CLUSTER_NODES")},
     )
 
     jobs = []
     with executor.batch():
         for dataset in datasets:
-            cmd = ["python", str(EVALUATION_SCRIPT_PATH)]
-            script_args = [
-                "--config_path",
-                args.config_path,
-                "--dataset",
-                dataset,
-                "--dataset_storage_path",
-                os.getenv("DATASET_STORAGE_PATH"),
-                "--output_dir",
-                f"slurm/{job_name}",
-                "--enable_wandb",
-            ]
+            for term in terms:
+                cmd = ["python", str(EVALUATION_SCRIPT_PATH)]
+                script_args = [
+                    "--config_path",
+                    args.config_path,
+                    "--dataset",
+                    dataset,
+                    "--dataset_storage_path",
+                    os.getenv("DATASET_STORAGE_PATH"),
+                    "--output_dir",
+                    f"slurm/{job_name}",
+                    "--enable_wandb",
+                    "--wandb_tags",
+                    f"{args.experiment_tag}",
+                    "--terms",
+                    term,
+                ]
 
-            if args.terms:
-                script_args.append("--terms")
-                script_args.append(args.terms)
+                # if not args.cast_multivariate_to_univariate:
+                #     script_args.append("--no_cast_multivariate_to_univariate")
 
-            job = executor.submit(submitit.helpers.CommandFunction(cmd), *script_args)
-            jobs.append(job)
+                job = executor.submit(
+                    submitit.helpers.CommandFunction(cmd), *script_args
+                )
+                jobs.append(job)
 
     print(f"Submitted {len(jobs)} jobs")
 

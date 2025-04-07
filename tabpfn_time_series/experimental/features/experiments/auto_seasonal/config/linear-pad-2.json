@@ -1,0 +1,5 @@
+{
+    "max_top_k": 5,
+    "detrend_type": "linear",
+    "zero_padding_factor": 2
+}
