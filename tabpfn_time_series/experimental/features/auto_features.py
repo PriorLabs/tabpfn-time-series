@@ -90,6 +90,7 @@ class AutoSeasonalFeature(FeatureGenerator):
             float
         ] = 0.05,  # Default relative threshold (5% of max)
         relative_threshold: bool = True,  # Interpret threshold as a fraction of max FFT magnitude
+        exclude_zero: bool = False,
     ) -> List[Tuple[float, float]]:
         """
         Identify dominant seasonal periods in a time series using FFT.
@@ -119,6 +120,8 @@ class AutoSeasonalFeature(FeatureGenerator):
         - relative_threshold: bool
             If True, the `magnitude_threshold` is interpreted as a fraction of the maximum FFT magnitude.
             Otherwise, it is treated as an absolute threshold value.
+        - exclude_zero: bool
+            If True, exclude periods of 0 from the results.
 
         Returns:
         - List[Tuple[float, float]]:
@@ -201,10 +204,17 @@ class AutoSeasonalFeature(FeatureGenerator):
         if round_to_closest_integer:
             top_periods = np.round(top_periods)
 
+        # Filter out zero periods if requested
+        if exclude_zero:
+            non_zero_mask = top_periods != 0
+            top_periods = top_periods[non_zero_mask]
+            top_indices = top_indices[non_zero_mask]
+
         # Keep unique periods only
-        unique_period_indices = np.unique(top_periods, return_index=True)[1]
-        top_periods = top_periods[unique_period_indices]
-        top_indices = top_indices[unique_period_indices]
+        if len(top_periods) > 0:
+            unique_period_indices = np.unique(top_periods, return_index=True)[1]
+            top_periods = top_periods[unique_period_indices]
+            top_indices = top_indices[unique_period_indices]
 
         # Pair each period with its corresponding magnitude
         results = [
