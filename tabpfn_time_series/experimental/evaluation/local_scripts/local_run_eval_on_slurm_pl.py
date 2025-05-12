@@ -10,7 +10,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
 
-from tabpfn_time_series.experimental.evaluation.dataset_definition import ALL_DATASETS
+from tabpfn_time_series.experimental.evaluation.dataset_definition import (
+    ALL_DATASETS,
+    DATASETS_WITH_COVARIATES,
+)
 
 load_dotenv()
 
@@ -41,6 +44,11 @@ def parse_arguments():
         "--dataset",
         default="all",
         help="Dataset to run, either a single dataset or 'all'",
+    )
+    parser.add_argument(
+        "--evaluate_covariates",
+        action="store_true",
+        help="Evaluate covariates",
     )
     parser.add_argument(
         "--config_path",
@@ -109,12 +117,16 @@ def parse_arguments():
 
 def get_datasets_to_evaluate(args):
     # If a single task is specified, check if it is valid
+    DATASET_COLLECTION = (
+        ALL_DATASETS if not args.evaluate_covariates else DATASETS_WITH_COVARIATES
+    )
+
     if args.dataset != "all":
-        if args.dataset not in ALL_DATASETS:
+        if args.dataset not in DATASET_COLLECTION:
             raise ValueError(f"Dataset {args.dataset} not found in dataset definition")
         datasets = [args.dataset]
     else:
-        datasets = ALL_DATASETS
+        datasets = DATASET_COLLECTION
 
     if args.debug_slurm:
         print("Debugging SLURM jobs")
@@ -142,6 +154,13 @@ def get_datasets_to_evaluate(args):
     return datasets
 
 
+def get_dataset_storage_path(args):
+    if args.evaluate_covariates:
+        return os.getenv("COVARIATE_DATASET_STORAGE_PATH")
+    else:
+        return os.getenv("DATASET_STORAGE_PATH")
+
+
 def is_valid_frequency(freq):
     import pandas as pd
 
@@ -153,8 +172,15 @@ def is_valid_frequency(freq):
 
 
 class EvaluationJob:
-    def __init__(self, dataset, term, args):
+    def __init__(
+        self,
+        dataset,
+        dataset_storage_path,
+        term,
+        args,
+    ):
         self.dataset = dataset
+        self.dataset_storage_path = dataset_storage_path
         self.term = term
         self.args = args
 
@@ -178,7 +204,7 @@ class EvaluationJob:
                 "--dataset",
                 self.dataset,
                 "--dataset_storage_path",
-                os.getenv("DATASET_STORAGE_PATH"),
+                self.dataset_storage_path,
                 "--output_dir",
                 f"slurm/{self.args.job_name}",
                 "--enable_wandb",
@@ -188,6 +214,9 @@ class EvaluationJob:
                 self.term,
             ]
         )
+
+        if self.args.evaluate_covariates:
+            cmd.append("--evaluate_covariates")
 
         # Execute the command
         print(f"Running command: {' '.join(cmd)}")
@@ -200,6 +229,7 @@ def main():
     args.job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     datasets = get_datasets_to_evaluate(args)
+    dataset_storage_path = get_dataset_storage_path(args)
     terms = args.terms.split(",")
     num_datasets = len(datasets)
     num_terms = len(terms)
@@ -243,7 +273,12 @@ def main():
     for dataset in datasets:
         for term in terms:
             # Create the job
-            job = EvaluationJob(dataset, term, args)
+            job = EvaluationJob(
+                dataset,
+                dataset_storage_path,
+                term,
+                args,
+            )
 
             # Submit the job
             submitted_job = executor.submit(job)

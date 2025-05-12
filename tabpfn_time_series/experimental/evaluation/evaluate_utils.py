@@ -21,6 +21,8 @@ from .data import Dataset
 from .dataset_definition import (
     MED_LONG_DATASETS,
     DATASET_PROPERTIES_MAP,
+    DATASETS_WITH_COVARIATES,
+    DATASET_W_COVARIATES_PROPERTIES_MAP,
 )
 
 
@@ -101,10 +103,66 @@ def construct_evaluation_data(
             "freq": ds_freq,
             "term": term,
             "season_length": season_length,
+            "domain": DATASET_PROPERTIES_MAP[ds_key]["domain"],
+            "num_variates": DATASET_PROPERTIES_MAP[ds_key]["num_variates"],
         }
         sub_datasets.append((dataset, dataset_metadata))
 
     return sub_datasets
+
+
+def construct_evaluation_data_with_covariates(
+    dataset_name: str,
+    dataset_storage_path: Path,
+    terms: List[str] = ["short", "medium", "long"],
+) -> Tuple[Dataset, dict]:
+    if dataset_name not in DATASETS_WITH_COVARIATES:
+        raise ValueError(
+            f"Dataset {dataset_name} not found in DATASETS_WITH_COVARIATES"
+        )
+
+    ds_freq = DATASET_W_COVARIATES_PROPERTIES_MAP[dataset_name]["frequency"]
+
+    term_datasets = []
+    for term in terms:
+        dataset = Dataset(
+            name=dataset_name,
+            term=term,
+            to_univariate=False,
+            storage_path=dataset_storage_path,
+        )
+
+        if dataset.target_dim != 1:
+            raise NotImplementedError(
+                f"Dataset {dataset_name} has {dataset.target_dim} target variables,"
+                "but only 1 is supported"
+            )
+
+        # Sanity check
+        if (
+            dataset.past_feat_dynamic_real_dim
+            != DATASET_W_COVARIATES_PROPERTIES_MAP[dataset_name]["num_covariates"]
+        ):
+            raise ValueError(
+                f"Dataset {dataset_name} has {dataset.past_feat_dynamic_real_dim} past_feat_dynamic_real_dim,"
+                f"but {DATASET_W_COVARIATES_PROPERTIES_MAP[dataset_name]['num_covariates']} are expected"
+            )
+        season_length = get_seasonality(dataset.freq)
+
+        dataset_metadata = {
+            "full_name": f"{dataset_name}/{ds_freq}/{term}",
+            "key": dataset_name,
+            "freq": ds_freq,
+            "term": term,
+            "season_length": season_length,
+            "domain": DATASET_W_COVARIATES_PROPERTIES_MAP[dataset_name]["domain"],
+            "num_variates": DATASET_W_COVARIATES_PROPERTIES_MAP[dataset_name][
+                "num_variates"
+            ],
+        }
+        term_datasets.append((dataset, dataset_metadata))
+
+    return term_datasets
 
 
 def create_csv_file(csv_file_path):
@@ -156,8 +214,8 @@ def append_results_to_csv(
                 res["NRMSE[mean]"][0],
                 res["ND[0.5]"][0],
                 res["mean_weighted_sum_quantile_loss"][0],
-                DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
-                DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
+                dataset_metadata["domain"],
+                dataset_metadata["num_variates"],
             ]
         )
 
@@ -172,19 +230,19 @@ def log_results_to_wandb(
     wandb_log_data = {
         "model": model_name,
         "dataset": dataset_metadata["full_name"],
-        "MSE_mean": res["MSE[mean]"][0],
-        "MSE_0.5": res["MSE[0.5]"][0],
-        "MAE_0.5": res["MAE[0.5]"][0],
-        "MASE_0.5": res["MASE[0.5]"][0],
-        "MAPE_0.5": res["MAPE[0.5]"][0],
-        "sMAPE_0.5": res["sMAPE[0.5]"][0],
-        "MSIS": res["MSIS"][0],
-        "RMSE_mean": res["RMSE[mean]"][0],
-        "NRMSE_mean": res["NRMSE[mean]"][0],
-        "ND_0.5": res["ND[0.5]"][0],
-        "wSQL_mean": res["mean_weighted_sum_quantile_loss"][0],
-        "domain": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
-        "num_variates": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
+        "MSE_mean": res["MSE[mean]"].iloc[0],
+        "MSE_0.5": res["MSE[0.5]"].iloc[0],
+        "MAE_0.5": res["MAE[0.5]"].iloc[0],
+        "MASE_0.5": res["MASE[0.5]"].iloc[0],
+        "MAPE_0.5": res["MAPE[0.5]"].iloc[0],
+        "sMAPE_0.5": res["sMAPE[0.5]"].iloc[0],
+        "MSIS": res["MSIS"].iloc[0],
+        "RMSE_mean": res["RMSE[mean]"].iloc[0],
+        "NRMSE_mean": res["NRMSE[mean]"].iloc[0],
+        "ND_0.5": res["ND[0.5]"].iloc[0],
+        "wSQL_mean": res["mean_weighted_sum_quantile_loss"].iloc[0],
+        "domain": dataset_metadata["domain"],
+        "num_variates": dataset_metadata["num_variates"],
         "term": dataset_metadata["term"],
     }
     wandb.log(wandb_log_data)

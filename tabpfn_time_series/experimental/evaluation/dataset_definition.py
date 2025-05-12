@@ -9,3 +9,17 @@ ALL_DATASETS = list(set(SHORT_DATASETS + MED_LONG_DATASETS))
 DATASET_PROPERTIES_MAP = json.load(
     open(Path(__file__).parent / "dataset_properties.json")
 )
+
+DATASETS_WITH_COVARIATES = [
+    "covid19_energy",
+    "gfc12_load",
+    "gfc14_load",
+    "gfc17_load",
+    "pdb",
+    "spain",
+    "bull",
+    "cockatoo",
+]
+DATASET_W_COVARIATES_PROPERTIES_MAP = json.load(
+    open(Path(__file__).parent / "dataset_w_covariates_properties.json")
+)

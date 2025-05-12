@@ -45,7 +45,7 @@ class AutoSeasonalFeature(FeatureGenerator):
         detected_periods_and_magnitudes = self.find_seasonal_periods(
             df.target, **self.config
         )
-        logger.info(
+        logger.debug(
             f"Found {len(detected_periods_and_magnitudes)} seasonal periods: {detected_periods_and_magnitudes}"
         )
 
