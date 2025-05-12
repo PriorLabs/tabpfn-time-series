@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+"""
+Script to submit evaluation jobs on SLURM using submitit.
+"""
+
 import os
 import argparse
 import submitit
@@ -8,22 +12,19 @@ from datetime import datetime
 
 from tabpfn_time_series.experimental.evaluation.dataset_definition import ALL_DATASETS
 
-
 load_dotenv()
 
 EVALUATION_SCRIPT_PATH = Path(__file__).parent.parent / "evaluate_pipeline.py"
 
-
 HUGE_DATASETS = [
-    "bitbrains_fast_storage/5T",
-    "bitbrains_fast_storage/H",
     "bitbrains_rnd/5T",
-    "bitbrains_rnd/H",
+    "electricity/15T",
     "LOOP_SEATTLE/5T",
     "LOOP_SEATTLE/H",
-    "LOOP_SEATTLE/D",
-    # Big (not huge)
-    "electricity/15T",
+    # "bitbrains_fast_storage/H",
+    # "bitbrains_fast_storage/5T",
+    # "bitbrains_rnd/H",
+    # "LOOP_SEATTLE/D",
 ]
 
 
@@ -87,9 +88,21 @@ def parse_arguments():
     parser.add_argument(
         "--experiment_tag",
         type=str,
-        help="Tag to distinguish the experiment/study",
+        help="Comma-separated list of tags to distinguish the experiment/study",
         required=True,
     )
+    # parser.add_argument(
+    #     "--mem",
+    #     type=int,
+    #     default=128,
+    #     help="Memory allocation in GB",
+    # )
+    # parser.add_argument(
+    #     "--cpus",
+    #     type=int,
+    #     default=16,
+    #     help="Number of CPUs to request",
+    # )
 
     return parser.parse_args()
 
@@ -139,12 +152,52 @@ def is_valid_frequency(freq):
         return False
 
 
+class EvaluationJob:
+    def __init__(self, dataset, term, args):
+        self.dataset = dataset
+        self.term = term
+        self.args = args
+
+    def __call__(self):
+        import sys
+        import os
+        import subprocess
+
+        # Print some debug information
+        print(f"Job running on node: {os.uname().nodename}")
+        print(f"CUDA devices: {os.environ.get('CUDA_VISIBLE_DEVICES', 'Not set')}")
+
+        # Construct command to run evaluate_pipeline.py
+        cmd = [sys.executable, "-u", str(EVALUATION_SCRIPT_PATH)]
+
+        # Add all required arguments
+        cmd.extend(
+            [
+                "--config_path",
+                self.args.config_path,
+                "--dataset",
+                self.dataset,
+                "--dataset_storage_path",
+                os.getenv("DATASET_STORAGE_PATH"),
+                "--output_dir",
+                f"slurm/{self.args.job_name}",
+                "--enable_wandb",
+                "--wandb_tags",
+                self.args.experiment_tag,
+                "--terms",
+                self.term,
+            ]
+        )
+
+        # Execute the command
+        print(f"Running command: {' '.join(cmd)}")
+        process = subprocess.run(cmd, check=True)
+        return process.returncode
+
+
 def main():
     args = parse_arguments()
-    job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    memory = 128
-    num_cpus = 16
-    num_gpus = args.ngpus
+    args.job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     datasets = get_datasets_to_evaluate(args)
     terms = args.terms.split(",")
@@ -155,7 +208,7 @@ def main():
     # Report the benchmark parameters
     print("\nRunning evaluation with the following parameters:")
     print(f" . CLUSTER_PARTITION: {args.cluster_partition}")
-    print(f" . # GPUS: {num_gpus}")
+    print(f" . # GPUS: {args.ngpus}")
     print(f" . # DATASETS: {num_datasets}")
     print(f" . DATASETS: {datasets}")
     print(f" . TERMS: {terms}")
@@ -165,52 +218,40 @@ def main():
         print("Dry run, not submitting any jobs")
         return
 
-    # Setup submitit executor
-    executor = submitit.AutoExecutor(folder=f"slurm_logs/{job_name}")
+    # Create logs directory if it doesn't exist
+    log_dir = Path("slurm_logs") / args.job_name
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize the executor
+    executor = submitit.AutoExecutor(folder=str(log_dir))
+
+    # Set slurm parameters
     executor.update_parameters(
-        name=job_name,
+        name=args.job_name,
         nodes=1,
         tasks_per_node=1,
-        cpus_per_task=num_cpus,
-        mem_gb=memory,
-        slurm_gres=f"gpu:{num_gpus}",
+        # cpus_per_task=args.cpus,
+        # slurm_mem=f"{args.mem}GB",
+        slurm_gres=f"gpu:{args.ngpus}",
         slurm_partition=args.cluster_partition,
         slurm_array_parallelism=total_jobs,
-        slurm_setup=[f"source {os.getenv('ENVIRONMENT_BASHRC_PATH')}"],
-        # timeout_min=1439,  # 23 hours and 59 minutes
-        # slurm_additional_parameters={"exclude": os.getenv("EXCLUDE_CLUSTER_NODES")},
+        timeout_min=48 * 60,  # 48 hours in minutes
+        slurm_additional_parameters={"comment": "TabPFN Time Series Evaluation"},
     )
 
     jobs = []
-    with executor.batch():
-        for dataset in datasets:
-            for term in terms:
-                cmd = ["python", str(EVALUATION_SCRIPT_PATH)]
-                script_args = [
-                    "--config_path",
-                    args.config_path,
-                    "--dataset",
-                    dataset,
-                    "--dataset_storage_path",
-                    os.getenv("DATASET_STORAGE_PATH"),
-                    "--output_dir",
-                    f"slurm/{job_name}",
-                    "--enable_wandb",
-                    "--wandb_tags",
-                    f"{args.experiment_tag}",
-                    "--terms",
-                    term,
-                ]
+    for dataset in datasets:
+        for term in terms:
+            # Create the job
+            job = EvaluationJob(dataset, term, args)
 
-                # if not args.cast_multivariate_to_univariate:
-                #     script_args.append("--no_cast_multivariate_to_univariate")
-
-                job = executor.submit(
-                    submitit.helpers.CommandFunction(cmd), *script_args
-                )
-                jobs.append(job)
+            # Submit the job
+            submitted_job = executor.submit(job)
+            jobs.append(submitted_job)
+            # print(f"Submitted job for dataset={dataset}, term={term}, job_id={submitted_job.job_id}")
 
     print(f"Submitted {len(jobs)} jobs")
+    print(f"Logs will be saved to: {log_dir}")
 
 
 if __name__ == "__main__":
