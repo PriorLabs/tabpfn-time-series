@@ -189,10 +189,14 @@ class LocalTabPFN(TabPFNWorker):
     def _get_tabpfn_engine(self):
         from tabpfn import TabPFNRegressor
 
-        if "model_path" in self.config["tabpfn_internal"]:
-            config = self.config["tabpfn_internal"].copy()
+        # Create a copy of the config to avoid modifying the original
+        config = self.config["tabpfn_internal"].copy()
+
+        # Handle model path if specified
+        if "model_path" in config:
             config["model_path"] = self._parse_model_path(config["model_path"])
 
+        # Initialize the TabPFNRegressor with fixed random state for reproducibility
         return TabPFNRegressor(**config, random_state=0)
 
     def _parse_model_path(self, model_name: str) -> str:

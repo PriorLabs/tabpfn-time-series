@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
 from gluonts.itertools import batcher
+from gluonts.dataset.field_names import FieldName
 from autogluon.timeseries import TimeSeriesDataFrame
 from torch.cuda import is_available as torch_cuda_is_available
 
@@ -35,6 +36,11 @@ FEATURE_MAP = {
     "PeriodicSinCosineFeature": PeriodicSinCosineFeature,
 }
 
+COVARIATE_FIELD_TYPES = {
+    FieldName.PAST_FEAT_DYNAMIC_REAL: float,
+    FieldName.PAST_FEAT_DYNAMIC_CAT: str,
+}
+
 
 class TabPFNTSPipeline:
     FALLBACK_FEATURES = [
@@ -56,10 +62,11 @@ class TabPFNTSPipeline:
             tabpfn_mode=TabPFNMode.LOCAL
             if torch_cuda_is_available()
             else TabPFNMode.CLIENT,
-            **config.predictor_config,
+            config=config.predictor_config,
         )
         self.context_length = config.context_length
         self.slice_before_featurization = config.slice_before_featurization
+        self.use_covariates = config.use_covariates
         self.debug = debug
 
         # Parse feature names from config
@@ -115,12 +122,50 @@ class TabPFNTSPipeline:
         return forecasts
 
     @staticmethod
-    def convert_to_timeseries_dataframe(test_data_input):
+    def _process_covariates(item, timestamp):
+        """
+        Process covariates from input item and return a DataFrame with all features.
+
+        Args:
+            item: Dictionary containing time series data and covariates
+            timestamp: Timestamp index for the data
+
+        Returns:
+            pd.DataFrame: DataFrame containing all covariate features
+        """
+        covariate_dfs = []
+
+        for key, dtype in COVARIATE_FIELD_TYPES.items():
+            if key in item:
+                # Get covariate data
+                covariate_data = item[key]
+
+                # Create a DataFrame with all features of this type
+                feature_df = pd.DataFrame(
+                    {
+                        f"{key}_{j}": covariate_data[j]
+                        for j in range(covariate_data.shape[0])
+                    },
+                    index=timestamp,
+                )
+
+                # Convert types if needed
+                feature_df = feature_df.astype(dtype)
+                covariate_dfs.append(feature_df)
+
+        # If we have any covariates, combine them
+        if covariate_dfs:
+            return pd.concat(covariate_dfs, axis=1)
+        return pd.DataFrame(index=timestamp)
+
+    @staticmethod
+    def convert_to_timeseries_dataframe(test_data_input, use_covariates: bool = False):
         """
         Convert test_data_input to TimeSeriesDataFrame.
 
         Args:
             test_data_input: List of dictionaries containing time series data
+            use_covariates: Whether to include covariates in the output
 
         Returns:
             TimeSeriesDataFrame: Converted data
@@ -138,14 +183,25 @@ class TabPFNTSPipeline:
                 freq=item["freq"],
             )
 
-            # Create DataFrame directly with final structure
-            time_series[i] = pd.DataFrame(
-                {
-                    "target": target,
-                },
-                index=pd.MultiIndex.from_product(
-                    [[i], timestamp], names=["item_id", "timestamp"]
-                ),
+            # Create DataFrame with target
+            df = pd.DataFrame({"target": target}, index=timestamp)
+
+            # Add covariates if needed
+            if use_covariates:
+                covariate_df = TabPFNTSPipeline._process_covariates(item, timestamp)
+                if not covariate_df.empty:
+                    df = pd.concat([df, covariate_df], axis=1)
+                else:
+                    logger.warning(
+                        "Pipeline configured to use covariates,"
+                        f"but no covariates found in input data for item {i}"
+                    )
+
+            # Create MultiIndex DataFrame
+            time_series[i] = df.set_index(
+                pd.MultiIndex.from_product(
+                    [[i], df.index], names=["item_id", "timestamp"]
+                )
             )
 
         # Concat pre-allocated list
@@ -228,7 +284,9 @@ class TabPFNTSPipeline:
         - Generate test data and apply feature transformations
         """
         # Convert input to TimeSeriesDataFrame
-        train_tsdf = self.convert_to_timeseries_dataframe(test_data_input)
+        train_tsdf = self.convert_to_timeseries_dataframe(
+            test_data_input, self.use_covariates
+        )
 
         # Handle NaN values
         train_tsdf = self.handle_nan_values(train_tsdf)

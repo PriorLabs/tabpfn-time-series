@@ -7,9 +7,13 @@ from gluonts.model import evaluate_model
 
 from tabpfn_time_series.experimental.pipeline import PipelineConfig
 
-from tabpfn_time_series.experimental.evaluation.dataset_definition import ALL_DATASETS
+from tabpfn_time_series.experimental.evaluation.dataset_definition import (
+    ALL_DATASETS,
+    DATASETS_WITH_COVARIATES,
+)
 from tabpfn_time_series.experimental.evaluation.evaluate_utils import (
     construct_evaluation_data,
+    construct_evaluation_data_with_covariates,
     create_csv_file,
     append_results_to_csv,
     log_results_to_wandb,
@@ -36,7 +40,10 @@ logger = logging.getLogger(__name__)
 
 def main(args):
     # Assert dataset exists
-    if args.dataset not in ALL_DATASETS:
+    DATASET_COLLECTION = (
+        DATASETS_WITH_COVARIATES if args.evaluate_covariates else ALL_DATASETS
+    )
+    if args.dataset not in DATASET_COLLECTION:
         raise ValueError(f"Invalid dataset: {args.dataset}")
     logger.info(f"Evaluating dataset {args.dataset}")
 
@@ -53,9 +60,16 @@ def main(args):
 
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
-    sub_datasets = construct_evaluation_data(
-        args.dataset, args.dataset_storage_path, args.terms
-    )
+    if args.evaluate_covariates:
+        sub_datasets = construct_evaluation_data_with_covariates(
+            args.dataset, args.dataset_storage_path, args.terms
+        )
+        if not isinstance(sub_datasets, list):
+            sub_datasets = [sub_datasets]
+    else:
+        sub_datasets = construct_evaluation_data(
+            args.dataset, args.dataset_storage_path, args.terms
+        )
 
     # Create output directory
     output_dir = args.output_dir / pipeline_config.predictor_name / args.dataset
@@ -151,7 +165,14 @@ if __name__ == "__main__":
         help="Comma-separated list of terms to evaluate",
     )
     parser.add_argument(
-        "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
+        "--dataset_storage_path",
+        type=str,
+        default=str(Path(__file__).parent / "data"),
+    )
+    parser.add_argument(
+        "--evaluate_covariates",
+        action="store_true",
+        help="Whether to evaluate covariates",
     )
     parser.add_argument("--debug", action="store_true")
 

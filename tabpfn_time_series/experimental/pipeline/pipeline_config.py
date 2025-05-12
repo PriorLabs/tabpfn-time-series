@@ -21,7 +21,7 @@ class PipelineConfig:
     slice_before_featurization: bool = True
     pipeline_name: str = "TabPFNTSPipeline"
     additional_pipeline_config: dict = field(default_factory=dict)
-
+    use_covariates: bool = False
     _PREDICTOR_NAME_TO_CLASS: ClassVar[Dict[str, Type]] = {
         "TabPFNTimeSeriesPredictor": TabPFNTimeSeriesPredictor,
         "TabPFNNoisyTranformPredictor": TabPFNNoisyTranformPredictor,

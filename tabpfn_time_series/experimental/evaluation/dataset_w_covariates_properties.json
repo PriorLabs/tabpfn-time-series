@@ -1,0 +1,50 @@
+{
+    "covid19_energy": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 6
+    },
+    "gfc12_load": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 1
+    },
+    "gfc14_load": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 1
+    },
+    "gfc17_load": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 1
+    },
+    "pdb": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 1
+    },
+    "spain": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 1
+    },
+    "bull": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 3
+    },
+    "cockatoo": {
+        "domain": "Energy",
+        "frequency": "H",
+        "num_variates": 1,
+        "num_covariates": 5
+    }
+}
