@@ -54,9 +54,12 @@ pretty_names = {
 
 def construct_evaluation_data(
     dataset_name: str,
-    dataset_storage_path: Path,
+    dataset_storage_path: Path | str,
     terms: List[str] = ["short", "medium", "long"],
 ) -> List[Tuple[Dataset, dict]]:
+    if isinstance(dataset_storage_path, str):
+        dataset_storage_path = Path(dataset_storage_path)
+
     sub_datasets = []
 
     # Construct evaluation data

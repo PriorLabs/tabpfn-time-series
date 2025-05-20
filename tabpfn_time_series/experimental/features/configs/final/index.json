@@ -1,0 +1,13 @@
+{
+    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_config": {
+        "tabpfn_internal": {
+            "model_path": "2noar4o2"
+        },
+        "tabpfn_output_selection": "median"
+    },
+    "features": {
+        "RunningIndexFeature": {}
+    },
+    "context_length": 4096
+}

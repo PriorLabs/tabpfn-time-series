@@ -13,6 +13,8 @@ from datetime import datetime
 from tabpfn_time_series.experimental.evaluation.dataset_definition import (
     ALL_DATASETS,
     DATASETS_WITH_COVARIATES,
+    SHORT_DATASETS,
+    MED_LONG_DATASETS,
 )
 
 load_dotenv()
@@ -21,11 +23,12 @@ EVALUATION_SCRIPT_PATH = Path(__file__).parent.parent / "evaluate_pipeline.py"
 
 HUGE_DATASETS = [
     "bitbrains_rnd/5T",
+    "bitbrains_fast_storage/5T",
     "electricity/15T",
     "LOOP_SEATTLE/5T",
     "LOOP_SEATTLE/H",
+    "temperature_rain_with_missing",
     # "bitbrains_fast_storage/H",
-    # "bitbrains_fast_storage/5T",
     # "bitbrains_rnd/H",
     # "LOOP_SEATTLE/D",
 ]
@@ -115,7 +118,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_datasets_to_evaluate(args):
+def get_datasets_to_evaluate(args, terms):
     # If a single task is specified, check if it is valid
     DATASET_COLLECTION = (
         ALL_DATASETS if not args.evaluate_covariates else DATASETS_WITH_COVARIATES
@@ -151,7 +154,18 @@ def get_datasets_to_evaluate(args):
         ), f"Frequency {args.exclude_freq} not supported. Must be a valid pandas frequency string."
         datasets = [ds for ds in datasets if not ds.endswith(args.exclude_freq)]
 
-    return datasets
+    datasets_and_terms = []
+    for d in datasets:
+        for t in terms:
+            if t is ["short"] and d not in SHORT_DATASETS:
+                continue
+
+            if t in ["medium", "long"] and d not in MED_LONG_DATASETS:
+                continue
+
+            datasets_and_terms.append((d, t))
+
+    return datasets, datasets_and_terms
 
 
 def get_dataset_storage_path(args):
@@ -228,12 +242,11 @@ def main():
     args = parse_arguments()
     args.job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-    datasets = get_datasets_to_evaluate(args)
-    dataset_storage_path = get_dataset_storage_path(args)
     terms = args.terms.split(",")
+    datasets, datasets_and_terms = get_datasets_to_evaluate(args, terms)
+    dataset_storage_path = get_dataset_storage_path(args)
     num_datasets = len(datasets)
-    num_terms = len(terms)
-    total_jobs = num_datasets * num_terms
+    total_jobs = len(datasets_and_terms)
 
     # Report the benchmark parameters
     print("\nRunning evaluation with the following parameters:")
@@ -270,8 +283,9 @@ def main():
     )
 
     jobs = []
-    for dataset in datasets:
-        for term in terms:
+    # Submit all jobs at once using batch context
+    with executor.batch():
+        for dataset, term in datasets_and_terms:
             # Create the job
             job = EvaluationJob(
                 dataset,
@@ -283,7 +297,6 @@ def main():
             # Submit the job
             submitted_job = executor.submit(job)
             jobs.append(submitted_job)
-            # print(f"Submitted job for dataset={dataset}, term={term}, job_id={submitted_job.job_id}")
 
     print(f"Submitted {len(jobs)} jobs")
     print(f"Logs will be saved to: {log_dir}")
