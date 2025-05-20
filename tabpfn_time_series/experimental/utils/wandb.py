@@ -19,7 +19,7 @@ def download_wandb_runs(
     project: str,
     tags: Optional[List[str]] = None,
     max_workers: int = 10,
-    cache_file: str = "wandb_runs_cache.pkl",
+    # cache_file: str = "wandb_runs_cache.pkl",
 ) -> pd.DataFrame:
     """
     Download runs data from Weights & Biases with parallelization and caching.
@@ -36,11 +36,11 @@ def download_wandb_runs(
     """
     # Check if cache exists and load it
     cached_df = pd.DataFrame()
-    try:
-        cached_df = pd.read_pickle(cache_file)
-        print(f"Loaded {len(cached_df)} runs from cache")
-    except (FileNotFoundError, Exception) as e:
-        print(f"Could not load cache: {e}")
+    # try:
+    #     cached_df = pd.read_pickle(cache_file)
+    #     print(f"Loaded {len(cached_df)} runs from cache")
+    # except (FileNotFoundError, Exception) as e:
+    #     print(f"Could not load cache: {e}")
 
     api = wandb.Api()
 
@@ -138,9 +138,9 @@ def download_wandb_runs(
             cached_df = cached_df[~cached_df["path"].isin(new_runs_df["path"])]
         df = pd.concat([cached_df, new_runs_df], ignore_index=True)
 
-    # Update cache if new runs were processed
-    if not new_runs_df.empty:
-        df.to_pickle(cache_file)
-        print(f"Updated cache with {len(new_runs_df)} new runs")
+    # # Update cache if new runs were processed
+    # if not new_runs_df.empty:
+    #     df.to_pickle(cache_file)
+    #     print(f"Updated cache with {len(new_runs_df)} new runs")
 
     return df
