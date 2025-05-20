@@ -202,21 +202,22 @@ def append_results_to_csv(
 ):
     with open(csv_file_path, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
+        res = res.iloc[0]
         writer.writerow(
             [
                 dataset_metadata["full_name"],
                 model_name,
-                res["MSE[mean]"][0],
-                res["MSE[0.5]"][0],
-                res["MAE[0.5]"][0],
-                res["MASE[0.5]"][0],
-                res["MAPE[0.5]"][0],
-                res["sMAPE[0.5]"][0],
-                res["MSIS"][0],
-                res["RMSE[mean]"][0],
-                res["NRMSE[mean]"][0],
-                res["ND[0.5]"][0],
-                res["mean_weighted_sum_quantile_loss"][0],
+                res["MSE[mean]"],
+                res["MSE[0.5]"],
+                res["MAE[0.5]"],
+                res["MASE[0.5]"],
+                res["MAPE[0.5]"],
+                res["sMAPE[0.5]"],
+                res["MSIS"],
+                res["RMSE[mean]"],
+                res["NRMSE[mean]"],
+                res["ND[0.5]"],
+                res["mean_weighted_sum_quantile_loss"],
                 dataset_metadata["domain"],
                 dataset_metadata["num_variates"],
             ]
