@@ -5,3 +5,4 @@ autogluon.timeseries>=1.2
 tabpfn-client>=0.1.7
 tabpfn>=2.0.6
 datasets>=3.3.2
+dotenv>=0.9.9
