@@ -11,18 +11,23 @@ from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
     FeatureTransformer,
-    DefaultFeatures,
     TabPFNMode,
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
+)
+from tabpfn_time_series.features import (
+    RunningIndexFeature,
+    CalendarFeature,
+    AutoSeasonalFeature,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class TabPFNTSPredictor:
-    SELECTED_FEATURES = [
-        DefaultFeatures.add_running_index,
-        DefaultFeatures.add_calendar_features,
+    DEFAULT_FEATURES = [
+        RunningIndexFeature(),
+        CalendarFeature(),
+        AutoSeasonalFeature(),
     ]
 
     def __init__(
@@ -30,7 +35,7 @@ class TabPFNTSPredictor:
         ds_prediction_length: int,
         ds_freq: str,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
-        context_length: int = -1,
+        context_length: int = 4096,
         debug: bool = False,
     ):
         self.ds_prediction_length = ds_prediction_length
@@ -40,6 +45,8 @@ class TabPFNTSPredictor:
         )
         self.context_length = context_length
         self.debug = debug
+
+        self.feature_transformer = FeatureTransformer(self.DEFAULT_FEATURES)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")
@@ -82,62 +89,18 @@ class TabPFNTSPredictor:
         """
         Preprocess includes:
         - Turn the test_data_input into a TimeSeriesDataFrame
-        - Drop rows with NaN values in "target" column
-            - If time series has all NaN or only 1 valid value, fill with 0s
-            - Else, drop the NaN values within the time series
+        - Handle NaN values in "target" column
         - If context_length is set, slice the train_tsdf to the last context_length timesteps
+        - Generate test data and apply feature transformations
         """
+        # Convert input to TimeSeriesDataFrame
+        train_tsdf = self.convert_to_timeseries_dataframe(test_data_input)
 
-        # Pre-allocate list with known size
-        time_series = [None] * len(test_data_input)
-        ts_with_0_or_1_valid_value = []
-        ts_with_nan = []
+        # Handle NaN values
+        train_tsdf = self.handle_nan_values(train_tsdf)
 
-        for i, item in enumerate(test_data_input):
-            target = item["target"]
-
-            # If there are 0 or 1 valid values, consider this an "all NaN" time series
-            # and replace NaN with 0
-            valid_value_count = np.count_nonzero(~np.isnan(target))
-            if valid_value_count <= 1:
-                ts_with_0_or_1_valid_value.append(i)
-                target = np.where(np.isnan(target), 0, target)
-
-            # Else (i.e. there are more than 1 valid values),
-            # drop NaN values within the time series
-            elif np.isnan(target).any():
-                ts_with_nan.append(i)
-                target = target[~np.isnan(target)]
-
-            # Create timestamp index once
-            timestamp = pd.date_range(
-                start=item["start"].to_timestamp(),
-                periods=len(target),
-                freq=item["freq"],
-            )
-
-            # Create DataFrame directly with final structure
-            time_series[i] = pd.DataFrame(
-                {
-                    "target": target,
-                },
-                index=pd.MultiIndex.from_product(
-                    [[i], timestamp], names=["item_id", "timestamp"]
-                ),
-            )
-
-        if ts_with_0_or_1_valid_value:
-            logger.warning(
-                f"Found time-series with 0 or 1 valid values, item_ids: {ts_with_0_or_1_valid_value}"
-            )
-
-        if ts_with_nan:
-            logger.warning(
-                f"Found time-series with NaN targets, item_ids: {ts_with_nan}"
-            )
-
-        # Concat pre-allocated list
-        train_tsdf = TimeSeriesDataFrame(pd.concat(time_series))
+        # Assert no more NaN in train_tsdf target
+        assert not train_tsdf.target.isnull().any()
 
         # Slice if needed
         if self.context_length > 0:
@@ -150,8 +113,112 @@ class TabPFNTSPredictor:
         test_tsdf = generate_test_X(
             train_tsdf, prediction_length=self.ds_prediction_length
         )
-        train_tsdf, test_tsdf = FeatureTransformer.add_features(
-            train_tsdf, test_tsdf, self.SELECTED_FEATURES
+        train_tsdf, test_tsdf = self.feature_transformer.transform(
+            train_tsdf, test_tsdf
         )
 
         return train_tsdf, test_tsdf
+
+    @staticmethod
+    def handle_nan_values(tsdf: TimeSeriesDataFrame) -> TimeSeriesDataFrame:
+        """
+        Handle NaN values in the TimeSeriesDataFrame:
+        - If time series has 0 or 1 valid value, fill with 0s
+        - Else, drop the NaN values within the time series
+
+        Args:
+            tsdf: TimeSeriesDataFrame containing time series data
+
+        Returns:
+            TimeSeriesDataFrame: Processed data with NaN values handled
+        """
+        processed_series = []
+        ts_with_0_or_1_valid_value = []
+        ts_with_nan = []
+
+        # Process each time series individually
+        for item_id, item_data in tsdf.groupby(level="item_id"):
+            target = item_data.target.values
+            timestamps = item_data.index.get_level_values("timestamp")
+
+            # If there are 0 or 1 valid values, fill NaNs with 0
+            valid_value_count = np.count_nonzero(~np.isnan(target))
+            if valid_value_count <= 1:
+                ts_with_0_or_1_valid_value.append(item_id)
+                target = np.where(np.isnan(target), 0, target)
+                processed_df = pd.DataFrame(
+                    {"target": target},
+                    index=pd.MultiIndex.from_product(
+                        [[item_id], timestamps], names=["item_id", "timestamp"]
+                    ),
+                )
+                processed_series.append(processed_df)
+
+            # Else drop NaN values
+            elif np.isnan(target).any():
+                ts_with_nan.append(item_id)
+                valid_indices = ~np.isnan(target)
+                processed_df = pd.DataFrame(
+                    {"target": target[valid_indices]},
+                    index=pd.MultiIndex.from_product(
+                        [[item_id], timestamps[valid_indices]],
+                        names=["item_id", "timestamp"],
+                    ),
+                )
+                processed_series.append(processed_df)
+
+            # No NaNs, keep as is
+            else:
+                processed_series.append(item_data)
+
+        # Log warnings about NaN handling
+        if ts_with_0_or_1_valid_value:
+            logger.warning(
+                f"Found time-series with 0 or 1 valid values, item_ids: {ts_with_0_or_1_valid_value}"
+            )
+
+        if ts_with_nan:
+            logger.warning(
+                f"Found time-series with NaN targets, item_ids: {ts_with_nan}"
+            )
+
+        # Combine processed series
+        return TimeSeriesDataFrame(pd.concat(processed_series))
+
+    @staticmethod
+    def convert_to_timeseries_dataframe(test_data_input, use_covariates: bool = False):
+        """
+        Convert test_data_input to TimeSeriesDataFrame.
+
+        Args:
+            test_data_input: List of dictionaries containing time series data
+            use_covariates: Whether to include covariates in the output
+
+        Returns:
+            TimeSeriesDataFrame: Converted data
+        """
+        # Pre-allocate list with known size
+        time_series = [None] * len(test_data_input)
+
+        for i, item in enumerate(test_data_input):
+            target = item["target"]
+
+            # Create timestamp index
+            timestamp = pd.date_range(
+                start=item["start"].to_timestamp(),
+                periods=len(target),
+                freq=item["freq"],
+            )
+
+            # Create DataFrame with target
+            df = pd.DataFrame({"target": target}, index=timestamp)
+
+            # Create MultiIndex DataFrame
+            time_series[i] = df.set_index(
+                pd.MultiIndex.from_product(
+                    [[i], df.index], names=["item_id", "timestamp"]
+                )
+            )
+
+        # Concat pre-allocated list
+        return TimeSeriesDataFrame(pd.concat(time_series))
