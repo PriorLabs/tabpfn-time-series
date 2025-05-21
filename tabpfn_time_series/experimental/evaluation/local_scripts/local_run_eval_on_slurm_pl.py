@@ -72,7 +72,7 @@ def parse_arguments():
     parser.add_argument(
         "--ngpus",
         type=int,
-        default=1,
+        required=True,
         help="Number of GPUs to use",
     )
     parser.add_argument(
@@ -157,7 +157,7 @@ def get_datasets_to_evaluate(args, terms):
     datasets_and_terms = []
     for d in datasets:
         for t in terms:
-            if t is ["short"] and d not in SHORT_DATASETS:
+            if t == ["short"] and d not in SHORT_DATASETS:
                 continue
 
             if t in ["medium", "long"] and d not in MED_LONG_DATASETS:
