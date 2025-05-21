@@ -9,7 +9,11 @@ from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
     TabPFNMode,
     FeatureTransformer,
-    DefaultFeatures,
+)
+from tabpfn_time_series.features import (
+    RunningIndexFeature,
+    CalendarFeature,
+    AutoSeasonalFeature,
 )
 from tabpfn_time_series.data_preparation import generate_test_X
 
@@ -52,16 +56,20 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
             timestamp_column="timestamp",
         )
 
-        # Generate test data and features
+        # Generate test data
         test_tsdf = generate_test_X(train_tsdf, prediction_length=5)
-        train_tsdf, test_tsdf = FeatureTransformer.add_features(
-            train_tsdf,
-            test_tsdf,
+
+        # Create feature transformer with multiple feature generators
+        feature_transformer = FeatureTransformer(
             [
-                DefaultFeatures.add_running_index,
-                DefaultFeatures.add_calendar_features,
-            ],
+                RunningIndexFeature(),
+                CalendarFeature(),
+                AutoSeasonalFeature(),
+            ]
         )
+
+        # Apply feature transformation
+        train_tsdf, test_tsdf = feature_transformer.transform(train_tsdf, test_tsdf)
 
         return train_tsdf, test_tsdf
 
