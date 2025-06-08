@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 import csv
 import logging
 import argparse
-import wandb
 from pathlib import Path
 from typing import Tuple, List
 
@@ -33,7 +32,10 @@ from gift_eval.dataset_definition import (
     ALL_DATASETS,
     DATASET_PROPERTIES_MAP,
 )
-from gift_eval.tabpfn_ts_wrapper import TabPFNTSPredictor, TabPFNMode
+from gift_eval.tabpfn_ts_wrapper import TabPFNTSPredictor
+
+# Global constants
+MODEL_NAME = "tabpfn-ts"
 
 # Instantiate the metrics
 metrics = [
@@ -169,51 +171,70 @@ def append_results_to_csv(
     model_name,
 ):
     with open(csv_file_path, "a", newline="") as csvfile:
+        res = res.iloc[0]
         writer = csv.writer(csvfile)
         writer.writerow(
             [
                 dataset_metadata["full_name"],
                 model_name,
-                res["MSE[mean]"][0],
-                res["MSE[0.5]"][0],
-                res["MAE[0.5]"][0],
-                res["MASE[0.5]"][0],
-                res["MAPE[0.5]"][0],
-                res["sMAPE[0.5]"][0],
-                res["MSIS"][0],
-                res["RMSE[mean]"][0],
-                res["NRMSE[mean]"][0],
-                res["ND[0.5]"][0],
-                res["mean_weighted_sum_quantile_loss"][0],
+                res["MSE[mean]"],
+                res["MSE[0.5]"],
+                res["MAE[0.5]"],
+                res["MASE[0.5]"],
+                res["MAPE[0.5]"],
+                res["sMAPE[0.5]"],
+                res["MSIS"],
+                res["RMSE[mean]"],
+                res["NRMSE[mean]"],
+                res["ND[0.5]"],
+                res["mean_weighted_sum_quantile_loss"],
                 DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
                 DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
             ]
         )
 
-    print(f"Results for {dataset_metadata['key']} have been written to {csv_file_path}")
+    logger.info(
+        f"Results for {dataset_metadata['full_name']} have been written to {csv_file_path}"
+    )
 
 
-def log_results_to_wandb(
-    res,
-    dataset_metadata,
-):
-    wandb_log_data = {
-        "MSE_mean": res["MSE[mean]"][0],
-        "MSE_0.5": res["MSE[0.5]"][0],
-        "MAE_0.5": res["MAE[0.5]"][0],
-        "MASE_0.5": res["MASE[0.5]"][0],
-        "MAPE_0.5": res["MAPE[0.5]"][0],
-        "sMAPE_0.5": res["sMAPE[0.5]"][0],
-        "MSIS": res["MSIS"][0],
-        "RMSE_mean": res["RMSE[mean]"][0],
-        "NRMSE_mean": res["NRMSE[mean]"][0],
-        "ND_0.5": res["ND[0.5]"][0],
-        "mean_weighted_sum_quantile_loss": res["mean_weighted_sum_quantile_loss"][0],
-        "domain": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["domain"],
-        "num_variates": DATASET_PROPERTIES_MAP[dataset_metadata["key"]]["num_variates"],
-        "term": dataset_metadata["term"],
-    }
-    wandb.log(wandb_log_data)
+def evaluate_dataset(
+    sub_dataset: Dataset,
+    dataset_metadata: dict,
+    output_csv_path: Path,
+) -> None:
+    """Evaluate a single dataset and log results."""
+    logger.info(f"Evaluating dataset {sub_dataset.name}")
+    logger.info(f"Dataset size: {len(sub_dataset.test_data)}")
+    logger.info(f"Dataset freq: {sub_dataset.freq}")
+    logger.info(f"Dataset term: {dataset_metadata['term']}")
+    logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")
+    logger.info(f"Dataset target dim: {sub_dataset.target_dim}")
+
+    # Initialize predictor
+    tabpfn_predictor = TabPFNTSPredictor(
+        ds_prediction_length=sub_dataset.prediction_length,
+        ds_freq=sub_dataset.freq,
+    )
+
+    # Evaluate model
+    res = evaluate_model(
+        tabpfn_predictor,
+        test_data=sub_dataset.test_data,
+        metrics=metrics,
+        axis=None,
+        mask_invalid_label=True,
+        allow_nan_forecast=False,
+        seasonality=dataset_metadata["season_length"],
+    )
+
+    # Write results to csv
+    append_results_to_csv(
+        res=res,
+        csv_file_path=output_csv_path,
+        dataset_metadata=dataset_metadata,
+        model_name=MODEL_NAME,
+    )
 
 
 def main(args):
@@ -227,15 +248,7 @@ def main(args):
             f"Dataset storage path {args.dataset_storage_path} does not exist"
         )
 
-    # Initialize wandb
-    wandb.init(
-        project=args.wandb_project,
-        name=f"{args.model_name}/{args.dataset}",
-        config=vars(args),
-        tags=[args.model_name] + args.wandb_tags.split(",") if args.wandb_tags else [],
-    )
-
-    output_dir = args.output_dir / args.model_name / args.dataset
+    output_dir = args.output_dir / MODEL_NAME / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     output_csv_path = output_dir / "results.csv"
 
@@ -248,57 +261,30 @@ def main(args):
         args.dataset, args.dataset_storage_path, args.terms
     )
 
-    # Evaluate model
+    # Evaluate each sub-dataset
     for i, (sub_dataset, dataset_metadata) in enumerate(sub_datasets):
         logger.info(
             f"Evaluating {i + 1}/{len(sub_datasets)} dataset {sub_dataset.name}"
         )
-        logger.info(f"Dataset size: {len(sub_dataset.test_data)}")
-        logger.info(f"Dataset freq: {sub_dataset.freq}")
-        logger.info(f"Dataset term: {dataset_metadata['term']}")
-        logger.info(f"Dataset prediction length: {sub_dataset.prediction_length}")
-        logger.info(f"Dataset target dim: {sub_dataset.target_dim}")
 
-        tabpfn_predictor = TabPFNTSPredictor(
-            ds_prediction_length=sub_dataset.prediction_length,
-            ds_freq=sub_dataset.freq,
-            # tabpfn_mode=TabPFNMode.LOCAL,
-            tabpfn_mode=TabPFNMode.CLIENT,
-            context_length=4096,
-            debug=args.debug,
-        )
-
-        res = evaluate_model(
-            tabpfn_predictor,
-            test_data=sub_dataset.test_data,
-            metrics=metrics,
-            axis=None,
-            mask_invalid_label=True,
-            allow_nan_forecast=False,
-            seasonality=dataset_metadata["season_length"],
-        )
-
-        # Log results to wandb
-        log_results_to_wandb(
-            res=res,
-            dataset_metadata=dataset_metadata,
-        )
-
-        # Write results to csv
-        append_results_to_csv(
-            res=res,
-            csv_file_path=output_csv_path,
-            dataset_metadata=dataset_metadata,
-            model_name=args.model_name,
-        )
-
-    # Finish wandb run
-    wandb.finish()
+        try:
+            evaluate_dataset(
+                sub_dataset=sub_dataset,
+                dataset_metadata=dataset_metadata,
+                output_csv_path=output_csv_path,
+            )
+        except Exception as e:
+            logger.error(f"Failed to evaluate {sub_dataset.name}: {str(e)}")
+            if args.continue_on_error:
+                logger.info("Continuing with next dataset...")
+                continue
+            else:
+                raise
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="tabpfn-ts-paper")
+    parser.add_argument("--model_name", type=str, default="tabpfn-ts")
     parser.add_argument("--dataset", type=str, required=True)
     parser.add_argument(
         "--output_dir", type=str, default=str(Path(__file__).parent / "results")
@@ -312,24 +298,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_storage_path", type=str, default=str(Path(__file__).parent / "data")
     )
-    parser.add_argument("--debug", action="store_true")
-
-    # Wandb settings
-    parser.add_argument("--wandb_project", type=str, default="tabpfn-ts-experiments")
     parser.add_argument(
-        "--wandb_tags", type=str, default=""
-    )  # model_name will be added later anyway
+        "--continue_on_error",
+        action="store_true",
+        help="Continue evaluation if one dataset fails",
+    )
 
     args = parser.parse_args()
     args.dataset_storage_path = Path(args.dataset_storage_path)
     args.output_dir = Path(args.output_dir)
     args.terms = args.terms.split(",")
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-        logger.debug("Debug mode enabled")
-    else:
-        logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     logger.info(f"Command Line Arguments: {vars(args)}")
 
