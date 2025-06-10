@@ -1,7 +1,6 @@
 # for development
 jupyter
 wandb>=0.19.8
-dotenv>=0.9.9
 submitit>=1.5.2
 ruff
 pre-commit
