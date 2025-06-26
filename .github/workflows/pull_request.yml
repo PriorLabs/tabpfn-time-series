@@ -31,20 +31,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-          
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          version: "0.7.15"
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
+          
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
       - name: Install the project
-        run: |
-          uv sync --locked --all-extras --dev
+        run: uv sync --locked --all-extras --dev
 
       - name: Run Tests
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
-        run: |
-          uv run pytest tests
+        run: uv run pytest tests
