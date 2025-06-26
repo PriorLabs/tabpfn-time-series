@@ -6,19 +6,21 @@ on:
       - dev
 
 jobs:
-  check_python_linting:
+  check_python_linting_formatting:
     name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: chartboost/ruff-action@v1
+      - name: Ruff Linting
+        uses: astral-sh/ruff-action@v3
         with:
           src: "./"
-          version: 0.3.3
-      - uses: chartboost/ruff-action@v1
+          version: "0.12.0"
+      - name: Ruff Formatting
+        uses: astral-sh/ruff-action@v3
         with:
           src: "./"
-          version: 0.3.3
+          version: "0.12.0"
           args: 'format --check'
 
   test_compatibility:

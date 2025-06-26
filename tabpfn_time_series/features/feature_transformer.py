@@ -31,9 +31,9 @@ class FeatureTransformer:
         train_tsdf = tsdf.iloc[: len(train_tsdf)]
         test_tsdf = tsdf.iloc[len(train_tsdf) :]
 
-        assert (
-            not train_tsdf[target_column].isna().any()
-        ), "All target values in train_tsdf should be non-NaN"
+        assert not train_tsdf[target_column].isna().any(), (
+            "All target values in train_tsdf should be non-NaN"
+        )
         assert test_tsdf[target_column].isna().all()
 
         return train_tsdf, test_tsdf
