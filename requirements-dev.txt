@@ -1,8 +1,0 @@
-# for development
-jupyter
-wandb>=0.19.8
-submitit>=1.5.2
-ruff
-pre-commit
-twine
-build
