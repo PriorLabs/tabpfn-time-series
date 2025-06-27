@@ -100,7 +100,7 @@ class MultivariateToUnivariate(Transformation):
                 yield data_entry
 
 
-class Dataset:
+class GiftEvalDataset:
     def __init__(
         self,
         name: str,

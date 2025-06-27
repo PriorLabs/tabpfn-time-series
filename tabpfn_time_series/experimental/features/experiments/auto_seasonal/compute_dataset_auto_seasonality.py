@@ -10,10 +10,10 @@ from tqdm import tqdm
 import pandas as pd
 from gluonts.itertools import batcher
 
-from tabpfn_time_series.experimental.evaluation.data import Dataset
+from tabpfn_time_series.experimental.evaluation.data import GiftEvalDataset
 from tabpfn_time_series.experimental.evaluation.dataset_definition import ALL_DATASETS
 from tabpfn_time_series.experimental.evaluation.evaluate_utils import (
-    construct_evaluation_data,
+    get_gift_eval_dataset,
 )
 from tabpfn_time_series.experimental.features.auto_features import AutoSeasonalFeature
 from tabpfn_time_series.experimental.pipeline import TimeSeriesEvalPipeline
@@ -39,7 +39,7 @@ def find_seasonality_per_time_series(
 
 
 def find_seasonality_per_dataset(
-    dataset: Dataset,
+    dataset: GiftEvalDataset,
     config: dict,
 ) -> pd.DataFrame:
     """Find seasonality per dataset."""
@@ -82,7 +82,7 @@ def main(args):
         auto_season_config = json.load(f)
 
     # Load dataset
-    dataset, dataset_metadata = construct_evaluation_data(
+    dataset, dataset_metadata = get_gift_eval_dataset(
         dataset_name=args.dataset,
         dataset_storage_path=args.dataset_storage_path,
         terms=args.terms,

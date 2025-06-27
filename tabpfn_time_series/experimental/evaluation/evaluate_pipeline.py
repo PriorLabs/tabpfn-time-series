@@ -12,8 +12,8 @@ from tabpfn_time_series.experimental.evaluation.dataset_definition import (
     DATASETS_WITH_COVARIATES,
 )
 from tabpfn_time_series.experimental.evaluation.evaluate_utils import (
-    construct_evaluation_data,
-    construct_evaluation_data_with_covariates,
+    get_gift_eval_dataset,
+    get_gift_eval_dataset_with_covariates,
     create_csv_file,
     append_results_to_csv,
     log_results_to_wandb,
@@ -61,13 +61,13 @@ def main(args):
     # Construct evaluation data (i.e. sub-datasets) for this dataset
     # (some datasets contain different forecasting terms, e.g. short, medium, long)
     if args.evaluate_covariates:
-        sub_datasets = construct_evaluation_data_with_covariates(
+        sub_datasets = get_gift_eval_dataset_with_covariates(
             args.dataset, args.dataset_storage_path, args.terms
         )
         if not isinstance(sub_datasets, list):
             sub_datasets = [sub_datasets]
     else:
-        sub_datasets = construct_evaluation_data(
+        sub_datasets = get_gift_eval_dataset(
             args.dataset, args.dataset_storage_path, args.terms
         )
 
