@@ -17,7 +17,7 @@ from gluonts.ev.metrics import (
     MeanWeightedSumQuantileLoss,
 )
 
-from .data import Dataset
+from .data import GiftEvalDataset
 from .dataset_definition import (
     MED_LONG_DATASETS,
     DATASET_PROPERTIES_MAP,
@@ -52,11 +52,11 @@ pretty_names = {
 }
 
 
-def construct_evaluation_data(
+def get_gift_eval_dataset(
     dataset_name: str,
     dataset_storage_path: Path | str,
     terms: List[str] = ["short", "medium", "long"],
-) -> List[Tuple[Dataset, dict]]:
+) -> List[Tuple[GiftEvalDataset, dict]]:
     if isinstance(dataset_storage_path, str):
         dataset_storage_path = Path(dataset_storage_path)
 
@@ -83,7 +83,7 @@ def construct_evaluation_data(
         # Initialize the dataset
         to_univariate = (
             False
-            if Dataset(
+            if GiftEvalDataset(
                 name=dataset_name,
                 term=term,
                 to_univariate=False,
@@ -92,7 +92,7 @@ def construct_evaluation_data(
             == 1
             else True
         )
-        dataset = Dataset(
+        dataset = GiftEvalDataset(
             name=dataset_name,
             term=term,
             to_univariate=to_univariate,
@@ -114,11 +114,11 @@ def construct_evaluation_data(
     return sub_datasets
 
 
-def construct_evaluation_data_with_covariates(
+def get_gift_eval_dataset_with_covariates(
     dataset_name: str,
     dataset_storage_path: Path,
     terms: List[str] = ["short", "medium", "long"],
-) -> Tuple[Dataset, dict]:
+) -> Tuple[GiftEvalDataset, dict]:
     if dataset_name not in DATASETS_WITH_COVARIATES:
         raise ValueError(
             f"Dataset {dataset_name} not found in DATASETS_WITH_COVARIATES"
@@ -128,7 +128,7 @@ def construct_evaluation_data_with_covariates(
 
     term_datasets = []
     for term in terms:
-        dataset = Dataset(
+        dataset = GiftEvalDataset(
             name=dataset_name,
             term=term,
             to_univariate=False,
