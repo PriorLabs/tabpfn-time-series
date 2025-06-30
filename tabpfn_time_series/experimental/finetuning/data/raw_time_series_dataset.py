@@ -108,6 +108,27 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         min_past: int = 128,
         min_future: int = 64,
     ):
+        """
+        Args:
+            datasets: A list of iterables of DataEntry objects.
+            probabilities: A list of probabilities for each dataset.
+            past_length: The exact length of the historical context ("past") fed to
+                the model. Shorter series are padded, longer series are truncated
+                to this length. (default: 10_000)
+            future_length: The exact length of the prediction horizon ("future") that
+                the model is trained to predict. (default: 1_024)
+            mode: The mode of the dataset (training, validation, or test). This
+                determines how windows are sampled. (default: DatasetMode.TRAINING)
+            min_past: A filter for training. This ensures that each sampled window
+                has at least this many valid (non-padded) data points in its
+                `past_target`, preventing training on nearly-empty samples.
+                (default: 128)
+            min_future: A filter for training and validation/test. For training, it
+                ensures `future_target` has at least this many valid points. For
+                validation/test, it ensures the series is long enough to create a
+                meaningful final window. (default: 64)
+        """
+
         super().__init__()
 
         assert len(probabilities) == len(datasets), (
@@ -124,6 +145,17 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         self.min_past = min_past
         self.min_future = min_future
         self.mode = DatasetMode(mode) if isinstance(mode, str) else mode
+
+    @staticmethod
+    def _is_past_target_not_constant(entry: DataEntry) -> bool:
+        """
+        Checks if 'past_target' is not a constant series.
+
+        This check is designed to be run after filtering out all-NaN series.
+        It identifies series with a standard deviation of zero.
+        We use a small epsilon for floating-point comparisons.
+        """
+        return np.nanstd(entry["past_target"]) > 1e-8
 
     def _create_transformation_chain(self) -> Transformation:
         """Creates the appropriate transformation chain based on the dataset mode."""
@@ -157,9 +189,12 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         return Chain(
             [
                 splitter,
+                # 1. Filter out series that are all-NaN
                 FilterTransformation(
                     condition=lambda entry: (~np.isnan(entry["past_target"])).sum() > 0
                 ),
+                # 2. Filter out constant series
+                FilterTransformation(condition=self._is_past_target_not_constant),
             ]
         )
 
