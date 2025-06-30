@@ -33,6 +33,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "jupyter",
+    "ipykernel",
+    "pip",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
     "ruff~=0.12.0",

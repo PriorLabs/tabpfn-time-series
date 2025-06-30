@@ -1,6 +1,7 @@
 *.pyc
 *.DS_Store
 .env
+.venv/
 gift_eval/data
 gift_eval/results
 wandb

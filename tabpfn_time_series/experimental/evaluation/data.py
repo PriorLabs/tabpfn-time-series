@@ -113,31 +113,14 @@ class GiftEvalDataset:
         )
 
         # Use the original ProcessDataEntry approach
-        process = ProcessDataEntry(
+        self.process = ProcessDataEntry(
             self.freq,
             one_dim_target=self.target_dim == 1,
         )
 
-        # Reshape covariate shape to 2D if it's 1D
-        def process_with_covariate_shape(data_entry):
-            # Ensure covariate shape is correct before processing
-            if FieldName.PAST_FEAT_DYNAMIC_REAL in data_entry:
-                past_feat = data_entry[FieldName.PAST_FEAT_DYNAMIC_REAL]
-                if past_feat.ndim == 1:
-                    data_entry = (
-                        data_entry.copy()
-                    )  # Create a copy to avoid modifying the original
-                    data_entry[FieldName.PAST_FEAT_DYNAMIC_REAL] = past_feat.reshape(
-                        1, -1
-                    )
-
-            # Process the entry with corrected shape
-            processed = process(data_entry)
-            return processed
-
         # Use the combined function in the Map
         self.gluonts_dataset = Map(
-            compose(process_with_covariate_shape, itemize_start), self.hf_dataset
+            compose(self._process_with_covariate_shape, itemize_start), self.hf_dataset
         )
 
         if to_univariate:
@@ -147,6 +130,20 @@ class GiftEvalDataset:
 
         self.term = Term(term)
         self.name = name
+
+    def _process_with_covariate_shape(self, data_entry: DataEntry) -> DataEntry:
+        # Ensure covariate shape is correct before processing
+        if FieldName.PAST_FEAT_DYNAMIC_REAL in data_entry:
+            past_feat = data_entry[FieldName.PAST_FEAT_DYNAMIC_REAL]
+            if past_feat.ndim == 1:
+                data_entry = (
+                    data_entry.copy()
+                )  # Create a copy to avoid modifying the original
+                data_entry[FieldName.PAST_FEAT_DYNAMIC_REAL] = past_feat.reshape(1, -1)
+
+        # Process the entry with corrected shape
+        processed = self.process(data_entry)
+        return processed
 
     @cached_property
     def prediction_length(self) -> int:
