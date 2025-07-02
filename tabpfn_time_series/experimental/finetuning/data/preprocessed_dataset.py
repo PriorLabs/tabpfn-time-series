@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeAlias
 
+import logging
 import numpy as np
 import pandas as pd
 import torch
@@ -16,6 +17,9 @@ from tabpfn_time_series.experimental.finetuning.data.raw_time_series_dataset imp
 from tabpfn_time_series.experimental.features.feature_generator_base import (
     FeatureGenerator,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def make_split_fn(
@@ -110,6 +114,8 @@ class PreprocessedTimeSeriesDataset(IterableDataset):
             sample["forecast_start"], past_len, len(future_target)
         )
 
+        logger.debug(f"all_timestamps.shape: {all_timestamps.shape}")
+
         # TODO: temporary workaround to avoid leakage
         #   (to be fixed together with AutoSeasonalFeature)
         ts_df = pd.DataFrame(
@@ -147,6 +153,10 @@ class PreprocessedTimeSeriesDataset(IterableDataset):
 
         assert len(preprocessed_collections) == 1, "Only one split is expected"
         preprocessed_collection = preprocessed_collections[0]
+
+        logger.debug(
+            f"X_train_preprocessed[0].shape: {preprocessed_collection.X_train_preprocessed[0].shape}"
+        )
 
         return {
             "X_train_preprocessed": [

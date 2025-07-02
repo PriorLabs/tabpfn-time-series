@@ -43,6 +43,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         num_workers: int = 4,
         past_length: int = 10_000,
         future_length: int = 1_024,
+        torch_dtype: torch.dtype = torch.float32,
     ):
         """
         Args:
@@ -53,6 +54,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
             num_workers: The number of workers for the dataloaders.
             past_length: The context length for the time series samples.
             future_length: The prediction length for the time series samples.
+            torch_dtype: The torch.dtype to use for the dataset.
         """
         super().__init__()
         self.dataset_name = dataset_name
@@ -74,7 +76,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         self.train_dataset: Optional[PreprocessedTimeSeriesDataset] = None
         self.val_dataset: Optional[PreprocessedTimeSeriesDataset] = None
         self.test_dataset: Optional[PreprocessedTimeSeriesDataset] = None
-        self.torch_dtype: Optional[torch.dtype] = None
+        self.torch_dtype = torch_dtype
         self.collate_fn = self.collate_fn
 
     def setup(self, stage: Optional[str] = None):
@@ -85,21 +87,6 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         with RawTimeSeriesDataset, which handles the creation of training,
         validation, and test instances on the fly using GluonTS samplers.
         """
-        if self.trainer.precision == "32-true":
-            self.torch_dtype = torch.float32
-        elif self.trainer.precision == "16-mixed":
-            self.torch_dtype = torch.float16
-        elif self.trainer.precision == "bf16-mixed":
-            self.torch_dtype = torch.bfloat16
-        else:
-            self.torch_dtype = torch.float32  # Default case
-
-        # MPS doesn't support float64, so we enforce float32
-        if (
-            str(self.trainer.accelerator).startswith("mps")
-            and self.torch_dtype == torch.float64
-        ):
-            self.torch_dtype = torch.float32
 
         ge_dataset: GiftEvalDataset
         ge_dataset, _ = get_gift_eval_dataset(
@@ -125,6 +112,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
                 torch_dtype=self.torch_dtype,
             )
 
+        if stage in ("fit", "validate", None):
             raw_val_dataset = RawTimeSeriesDataset(
                 datasets=[ge_dataset.validation_dataset],
                 probabilities=[1.0],
@@ -185,7 +173,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         - `list`: Assumes it's for ensemble members. It processes each item
           in the list, adding a batch dimension to tensors and wrapping non-
           tensors in a list.
-        - Other types: Wraps the item in a list.
+        - Other types: Wraps the item in a list for consistency
 
         Args:
             batch: A list containing a single sample dictionary.

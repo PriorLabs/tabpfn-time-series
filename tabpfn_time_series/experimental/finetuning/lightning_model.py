@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass
-from functools import partial
 
 import numpy as np
 import torch
@@ -29,6 +28,7 @@ class EvalResult:
 
 
 TABPFN_ENABLE_FINETUNING_KWARGS = {
+    "ignore_pretraining_limits": True,
     "differentiable_input": False,
     "fit_mode": "batched",
 }
@@ -51,21 +51,21 @@ class FinetuneTabPFNModule(pl.LightningModule):
         self,
         training_config: dict,
         tabpfn_model_config: dict,
+        seed: int = 42,
     ):
         super().__init__()
+        self.seed = seed
         self.tabpfn_model_config = self._parse_model_config(tabpfn_model_config)
         self.regressor = TabPFNRegressor(
             **self.tabpfn_model_config,
             **TABPFN_ENABLE_FINETUNING_KWARGS,
+            random_state=self.seed,
         )
         self.regressor.initialize_model()
         self.training_config = training_config
         self.save_hyperparameters(ignore=["regressor"])
 
         self.original_params_ = None
-
-        # Log with batch size 1
-        self.log = partial(self.log, batch_size=1)
 
     def get_cpu_regressor_for_preprocessing(self) -> TabPFNRegressor:
         """Create a CPU-based copy of the regressor for data preprocessing."""
@@ -75,6 +75,7 @@ class FinetuneTabPFNModule(pl.LightningModule):
         cpu_regressor = TabPFNRegressor(
             **cpu_config,
             **TABPFN_ENABLE_FINETUNING_KWARGS,
+            random_state=self.seed,
         )
         cpu_regressor.initialize_model()
         return cpu_regressor
@@ -134,9 +135,13 @@ class FinetuneTabPFNModule(pl.LightningModule):
 
         loss = pred_loss + tying_loss
 
-        self.log("train/pred_loss", pred_loss, on_step=True, on_epoch=False)
-        self.log("train/tying_loss", tying_loss, on_step=True, on_epoch=False)
-        self.log("train/total_loss", loss, on_step=True, on_epoch=False)
+        self.log(
+            "train/pred_loss", pred_loss, on_step=True, on_epoch=False, batch_size=1
+        )
+        self.log(
+            "train/tying_loss", tying_loss, on_step=True, on_epoch=False, batch_size=1
+        )
+        self.log("train/total_loss", loss, on_step=True, on_epoch=False, batch_size=1)
 
         return loss
 
@@ -172,6 +177,7 @@ class FinetuneTabPFNModule(pl.LightningModule):
                 field_value,
                 on_step=False,
                 on_epoch=True,
+                batch_size=1,
             )
             result_dict[field_name] = field_value
 

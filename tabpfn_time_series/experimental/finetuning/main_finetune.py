@@ -28,6 +28,21 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune TabPFN for Time Series.")
 
     parser.add_argument("--debug", action="store_true", help="Run in debug mode.")
+    parser.add_argument("--verbose", action="store_true", help="Run in verbose mode.")
+    parser.add_argument("--no_wandb", action="store_true", help="Do not use wandb.")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed for reproducibility."
+    )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Profile the training process with PyTorch Profiler.",
+    )
+    parser.add_argument(
+        "--overfit_test",
+        action="store_true",
+        help="Run an overfit test on a single batch to check for bugs.",
+    )
 
     # Data args
     parser.add_argument(
@@ -60,13 +75,19 @@ def parse_args():
         "--max_steps",
         type=int,
         default=1000,
-        help="Total number of training steps.",
+        help="Total number of training optimizer steps (see accumulate_grad_batches).",
     )
     parser.add_argument(
         "--val_check_interval",
         type=int,
-        default=200,
+        default=25,
         help="Run validation every N training steps.",
+    )
+    parser.add_argument(
+        "--accumulate_grad_batches",
+        type=int,
+        default=4,
+        help="Number of batches for gradient accumulation.",
     )
     parser.add_argument(
         "--batch_size",
@@ -77,11 +98,11 @@ def parse_args():
     parser.add_argument(
         "--num_workers", type=int, default=4, help="Number of workers for dataloading."
     )
-    parser.add_argument("--past_length", type=int, default=1024, help="Context length.")
+    parser.add_argument("--past_length", type=int, default=2048, help="Context length.")
     parser.add_argument(
         "--future_length",
         type=int,
-        default=1024,
+        default=512,
         help="Prediction length for training samples.",
     )
     parser.add_argument(
@@ -119,6 +140,9 @@ def main(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Set seed for reproducibility
+    pl.seed_everything(args.seed, workers=True)
+
     # Define configs
     tabpfn_model_config = {
         "device": args.accelerator,
@@ -144,6 +168,7 @@ def main(args):
     model = FinetuneTabPFNModule(
         training_config=training_config,
         tabpfn_model_config=tabpfn_model_config,
+        seed=args.seed,
     )
 
     print("Initiating TimeSeriesDataModule")
@@ -153,18 +178,22 @@ def main(args):
         model=model.get_cpu_regressor_for_preprocessing(),
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        past_length=args.past_length if not args.debug else 5,
-        future_length=args.future_length if not args.debug else 3,
+        past_length=args.past_length if not args.debug else 30,
+        future_length=args.future_length if not args.debug else 20,
     )
 
     # Set up trainer
-    run_name = f"{args.dataset}_lr{args.lr}_lambda{args.l2_sp_lambda}"
-    wandb_logger = WandbLogger(
-        project=args.wandb_project,
-        entity=args.wandb_entity,
-        name=run_name,
-        save_dir=str(output_dir),
-    )
+    run_name = f"{args.dataset.replace('/', '_')}_lr{args.lr}_lambda{args.l2_sp_lambda}_seed{args.seed}"
+    if not args.no_wandb:
+        wandb_logger = WandbLogger(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=run_name,
+            save_dir=str(output_dir),
+            tags=[args.dataset],
+        )
+    else:
+        wandb_logger = None
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=str(output_dir / "checkpoints" / run_name),
@@ -174,14 +203,27 @@ def main(args):
         mode="min",
     )
 
-    trainer = pl.Trainer(
-        max_steps=args.max_steps,
-        val_check_interval=args.val_check_interval,
-        accelerator=args.accelerator,
-        precision=args.precision,
-        logger=wandb_logger,
-        callbacks=[checkpoint_callback],
-    )
+    trainer_kwargs = {
+        "max_steps": args.max_steps,
+        "val_check_interval": args.val_check_interval,
+        "accelerator": args.accelerator,
+        "precision": args.precision,
+        "logger": wandb_logger,
+        "callbacks": [checkpoint_callback],
+        "log_every_n_steps": 1,
+        "accumulate_grad_batches": args.accumulate_grad_batches,
+        "profiler": "simple" if args.profile else None,
+    }
+
+    if args.overfit_test:
+        logger.info("--- Running in overfit test mode ---")
+        trainer_kwargs["overfit_batches"] = 10
+        trainer_kwargs.pop("val_check_interval", None)
+        # Disable checkpointing for overfit test
+        trainer_kwargs["callbacks"] = []
+        trainer_kwargs["accumulate_grad_batches"] = 1
+
+    trainer = pl.Trainer(**trainer_kwargs)
 
     # Start fine-tuning
     trainer.fit(model, datamodule=data_module)
@@ -217,7 +259,7 @@ if __name__ == "__main__":
 
     arguments = parse_args()
 
-    if arguments.debug:
+    if arguments.debug or arguments.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
     main(arguments)
