@@ -212,13 +212,6 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
             transformed = transform.apply(source, is_train=is_train)
             transformed_iterators.append(iter(transformed))
 
-        # Debug logging for validation mode
-        if self.mode == DatasetMode.VALIDATION:
-            print(
-                f"[DEBUG] Starting validation iteration with {len(self.datasets)} dataset(s)"
-            )
-            sample_count = 0
-
         # The main sampling loop
         while True:
             # Choose a source dataset iterator based on probabilities
@@ -226,19 +219,9 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
 
             try:
                 # Yield the next available sample from the chosen iterator
-                sample = next(transformed_iterators[dataset_idx])
-                if self.mode == DatasetMode.VALIDATION:
-                    sample_count += 1
-                    print(
-                        f"[DEBUG] Validation sample {sample_count} from dataset {dataset_idx}"
-                    )
-                yield sample
+                yield next(transformed_iterators[dataset_idx])
 
             except StopIteration:
                 # This will only be reached in non-training modes when an
                 # iterator is exhausted. We stop the entire iteration.
-                if self.mode == DatasetMode.VALIDATION:
-                    print(
-                        f"[DEBUG] Validation iteration stopped after {sample_count} samples"
-                    )
                 break

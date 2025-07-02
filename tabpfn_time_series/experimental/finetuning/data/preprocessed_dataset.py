@@ -114,8 +114,6 @@ class PreprocessedTimeSeriesDataset(IterableDataset):
             sample["forecast_start"], past_len, len(future_target)
         )
 
-        logger.debug(f"all_timestamps.shape: {all_timestamps.shape}")
-
         # TODO: temporary workaround to avoid leakage
         #   (to be fixed together with AutoSeasonalFeature)
         ts_df = pd.DataFrame(
@@ -153,10 +151,6 @@ class PreprocessedTimeSeriesDataset(IterableDataset):
 
         assert len(preprocessed_collections) == 1, "Only one split is expected"
         preprocessed_collection = preprocessed_collections[0]
-
-        logger.debug(
-            f"X_train_preprocessed[0].shape: {preprocessed_collection.X_train_preprocessed[0].shape}"
-        )
 
         return {
             "X_train_preprocessed": [

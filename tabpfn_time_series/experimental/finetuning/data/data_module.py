@@ -147,7 +147,8 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers,
+            num_workers=1,  # Single worker avoids duplicates
+            persistent_workers=True,
             pin_memory=True,
             collate_fn=self.collate_fn,
         )

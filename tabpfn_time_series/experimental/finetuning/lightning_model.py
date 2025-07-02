@@ -87,7 +87,7 @@ class FinetuneTabPFNModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         """Execute a single training step."""
         # Unpack batch
-        logger.debug(f"Training step batch: {batch_idx}")
+        logger.debug(f"Training step batch: {batch_idx}, hash: {hash(str(batch))}")
 
         # The batch is already processed by the collate_fn and has a batch size of 1
         X_train_preprocessed = batch["X_train_preprocessed"]
@@ -147,6 +147,8 @@ class FinetuneTabPFNModule(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         """Execute a single validation step."""
+        logger.debug(f"Validation step batch: {batch_idx}, hash: {hash(str(batch))}")
+
         eval_model = clone_model_for_evaluation(
             original_model=self.regressor,
             eval_init_args=self.tabpfn_model_config,
