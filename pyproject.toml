@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "hatch-requirements-txt"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
@@ -16,13 +16,29 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies", "optional-dependencies"]
+dependencies = [
+    "tqdm",
+    "pandas>=2.1.2, <2.2.0",
+    "gluonts>=0.16.0",
+    "autogluon.timeseries>=1.2",
+    "tabpfn-client>=0.1.7",
+    "tabpfn>=2.0.9",
+    "datasets>=3.3.2",
+    "python-dotenv>=1.1.0",
+    "pyyaml>=6.0.1",
+]
 
-[tool.hatch.metadata.hooks.requirements_txt]
-files = ["requirements.txt"]
-
-[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
-dev = ["requirements-dev.txt"]
+[project.optional-dependencies]
+dev = [
+    "jupyter",
+    "wandb>=0.19.8",
+    "submitit>=1.5.2",
+    "ruff~=0.12.0",
+    "pre-commit",
+    "twine",
+    "build",
+    "pytest",
+]
 
 [tool.hatch.build.targets.wheel]
 exclude = ["docs", "gift_eval"]

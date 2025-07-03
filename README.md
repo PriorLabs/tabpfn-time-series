@@ -37,7 +37,25 @@ For more details, please refer to our [paper](https://arxiv.org/abs/2501.02945v3
 - **Point and probabilistic forecasting**: it provides accurate point forecasts as well as probabilistic forecasts.
 - **Support for exogenous variables**: if you have exogenous variables, this method can seemlessly incorporate them into the forecasting model.
 
-On top of that, thanks to **[tabpfn-client](https://github.com/automl/tabpfn-client)** from **[Prior Labs](https://priorlabs.ai)**, you won’t even need your own GPU to run fast inference with TabPFNv2. 😉 We have included `tabpfn-client` as the default engine in our implementation.
+On top of that, thanks to **[tabpfn-client](https://github.com/automl/tabpfn-client)** from **[Prior Labs](https://priorlabs.ai)**, you won't even need your own GPU to run fast inference with TabPFNv2. 😉 We have included `tabpfn-client` as the default engine in our implementation.
+
+## ⚙️ Installation
+
+You can install the package via pip:
+
+```bash
+pip install tabpfn-time-series
+```
+
+### For Developers
+
+To install the package in editable mode with all development dependencies, run the following command in your terminal:
+
+```bash
+pip install -e ".[dev]"
+# or with uv
+uv pip install -e ".[dev]"
+```
 
 ## How to use it?
 
