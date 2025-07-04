@@ -1,9 +1,6 @@
 name: In pull request
 on:
   pull_request_target:
-    types:
-      - opened
-      - synchronize
     branches:
       - main
       - dev
