@@ -199,7 +199,7 @@ def test_feature_pipeline():
         RunningIndexFeatureTransformer,
         AutoSeasonalFeatureTransformer,
         CalendarFeatureTransformer,
-        FeaturePipeline,
+        FeatureTransformer,
     )
     from tabpfn_time_series.features_sklearn.utils_pipeline import (
         train_test_split_time_series,
@@ -227,13 +227,13 @@ def test_feature_pipeline():
         ("auto_seasonal", AutoSeasonalFeatureTransformer()),
     ]
 
-    feature_pipeline = FeaturePipeline(pipeline_steps=pipeline)
+    feat_transformer = FeatureTransformer(pipeline_steps=pipeline)
 
     # 1. Fit on the training data AND transform it in one step
-    train_feat_PDs = feature_pipeline.fit_transform(train_df)
+    train_feat_PDs = feat_transformer.fit_transform(train_df)
 
     # 2. ONLY transform the test data using what was learned from train
-    test_feat_PDs = feature_pipeline.transform(test_df)
+    test_feat_PDs = feat_transformer.transform(test_df)
 
     train_feat_tsdf = from_df_to_autogluon_tsdf(train_feat_PDs)
     test_feat_tsdf = from_df_to_autogluon_tsdf(test_feat_PDs)

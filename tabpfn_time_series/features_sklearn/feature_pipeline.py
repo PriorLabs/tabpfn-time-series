@@ -13,7 +13,7 @@ from statsmodels.tsa.stattools import acf
 import gluonts.time_feature
 
 
-class FeaturePipeline(BaseEstimator, TransformerMixin):
+class FeatureTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, pipeline_steps):
         """
         This transformer takes the steps for a pipeline as input.
@@ -123,6 +123,10 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         -------
         self
         """
+        assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
+            "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
+        )
+
         self.train_df = X
         return self
 
@@ -141,6 +145,10 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
                 - "running_index" (per_item mode)
                 - "timestamp_index" (global_timestamp mode)
         """
+        assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
+            "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
+        )
+
         X = X.copy()
         if self.train_df is None:
             raise ValueError("Must call fit before transform")
@@ -150,6 +158,9 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         else:
             X["running_index"] = range(len(X))
             X["running_index"] += len(self.train_df)
+
+        # TODO: Add a global running index feature sorted by timestamp across all item_ids
+
         return X
 
 
@@ -200,6 +211,10 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
+            "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
+        )
+
         X_copy = X.copy()
 
         # LET'S JUST SET LEVEL
@@ -361,6 +376,10 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         self
             The fitted estimator.
         """
+        assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
+            "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
+        )
+
         # save the train_df
         self.train_df = X
 
@@ -416,6 +435,10 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
                 "The transformer has not been fitted yet. "
                 "Please call 'fit' before 'transform'."
             )
+
+        assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
+            "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
+        )
 
         X_transformed = X.copy()
         if not X["target"].isnull().all():
