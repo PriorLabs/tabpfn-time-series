@@ -14,14 +14,40 @@ import gluonts.time_feature
 
 
 class FeatureTransformer(BaseEstimator, TransformerMixin):
+    """
+    A custom scikit-learn transformer that fits and applies a separate pipeline
+    to different groups of data within a pandas DataFrame.
+
+    Parameters
+    ----------
+    pipeline_steps : list of tuples
+        A list of (name, transformer) tuples that define the steps of the
+        pipeline to be applied to each group. For example:
+        `[('scaler', StandardScaler()), ('poly', PolynomialFeatures())]`.
+
+    group_by_column : str, default="item_id"
+        The name of the column in the input DataFrame `X` to group by. A
+        separate pipeline will be fitted for each unique value in this column.
+        If `None`, a single global pipeline is fitted on the entire dataset.
+
+    Attributes
+    ----------
+    fitted_pipelines_ : dict
+        A dictionary to store the fitted pipeline for each group. The keys are
+        the unique group names, and the values are the corresponding fitted
+        `Pipeline` objects. If `group_by_column` is `None`, the dictionary
+        contains a single entry with the key "__global__".
+    """
     def __init__(self, pipeline_steps, group_by_column="item_id"):
         """
-        This transformer takes the steps for a pipeline as input.
+        Initializes the FeatureTransformer.
 
         Args:
             pipeline_steps (list): A list of tuples, where each tuple contains the
-                                   name and the transformer instance, e.g.,
-                                   [('step_name', TransformerObject())].
+                                   name of the step and the transformer instance,
+                                   e.g., [('step_name', TransformerObject())].
+            group_by_column (str): The column name to group the data by. If None,
+                                   a single pipeline is used for all data.
         """
         # Create an unfitted template pipeline from the provided steps.
         # We will clone this template for each group.
@@ -32,13 +58,22 @@ class FeatureTransformer(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         """
-        Fit one separate pipeline for each item_id.
+        Fits a separate pipeline for each group defined by `group_by_column`.
 
-        This method iterates through each 'item_id' in the input DataFrame X,
-        creates a deep copy (clone) of the template pipeline, and fits that
-        copy on the data for that specific item. This ensures that each item_id
-        gets its own independently fitted pipeline without any state leaking
-        from other items.
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input data to fit the pipelines on. Must contain the column
+            specified in `group_by_column` if it is not None.
+
+        y : pd.Series or np.array, optional (default=None)
+            The target values, passed to the fit method of the underlying
+            pipelines.
+
+        Returns
+        -------
+        self : FeatureTransformer
+            The fitted transformer instance.
         """
         # Reset fitted pipelines on each call to fit
         self.fitted_pipelines_ = {}
@@ -58,7 +93,22 @@ class FeatureTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         """
-        Transforms the data using the fitted pipeline(s).
+        Transforms the data using the appropriate fitted pipeline for each group.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The data to transform. Must contain the `group_by_column`.
+
+        Returns
+        -------
+        pd.DataFrame
+            The transformed data, with the same index as the input `X`.
+
+        Raises
+        ------
+        RuntimeError
+            If `transform` is called before `fit` when no grouping is used.
         """
         if self.group_by_column:
             all_transformed_groups = []
@@ -92,12 +142,6 @@ class FeatureTransformer(BaseEstimator, TransformerMixin):
 class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
     """
     Adds a running index feature to the DataFrame.
-
-    Parameters
-    ----------
-    mode : str, default="per_item"
-        - "per_item": running index resets for each item_id.
-        - "global_timestamp": running index is assigned based on unique sorted timestamps across all item_ids.
 
     Attributes
     ----------
@@ -139,10 +183,8 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
 
         Returns
         -------
-        X_out : pd.DataFrame
-            With new column:
-                - "running_index" (per_item mode)
-                - "timestamp_index" (global_timestamp mode)
+        X : pd.DataFrame
+            With new column "running_index"
         """
         assert all(col in X.columns for col in ["item_id", "timestamp", "target"]), (
             "Input DataFrame must contain 'item_id', 'timestamp', and 'target' columns."
@@ -164,24 +206,6 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
             )
             X = X.join(ts_index["running_index"])
             X["running_index"] += len(self.train_df)
-
-        # if self.mode == "per_item":
-        #     if self.train_df is None:
-        #         raise ValueError("Must call fit before transform")
-
-        #     if not X["target"].isnull().all():
-        #         ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
-        #         X = X.join(ts_index['running_index'])
-        #         # X["running_index"] = range(len(X))
-        #     else:
-        #         ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
-        #         X = X.join(ts_index['running_index'])
-        #         X["running_index"] += len(self.train_df)
-
-        # elif self.mode == "global_timestamp":
-        #     # Using join for a more robust and cleaner implementation
-        #     ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
-        #     X = X.join(ts_index['running_index'])
 
         return X
 
