@@ -14,7 +14,7 @@ import gluonts.time_feature
 
 
 class FeatureTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, pipeline_steps):
+    def __init__(self, pipeline_steps, group_by_column="item_id"):
         """
         This transformer takes the steps for a pipeline as input.
 
@@ -23,9 +23,10 @@ class FeatureTransformer(BaseEstimator, TransformerMixin):
                                    name and the transformer instance, e.g.,
                                    [('step_name', TransformerObject())].
         """
-        self.pipeline_steps = pipeline_steps
         # Create an unfitted template pipeline from the provided steps.
         # We will clone this template for each group.
+        self.pipeline_steps = pipeline_steps
+        self.group_by_column = group_by_column
         self._template_pipeline = Pipeline(steps=self.pipeline_steps)
         self.fitted_pipelines_ = {}  # Dictionary to store a fitted pipeline for each group
 
@@ -42,52 +43,50 @@ class FeatureTransformer(BaseEstimator, TransformerMixin):
         # Reset fitted pipelines on each call to fit
         self.fitted_pipelines_ = {}
 
-        grouped = X.groupby("item_id")
-        for item_id, group in grouped:
-            # This prevents the state of transformers from one group affecting another.
+        if self.group_by_column:
+            grouped = X.groupby(self.group_by_column)
+            for group_name, group_data in grouped:
+                pipeline_for_group = copy.deepcopy(self._template_pipeline)
+                pipeline_for_group.fit(group_data, y)
+                self.fitted_pipelines_[group_name] = pipeline_for_group
+        else:
             pipeline_for_item = copy.deepcopy(self._template_pipeline)
+            pipeline_for_item.fit(X, y)
+            self.fitted_pipelines_["__global__"] = pipeline_for_item
 
-            pipeline_for_item.fit(group, y)
-            self.fitted_pipelines_[item_id] = pipeline_for_item
         return self
 
     def transform(self, X):
         """
-        Transform each group in X using its corresponding fitted pipeline.
-
-        This method applies the correct, pre-fitted pipeline to each 'item_id'
-        group in the input DataFrame X. It handles cases where an item_id might
-        be in the transformation set but not in the training set (it will be skipped).
-        Finally, it concatenates the results and reorders them to match the
-        original index of X, preventing row shuffling.
+        Transforms the data using the fitted pipeline(s).
         """
-        all_transformed_groups = []
-        grouped = X.groupby("item_id")
+        if self.group_by_column:
+            all_transformed_groups = []
+            grouped = X.groupby(self.group_by_column)
 
-        for item_id, group in grouped:
-            if item_id in self.fitted_pipelines_:
-                # Use the pipeline that was fitted specifically for this item_id
-                transformed_group = self.fitted_pipelines_[item_id].transform(group)
-                all_transformed_groups.append(transformed_group)
+            for group_name, group_data in grouped:
+                if group_name in self.fitted_pipelines_:
+                    transformed_group = self.fitted_pipelines_[group_name].transform(
+                        group_data
+                    )
+                    all_transformed_groups.append(transformed_group)
+                else:
+                    print(
+                        f"Warning: No fitted pipeline found for group '{group_name}'. Skipping."
+                    )
+
+            if not all_transformed_groups:
+                return pd.DataFrame(columns=X.columns)
+
+            transformed_df = pd.concat(all_transformed_groups)
+            return transformed_df.reindex(X.index)  # Reorder to match original index
+        else:
+            # Use the single global pipeline
+            global_pipeline = self.fitted_pipelines_.get("__global__")
+            if global_pipeline:
+                return global_pipeline.transform(X)
             else:
-                # Optional: Handle cases where an item_id appears in the transform set
-                # but was not seen during fit. Here, we'll just print a warning.
-                print(
-                    f"Warning: No fitted pipeline found for item_id '{item_id}'. Skipping."
-                )
-
-        # Check if any groups were transformed to avoid errors on empty lists
-        if not all_transformed_groups:
-            return pd.DataFrame(
-                columns=X.columns
-            )  # Return empty DataFrame with original columns
-
-        # Concatenate all the transformed group DataFrames
-        transformed_df = pd.concat(all_transformed_groups, axis=0)
-
-        # IMPORTANT: Reorder the final DataFrame to match the original index.
-        # This prevents the rows from being shuffled due to the groupby-concat process.
-        return transformed_df.reindex(X.index)
+                raise RuntimeError("Transformer has not been fitted yet.")
 
 
 class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
@@ -150,16 +149,39 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         )
 
         X = X.copy()
-        if self.train_df is None:
-            raise ValueError("Must call fit before transform")
-
         if not X["target"].isnull().all():
-            X["running_index"] = range(len(X))
+            ts_index = (
+                X[["timestamp"]]
+                .sort_values("timestamp")
+                .assign(running_index=range(len(X)))
+            )
+            X = X.join(ts_index["running_index"])
         else:
-            X["running_index"] = range(len(X))
+            ts_index = (
+                X[["timestamp"]]
+                .sort_values("timestamp")
+                .assign(running_index=range(len(X)))
+            )
+            X = X.join(ts_index["running_index"])
             X["running_index"] += len(self.train_df)
 
-        # TODO: Add a global running index feature sorted by timestamp across all item_ids
+        # if self.mode == "per_item":
+        #     if self.train_df is None:
+        #         raise ValueError("Must call fit before transform")
+
+        #     if not X["target"].isnull().all():
+        #         ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
+        #         X = X.join(ts_index['running_index'])
+        #         # X["running_index"] = range(len(X))
+        #     else:
+        #         ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
+        #         X = X.join(ts_index['running_index'])
+        #         X["running_index"] += len(self.train_df)
+
+        # elif self.mode == "global_timestamp":
+        #     # Using join for a more robust and cleaner implementation
+        #     ts_index = X[['timestamp']].sort_values('timestamp').assign(running_index=range(len(X)))
+        #     X = X.join(ts_index['running_index'])
 
         return X
 

@@ -77,11 +77,13 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
         )
 
         # Apply feature transformation
-        # 1. Fit on the training data AND transform it in one step
-        train_feat_df = feature_transformer.fit_transform(train_df)
+        train_feat_df = feature_transformer.fit_transform(
+            train_df
+        )  # Fit on the training data AND transform it in one step
 
-        # 2. ONLY transform the test data using what was learned from train
-        test_feat_df = feature_transformer.transform(test_df)
+        test_feat_df = feature_transformer.transform(
+            test_df
+        )  # ONLY transform the test data using what was learned from train
 
         train_tsdf = from_df_to_autogluon_tsdf(train_feat_df)
         test_tsdf = from_df_to_autogluon_tsdf(test_feat_df)
