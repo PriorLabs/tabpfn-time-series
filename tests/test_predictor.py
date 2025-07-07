@@ -8,14 +8,18 @@ from autogluon.timeseries import TimeSeriesDataFrame
 from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
     TabPFNMode,
-    FeatureTransformer,
 )
 from tabpfn_time_series.features import (
-    RunningIndexFeature,
-    CalendarFeature,
-    AutoSeasonalFeature,
+    FeatureTransformer,
+    RunningIndexFeatureTransformer,
+    CalendarFeatureTransformer,
+    AutoSeasonalFeatureTransformer,
 )
 from tabpfn_time_series.data_preparation import generate_test_X
+from tabpfn_time_series.features.utils_pipeline import (
+    from_autogluon_tsdf_to_df,
+    from_df_to_autogluon_tsdf,
+)
 
 
 class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
@@ -59,17 +63,28 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
         # Generate test data
         test_tsdf = generate_test_X(train_tsdf, prediction_length=5)
 
+        # convert to pandas dataframe
+        train_df = from_autogluon_tsdf_to_df(train_tsdf)
+        test_df = from_autogluon_tsdf_to_df(test_tsdf)
+
         # Create feature transformer with multiple feature generators
         feature_transformer = FeatureTransformer(
             [
-                RunningIndexFeature(),
-                CalendarFeature(),
-                AutoSeasonalFeature(),
+                ("running_index", RunningIndexFeatureTransformer()),
+                ("calendar", CalendarFeatureTransformer()),
+                ("auto_seasonal", AutoSeasonalFeatureTransformer()),
             ]
         )
 
         # Apply feature transformation
-        train_tsdf, test_tsdf = feature_transformer.transform(train_tsdf, test_tsdf)
+        # 1. Fit on the training data AND transform it in one step
+        train_feat_df = feature_transformer.fit_transform(train_df)
+
+        # 2. ONLY transform the test data using what was learned from train
+        test_feat_df = feature_transformer.transform(test_df)
+
+        train_tsdf = from_df_to_autogluon_tsdf(train_feat_df)
+        test_tsdf = from_df_to_autogluon_tsdf(test_feat_df)
 
         return train_tsdf, test_tsdf
 
