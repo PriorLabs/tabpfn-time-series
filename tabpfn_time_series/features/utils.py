@@ -88,17 +88,13 @@ def quick_mase_evaluation(train_df, ground_truth_df, pred_df, prediction_length)
             seasonal_period=get_seasonality(train_tsdf.freq),
         )
 
-        # for debugging
-        # print(f'test_tsdf_ground_truth.loc[[item_id]]: {len(test_tsdf_ground_truth.loc[[item_id]].slice_by_timestep(-prediction_length, None))}')
-        # print(f'pred.loc[[item_id]]: {len(pred.loc[[item_id]])}')
-
         mase_score = mase_computer.compute_metric(
             data_future=test_tsdf_ground_truth.loc[[item_id]].slice_by_timestep(
                 -prediction_length, None
             ),
             predictions=pred.loc[[item_id]],
         )
-
+        print(f"mase_score: {mase_score}")
         mase_results.append({"item_id": item_id, "mase_score": mase_score})
 
     # Create DataFrame with individual results
@@ -111,7 +107,7 @@ def quick_mase_evaluation(train_df, ground_truth_df, pred_df, prediction_length)
     # Combine results
     final_results = pd.concat([results_df, average_row], ignore_index=True)
 
-    return final_results
+    return final_results, average_mase
 
 
 def load_data(dataset_choice, num_time_series_subset, dataset_metadata):
