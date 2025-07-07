@@ -10,17 +10,10 @@ from autogluon.timeseries import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
-    # FeatureTransformer,
     TabPFNMode,
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
 )
-
-# from tabpfn_time_series.features import (
-#     RunningIndexFeature,
-#     CalendarFeature,
-#     AutoSeasonalFeature,
-# )
-from tabpfn_time_series.features_sklearn.feature_pipeline import (
+from tabpfn_time_series.features.feature_pipeline import (
     RunningIndexFeatureTransformer,
     AutoSeasonalFeatureTransformer,
     CalendarFeatureTransformer,
@@ -32,9 +25,6 @@ logger = logging.getLogger(__name__)
 
 class TabPFNTSPredictor:
     DEFAULT_FEATURES = [
-        # RunningIndexFeature(),
-        # CalendarFeature(),
-        # AutoSeasonalFeature(),
         ("running_index", RunningIndexFeatureTransformer()),
         ("calendar", CalendarFeatureTransformer()),
         ("auto_seasonal", AutoSeasonalFeatureTransformer()),
