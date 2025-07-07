@@ -14,12 +14,11 @@ from tabpfn_time_series.features import (
     RunningIndexFeatureTransformer,
     CalendarFeatureTransformer,
     AutoSeasonalFeatureTransformer,
-)
-from tabpfn_time_series.data_preparation import generate_test_X
-from tabpfn_time_series.features.utils_pipeline import (
     from_autogluon_tsdf_to_df,
     from_df_to_autogluon_tsdf,
 )
+from tabpfn_time_series.data_preparation import generate_test_X
+
 
 
 class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
