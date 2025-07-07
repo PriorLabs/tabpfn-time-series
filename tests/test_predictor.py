@@ -20,7 +20,6 @@ from tabpfn_time_series.features import (
 from tabpfn_time_series.data_preparation import generate_test_X
 
 
-
 class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
     def setUp(self):
         self.train_tsdf, self.test_tsdf = self._create_test_data()
