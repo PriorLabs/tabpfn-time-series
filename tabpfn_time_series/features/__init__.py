@@ -24,5 +24,5 @@ __all__ = [
     "from_autogluon_tsdf_to_df",
     "from_df_to_autogluon_tsdf",
     "quick_mase_evaluation",
-    "load_data",    
+    "load_data",
 ]
