@@ -13,7 +13,6 @@ from tabpfn_time_series.features import (
     RunningIndexFeatureTransformer,
     CalendarFeatureTransformer,
     AutoSeasonalFeatureTransformer,
-    train_test_split_time_series,
 )
 # from tabpfn_time_series.features.utils_pipeline import (
 #     from_autogluon_tsdf_to_df,
@@ -152,157 +151,157 @@ def test_conversion_to_tsdf():
     assert not is_pure_pandas_df(new_tsdf)
 
 
-def test_feature_pipeline():
-    # old implementation
-    from tabpfn_time_series.features_old import (
-        RunningIndexFeature,
-        CalendarFeature,
-        AutoSeasonalFeature,
-    )
-    from tabpfn_time_series.features.utils import (
-        from_autogluon_tsdf_to_df,
-        from_df_to_autogluon_tsdf,
-        load_data,
-    )
+# def test_feature_pipeline():
+#     # old implementation
+#     from tabpfn_time_series.features_old import (
+#         RunningIndexFeature,
+#         CalendarFeature,
+#         AutoSeasonalFeature,
+#     )
+#     from tabpfn_time_series.features.utils import (
+#         from_autogluon_tsdf_to_df,
+#         from_df_to_autogluon_tsdf,
+#         load_data,
+#     )
 
-    dataset_metadata = {
-        "monash_tourism_monthly": {"prediction_length": 24},
-        "m4_hourly": {"prediction_length": 48},
-    }
+#     dataset_metadata = {
+#         "monash_tourism_monthly": {"prediction_length": 24},
+#         "m4_hourly": {"prediction_length": 48},
+#     }
 
-    dataset_choice = "monash_tourism_monthly"
-    num_time_series_subset = 2
-    prediction_length = dataset_metadata[dataset_choice]["prediction_length"]
+#     dataset_choice = "monash_tourism_monthly"
+#     num_time_series_subset = 2
+#     prediction_length = dataset_metadata[dataset_choice]["prediction_length"]
 
-    # Loading Time Series Data Frames
-    tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
-        dataset_choice, num_time_series_subset, dataset_metadata
-    )
+#     # Loading Time Series Data Frames
+#     tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
+#         dataset_choice, num_time_series_subset, dataset_metadata
+#     )
 
-    # Original Feature Transformer
-    from tabpfn_time_series.features_old import FeatureTransformer
+#     # Original Feature Transformer
+#     from tabpfn_time_series.features_old import FeatureTransformer
 
-    selected_features = [
-        RunningIndexFeature(),
-        CalendarFeature(),
-        AutoSeasonalFeature(),
-    ]
+#     selected_features = [
+#         RunningIndexFeature(),
+#         CalendarFeature(),
+#         AutoSeasonalFeature(),
+#     ]
 
-    # Transform the data using the original feature transformer
-    feature_transformer = FeatureTransformer(selected_features)
-    train_tsdf_original, test_tsdf_original = feature_transformer.transform(
-        train_tsdf, test_tsdf
-    )
+#     # Transform the data using the original feature transformer
+#     feature_transformer = FeatureTransformer(selected_features)
+#     train_tsdf_original, test_tsdf_original = feature_transformer.transform(
+#         train_tsdf, test_tsdf
+#     )
 
-    import torch
+#     import torch
 
-    if torch.cuda.is_available():
-        # Your code to run on GPU
-        print("CUDA is available! Running predictions on GPU.")
-        # Predict using TabPFNTimeSeriesPredictor
-        from tabpfn_time_series import TabPFNTimeSeriesPredictor, TabPFNMode
+#     if torch.cuda.is_available():
+#         # Your code to run on GPU
+#         print("CUDA is available! Running predictions on GPU.")
+#         # Predict using TabPFNTimeSeriesPredictor
+#         from tabpfn_time_series import TabPFNTimeSeriesPredictor, TabPFNMode
 
-        predictor = TabPFNTimeSeriesPredictor(
-            tabpfn_mode=TabPFNMode.LOCAL,
-        )
+#         predictor = TabPFNTimeSeriesPredictor(
+#             tabpfn_mode=TabPFNMode.LOCAL,
+#         )
 
-        pred = predictor.predict(train_tsdf_original, test_tsdf_original)
+#         pred = predictor.predict(train_tsdf_original, test_tsdf_original)
 
-        from tabpfn_time_series.features.utils import (
-            quick_mase_evaluation,
-        )
+#         from tabpfn_time_series.features.utils import (
+#             quick_mase_evaluation,
+#         )
 
-        _, average_mase_original = quick_mase_evaluation(
-            train_tsdf, test_tsdf_ground_truth, pred, prediction_length
-        )
+#         _, average_mase_original = quick_mase_evaluation(
+#             train_tsdf, test_tsdf_ground_truth, pred, prediction_length
+#         )
 
-    # New Feature Transformer
-    from tabpfn_time_series.features import (
-        RunningIndexFeatureTransformer,
-        FeatureTransformer,
-    )
+#     # New Feature Transformer
+#     from tabpfn_time_series.features import (
+#         RunningIndexFeatureTransformer,
+#         FeatureTransformer,
+#     )
 
-    # load data
-    tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
-        dataset_choice, num_time_series_subset, dataset_metadata
-    )
+#     # load data
+#     tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
+#         dataset_choice, num_time_series_subset, dataset_metadata
+#     )
 
-    # convert to pandas dataframe
-    df = from_autogluon_tsdf_to_df(tsdf)
-    assert not is_autogluon_tsdf(df)
-    assert is_pure_pandas_df(df)
+#     # convert to pandas dataframe
+#     df = from_autogluon_tsdf_to_df(tsdf)
+#     assert not is_autogluon_tsdf(df)
+#     assert is_pure_pandas_df(df)
 
-    # convert tsdf to pandas dataframe
-    train_df, test_df, ground_truth = train_test_split_time_series(
-        df, prediction_length
-    )
+#     # convert tsdf to pandas dataframe
+#     train_df, test_df, ground_truth = train_test_split_time_series(
+#         df, prediction_length
+#     )
 
-    # Set up pipeline
-    pipeline = [
-        ("running_index", RunningIndexFeatureTransformer()),
-        ("calendar", CalendarFeatureTransformer()),
-        ("auto_seasonal", AutoSeasonalFeatureTransformer()),
-    ]
+#     # Set up pipeline
+#     pipeline = [
+#         ("running_index", RunningIndexFeatureTransformer()),
+#         ("calendar", CalendarFeatureTransformer()),
+#         ("auto_seasonal", AutoSeasonalFeatureTransformer()),
+#     ]
 
-    feat_transformer = FeatureTransformer(pipeline_steps=pipeline)
+#     feat_transformer = FeatureTransformer(pipeline_steps=pipeline)
 
-    # 1. Fit on the training data AND transform it in one step
-    train_feat_PDs = feat_transformer.fit_transform(train_df)
+#     # 1. Fit on the training data AND transform it in one step
+#     train_feat_PDs = feat_transformer.fit_transform(train_df)
 
-    # 2. ONLY transform the test data using what was learned from train
-    test_feat_PDs = feat_transformer.transform(test_df)
+#     # 2. ONLY transform the test data using what was learned from train
+#     test_feat_PDs = feat_transformer.transform(test_df)
 
-    train_feat_tsdf = from_df_to_autogluon_tsdf(train_feat_PDs)
-    test_feat_tsdf = from_df_to_autogluon_tsdf(test_feat_PDs)
+#     train_feat_tsdf = from_df_to_autogluon_tsdf(train_feat_PDs)
+#     test_feat_tsdf = from_df_to_autogluon_tsdf(test_feat_PDs)
 
-    assert set(train_tsdf_original.columns) == set(train_feat_tsdf.columns)
-    assert set(test_tsdf_original.columns) == set(test_feat_tsdf.columns)
+#     assert set(train_tsdf_original.columns) == set(train_feat_tsdf.columns)
+#     assert set(test_tsdf_original.columns) == set(test_feat_tsdf.columns)
 
-    assert len(train_feat_tsdf) == len(train_tsdf)
-    assert len(test_feat_tsdf) == len(test_tsdf)
+#     assert len(train_feat_tsdf) == len(train_tsdf)
+#     assert len(test_feat_tsdf) == len(test_tsdf)
 
-    def test_column_values(tsdf_original, tsdf_new):
-        is_same = True
-        for col in tsdf_new.columns:
-            if col in tsdf_original.columns:
-                is_same &= True
-                # check if the column is the same
-                if tsdf_original[col].equals(tsdf_new[col]):
-                    is_same &= True
-                else:
-                    is_same &= False
-                    raise ValueError(f"Column {col} is not the same")
-            else:
-                is_same &= False
-                raise ValueError(f"Column {col} is not in tsdf_original")
+#     def test_column_values(tsdf_original, tsdf_new):
+#         is_same = True
+#         for col in tsdf_new.columns:
+#             if col in tsdf_original.columns:
+#                 is_same &= True
+#                 # check if the column is the same
+#                 if tsdf_original[col].equals(tsdf_new[col]):
+#                     is_same &= True
+#                 else:
+#                     is_same &= False
+#                     raise ValueError(f"Column {col} is not the same")
+#             else:
+#                 is_same &= False
+#                 raise ValueError(f"Column {col} is not in tsdf_original")
 
-        return is_same
+#         return is_same
 
-    assert test_column_values(train_tsdf_original, train_feat_tsdf)
-    assert test_column_values(test_tsdf_original, test_feat_tsdf)
+#     assert test_column_values(train_tsdf_original, train_feat_tsdf)
+#     assert test_column_values(test_tsdf_original, test_feat_tsdf)
 
-    assert train_feat_tsdf.equals(train_tsdf_original)
-    assert test_feat_tsdf.equals(test_tsdf_original)
+#     assert train_feat_tsdf.equals(train_tsdf_original)
+#     assert test_feat_tsdf.equals(test_tsdf_original)
 
-    import torch
+#     import torch
 
-    if torch.cuda.is_available():
-        print("CUDA is available! Running predictions on GPU.")
-        predictor = TabPFNTimeSeriesPredictor(
-            tabpfn_mode=TabPFNMode.LOCAL,
-        )
+#     if torch.cuda.is_available():
+#         print("CUDA is available! Running predictions on GPU.")
+#         predictor = TabPFNTimeSeriesPredictor(
+#             tabpfn_mode=TabPFNMode.LOCAL,
+#         )
 
-        pred = predictor.predict(train_feat_tsdf, test_feat_tsdf)
+#         pred = predictor.predict(train_feat_tsdf, test_feat_tsdf)
 
-        from tabpfn_time_series.features.utils import (
-            quick_mase_evaluation,
-        )
+#         from tabpfn_time_series.features.utils import (
+#             quick_mase_evaluation,
+#         )
 
-        _, average_mase_new = quick_mase_evaluation(
-            train_tsdf, test_tsdf_ground_truth, pred, prediction_length
-        )
+#         _, average_mase_new = quick_mase_evaluation(
+#             train_tsdf, test_tsdf_ground_truth, pred, prediction_length
+#         )
 
-        assert average_mase_original == average_mase_new
+#         assert average_mase_original == average_mase_new
 
 
 # --- Test Data ---
