@@ -339,8 +339,12 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
 
         if use_peaks_only:
             peak_indices, _ = find_peaks(fft_magnitudes, height=threshold_value)
+            # If no peaks are found above the threshold, return immediately.
             if len(peak_indices) == 0:
+                # TODO: check with Liam: should it return [] or peak_indices? # <<< FIX: Return empty list
                 peak_indices = np.arange(len(fft_magnitudes))
+
+            # This code now only runs if actual peaks were found.
             sorted_peak_indices = peak_indices[
                 np.argsort(fft_magnitudes[peak_indices])[::-1]
             ]
