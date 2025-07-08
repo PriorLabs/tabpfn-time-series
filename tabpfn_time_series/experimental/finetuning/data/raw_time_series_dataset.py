@@ -107,6 +107,7 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         | DatasetMode = DatasetMode.TRAINING,
         min_past: int = 128,
         min_future: int = 64,
+        enable_sampling: bool = True,
     ):
         """
         Args:
@@ -127,6 +128,10 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
                 ensures `future_target` has at least this many valid points. For
                 validation/test, it ensures the series is long enough to create a
                 meaningful final window. (default: 64)
+            enable_sampling: Whether to enable random sampling during training. When
+                False, training mode will use validation-like sampling (single
+                window from the end of each series) instead of random sampling.
+                (default: True)
         """
 
         super().__init__()
@@ -145,6 +150,7 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         self.min_past = min_past
         self.min_future = min_future
         self.mode = DatasetMode(mode) if isinstance(mode, str) else mode
+        self.enable_sampling = enable_sampling
 
     @staticmethod
     def _is_past_target_not_constant(entry: DataEntry) -> bool:
@@ -159,13 +165,16 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
 
     def _create_transformation_chain(self) -> Transformation:
         """Creates the appropriate transformation chain based on the dataset mode."""
-        if self.mode == DatasetMode.TRAINING:
+        if self.mode == DatasetMode.TRAINING and self.enable_sampling:
             sampler = ExpectedNumInstanceSampler(
                 num_instances=1.0,
                 min_instances=1,
                 min_past=self.min_past,
                 min_future=self.min_future,
             )
+        elif self.mode == DatasetMode.TRAINING and not self.enable_sampling:
+            # Use validation-like sampling when sampling is disabled during training
+            sampler = ValidationSplitSampler(min_future=self.min_future)
         elif self.mode == DatasetMode.VALIDATION:
             sampler = ValidationSplitSampler(min_future=self.min_future)
         else:  # TEST mode
@@ -204,11 +213,13 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
         """
         transform = self._create_transformation_chain()
         is_train = self.mode == DatasetMode.TRAINING
+        # Use cyclic iteration only when in training mode with sampling enabled
+        use_cyclic = is_train and self.enable_sampling
 
         # Create a list of iterators over transformed datasets
         transformed_iterators = []
         for ds in self.datasets:
-            source = Cyclic(ds) if is_train else ds
+            source = Cyclic(ds) if use_cyclic else ds
             transformed = transform.apply(source, is_train=is_train)
             transformed_iterators.append(iter(transformed))
 

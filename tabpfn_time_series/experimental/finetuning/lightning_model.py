@@ -6,6 +6,7 @@ import torch
 import pytorch_lightning as pl
 from sklearn.metrics import mean_absolute_error, r2_score
 from gluonts.evaluation.metrics import mse
+from schedulefree import AdamWScheduleFree
 
 from tabpfn import TabPFNRegressor
 
@@ -35,10 +36,28 @@ TABPFN_ENABLE_FINETUNING_KWARGS = {
 
 TABPFN_FINETUNING_FIXED_BATCH_SIZE = 1
 
-PRECISION_MAP = {
-    "float16": torch.float16,
-    "float32": torch.float32,
-}
+
+def _convert_lightning_precision_to_tabpfn(
+    lightning_precision: str,
+) -> str | torch.dtype:
+    """Convert PyTorch Lightning precision to TabPFN inference_precision.
+
+    TabPFN supports:
+    - torch.dtype for forced precision (e.g., torch.float32, torch.float16)
+    - "autocast" for PyTorch's mixed-precision autocast
+    - "auto" for automatic determination based on device
+    """
+    if lightning_precision in ["32-true", "32"]:
+        return torch.float32  # Force float32 precision
+    elif lightning_precision in ["16-mixed", "bf16-mixed"]:
+        return "autocast"  # Use PyTorch's mixed-precision autocast
+    elif lightning_precision in ["16-true", "16"]:
+        return torch.float16  # Force float16 precision
+    elif lightning_precision in ["bf16-true", "bf16"]:
+        return torch.bfloat16  # Force bfloat16 precision
+    else:
+        # Default to auto for unknown precision types
+        return "auto"
 
 
 class FinetuneTabPFNModule(pl.LightningModule):
@@ -66,11 +85,13 @@ class FinetuneTabPFNModule(pl.LightningModule):
         self.save_hyperparameters(ignore=["regressor"])
 
         self.original_params_ = None
+        self.eval_model = None  # Will be set once per validation run
 
     def get_cpu_regressor_for_preprocessing(self) -> TabPFNRegressor:
         """Create a CPU-based copy of the regressor for data preprocessing."""
         cpu_config = self.tabpfn_model_config.copy()
         cpu_config["device"] = "cpu"
+        cpu_config["inference_precision"] = "auto"
 
         cpu_regressor = TabPFNRegressor(
             **cpu_config,
@@ -135,6 +156,10 @@ class FinetuneTabPFNModule(pl.LightningModule):
 
         loss = pred_loss + tying_loss
 
+        # Log learning rate
+        current_lr = self.optimizers().param_groups[0]["lr"]
+        self.log("train/lr", current_lr, on_step=True, on_epoch=False, batch_size=1)
+
         self.log(
             "train/pred_loss", pred_loss, on_step=True, on_epoch=False, batch_size=1
         )
@@ -145,15 +170,32 @@ class FinetuneTabPFNModule(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_idx):
-        """Execute a single validation step."""
-        logger.debug(f"Validation step batch: {batch_idx}, hash: {hash(str(batch))}")
+    def on_train_start(self):
+        """Called when training starts. Set optimizer to train mode for schedule-free."""
+        if hasattr(self.optimizers(), "train"):
+            self.optimizers().train()
 
-        eval_model = clone_model_for_evaluation(
+    def on_validation_start(self):
+        """Called when validation starts. Set optimizer to eval mode for schedule-free."""
+        # Clone the model once at the start of validation run.
+        self.eval_model = clone_model_for_evaluation(
             original_model=self.regressor,
             eval_init_args=self.tabpfn_model_config,
             model_class=TabPFNRegressor,
         )
+
+        # Set optimizer to eval mode for schedule-free
+        if hasattr(self.optimizers(), "eval"):
+            self.optimizers().eval()
+
+    def on_validation_end(self):
+        """Called when validation ends. Set optimizer back to train mode for schedule-free."""
+        if hasattr(self.optimizers(), "train"):
+            self.optimizers().train()
+
+    def validation_step(self, batch, batch_idx):
+        """Execute a single validation step."""
+        logger.debug(f"Validation step batch: {batch_idx}, hash: {hash(str(batch))}")
 
         # Remove batch dimension before converting to numpy
         x_train_raw_numpy = batch["X_train_raw"][0].cpu().numpy()
@@ -161,8 +203,13 @@ class FinetuneTabPFNModule(pl.LightningModule):
         x_test_raw_numpy = batch["X_test_raw"][0].cpu().numpy()
         y_test_raw_numpy = batch["y_test_raw"][0].cpu().numpy()
 
-        eval_model.fit(x_train_raw_numpy, y_train_raw_numpy)
-        full_pred_on_test = eval_model.predict(x_test_raw_numpy, output_type="full")
+        # Use the pre-cloned eval model and fit it on this batch's training data
+        # Use no_grad context to prevent gradient computation during validation
+        with torch.no_grad():
+            self.eval_model.fit(x_train_raw_numpy, y_train_raw_numpy)
+            full_pred_on_test = self.eval_model.predict(
+                x_test_raw_numpy, output_type="full"
+            )
 
         metrics_on_test = self._compute_metrics(
             full_pred=full_pred_on_test,
@@ -171,6 +218,8 @@ class FinetuneTabPFNModule(pl.LightningModule):
         )
 
         # Log metrics and prepare return dictionary
+        # Note: Using on_epoch=True for aggregation across validation batches
+        # In cyclic training, "epoch" here means "validation check interval"
         result_dict = {}
         for field_name in EvalResult.__dataclass_fields__:
             field_value = getattr(metrics_on_test, field_name)
@@ -180,8 +229,23 @@ class FinetuneTabPFNModule(pl.LightningModule):
                 on_step=False,
                 on_epoch=True,
                 batch_size=1,
+                prog_bar=True,
             )
             result_dict[field_name] = field_value
+
+        # Also include prediction data for potential visualization by callbacks
+        result_dict.update(
+            {
+                "prediction_data": {
+                    "X_train_raw": x_train_raw_numpy,
+                    "y_train_raw": y_train_raw_numpy,
+                    "X_test_raw": x_test_raw_numpy,
+                    "y_test_raw": y_test_raw_numpy,
+                    "full_pred_on_test": full_pred_on_test,
+                    "batch_idx": batch_idx,
+                }
+            }
+        )
 
         return result_dict
 
@@ -211,16 +275,38 @@ class FinetuneTabPFNModule(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure the optimizer for training."""
-        return torch.optim.Adam(
-            self.regressor.model_.parameters(), lr=self.training_config["lr"]
-        )
+        # Check if we should use schedule-free optimizer
+        use_schedulefree = self.training_config.get("use_schedulefree", False)
+
+        if use_schedulefree:
+            optimizer = AdamWScheduleFree(
+                self.regressor.model_.parameters(),
+                lr=self.training_config["lr"],
+                weight_decay=0.0,  # Default weight decay
+                betas=(0.9, 0.999),  # Default betas (beta1=0.9, beta2=0.999)
+                warmup_steps=10,  # Default warmup steps
+            )
+            logger.info(
+                f"Using AdamWScheduleFree optimizer with lr={self.training_config['lr']}"
+            )
+            logger.info(
+                "  - Using defaults: warmup_steps=10, betas=(0.9, 0.999), weight_decay=0.0"
+            )
+        else:
+            optimizer = torch.optim.Adam(
+                self.regressor.model_.parameters(), lr=self.training_config["lr"]
+            )
+            logger.info(f"Using Adam optimizer with lr={self.training_config['lr']}")
+
+        return optimizer
 
     @staticmethod
     def _parse_model_config(raw_model_config: dict) -> dict:
         new_model_config = raw_model_config.copy()
-        new_model_config["inference_precision"] = PRECISION_MAP[
+        precision_str = _convert_lightning_precision_to_tabpfn(
             raw_model_config["inference_precision"]
-        ]
+        )
+        new_model_config["inference_precision"] = precision_str
         return new_model_config
 
     @staticmethod

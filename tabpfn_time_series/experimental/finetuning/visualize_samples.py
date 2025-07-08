@@ -15,6 +15,7 @@ from tabpfn_time_series.experimental.finetuning.data.data_module import (
 from tabpfn_time_series.experimental.finetuning.lightning_model import (
     FinetuneTabPFNModule,
 )
+from tabpfn_time_series.experimental.utils.general import OUTPUT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="output/visualizations",
+        default=str(OUTPUT_ROOT / "visualizations"),
         help="Directory to save the plots.",
     )
     parser.add_argument(

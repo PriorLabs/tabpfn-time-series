@@ -44,6 +44,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         past_length: int = 10_000,
         future_length: int = 1_024,
         torch_dtype: torch.dtype = torch.float32,
+        enable_sampling: bool = True,
     ):
         """
         Args:
@@ -55,6 +56,10 @@ class TimeSeriesDataModule(pl.LightningDataModule):
             past_length: The context length for the time series samples.
             future_length: The prediction length for the time series samples.
             torch_dtype: The torch.dtype to use for the dataset.
+            enable_sampling: Whether to enable random sampling during training. When
+                False, training mode will use validation-like sampling (single
+                window from the end of each series) instead of random sampling.
+                (default: True)
         """
         super().__init__()
         self.dataset_name = dataset_name
@@ -64,6 +69,7 @@ class TimeSeriesDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.past_length = past_length
         self.future_length = future_length
+        self.enable_sampling = enable_sampling
         self.save_hyperparameters(ignore=["model"])
 
         self.feature_generators = [
@@ -104,7 +110,8 @@ class TimeSeriesDataModule(pl.LightningDataModule):
                 future_length=self.future_length,
                 mode=DatasetMode.TRAINING,
                 min_future=ge_dataset.prediction_length,
-            )
+                enable_sampling=self.enable_sampling,
+            ).shuffle()
             self.train_dataset = PreprocessedTimeSeriesDataset(
                 raw_dataset=raw_train_dataset,
                 model=self.model,

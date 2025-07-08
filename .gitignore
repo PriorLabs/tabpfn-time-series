@@ -12,3 +12,4 @@ logs/
 lightning_logs/
 catboost_info/
 output/
+.cursorignore
