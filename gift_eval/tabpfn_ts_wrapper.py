@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple
+from typing import Iterator, List, Tuple, Any
 import logging
 
 import numpy as np
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class TabPFNTSPredictor:
-    DEFAULT_FEATURES = [
+    DEFAULT_FEATURES: List[Tuple[str, Any]] = [
         ("running_index", RunningIndexFeatureTransformer()),
         ("calendar", CalendarFeatureTransformer()),
         ("auto_seasonal", AutoSeasonalFeatureTransformer()),
@@ -37,6 +37,7 @@ class TabPFNTSPredictor:
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         context_length: int = 4096,
         debug: bool = False,
+        feature_pipeline_steps: List[Tuple[str, Any]] = None,
     ):
         self.ds_prediction_length = ds_prediction_length
         self.ds_freq = ds_freq
@@ -46,9 +47,13 @@ class TabPFNTSPredictor:
         self.context_length = context_length
         self.debug = debug
 
-        self.feature_transformer = FeatureTransformer(
-            pipeline_steps=self.DEFAULT_FEATURES
-        )
+        # If no custom pipeline is provided, use the default one.
+        if feature_pipeline_steps is None:
+            pipeline_steps = self.DEFAULT_FEATURES
+        else:
+            pipeline_steps = feature_pipeline_steps
+
+        self.feature_transformer = FeatureTransformer(pipeline_steps=pipeline_steps)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")
