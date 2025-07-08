@@ -10,7 +10,6 @@ from tabpfn_time_series import (
     TabPFNMode,
 )
 from tabpfn_time_series.features import (
-    FeatureTransformer,
     RunningIndexFeatureTransformer,
     CalendarFeatureTransformer,
     AutoSeasonalFeatureTransformer,
@@ -18,7 +17,7 @@ from tabpfn_time_series.features import (
     from_df_to_autogluon_tsdf,
 )
 from tabpfn_time_series.data_preparation import generate_test_X
-
+from sklearn.pipeline import Pipeline
 
 class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
     def setUp(self):
@@ -66,7 +65,7 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
         test_df = from_autogluon_tsdf_to_df(test_tsdf)
 
         # Create feature transformer with multiple feature generators
-        feature_transformer = FeatureTransformer(
+        feature_transformer = Pipeline(
             [
                 ("running_index", RunningIndexFeatureTransformer()),
                 ("calendar", CalendarFeatureTransformer()),
