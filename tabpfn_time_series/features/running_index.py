@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 import logging
 
-from typing import Literal
+from typing import Literal, Optional, Any
 
 
 from .pipeline import ColumnConfig, DefaultColumnConfig
@@ -12,19 +12,30 @@ logger = logging.getLogger(__name__)
 
 class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
     """
-    Adds a running index feature to the DataFrame.
+    A transformer that adds a running index feature to a DataFrame.
 
-    The index can be calculated globally across all time stamps or on a
-    per-item basis.
+    This feature can be calculated in two ways: globally across all timestamps
+    or on a per-item basis, restarting the index for each unique item. The
+    transformer is designed to work within a scikit-learn pipeline and
+    differentiates between training and prediction data to apply correct offsets.
 
     Attributes
     ----------
-    mode : str
-        The mode of operation, either "per_item" or "global_timestamp".
-    train_data : pd.DataFrame or Dict[str, pd.DataFrame]
-        The stored training data. For "global_timestamp" mode, this is a
-        single DataFrame. For "per_item" mode, this is a dictionary mapping
+    mode : Literal["per_item", "global_timestamp"]
+        The mode of operation. "per_item" calculates the index per unique
+        item, while "global_timestamp" calculates a single index across all
+        data.
+    train_data : Optional[Union[pd.DataFrame, Dict[str, pd.DataFrame]]]
+        The stored training data, used to calculate the index offset for
+        prediction sets. For "global_timestamp" mode, this is a single
+        DataFrame. For "per_item" mode, this is a dictionary mapping
         item IDs to their corresponding training DataFrames.
+    timestamp_col_name : str
+        The name of the timestamp column.
+    target_col_name : str
+        The name of the target variable column.
+    item_id_col_name : str
+        The name of the item identifier column.
     """
 
     def __init__(
@@ -51,7 +62,9 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         self.target_col_name = column_config.target_col_name
         self.item_id_col_name = column_config.item_id_col_name
 
-    def fit(self, X, y=None):
+    def fit(
+        self, X: pd.DataFrame, y: Optional[Any] = None
+    ) -> "RunningIndexFeatureTransformer":
         """
         Fit the transformer on the training data.
 
@@ -62,11 +75,14 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         ----------
         X : pd.DataFrame
             The training data, containing columns specified in column_config.
-        y : Ignored
+        y : Any, optional
+            Ignored. This parameter exists for scikit-learn compatibility.
+            By default None.
 
         Returns
         -------
-        self
+        self : RunningIndexFeatureTransformer
+            The fitted transformer instance.
         """
         # --- Assertions to ensure data quality ---
         for col in [
@@ -89,7 +105,7 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """
         Transform the DataFrame by adding the running index feature.
 
@@ -120,9 +136,28 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         # This case should be caught in __init__, but as a safeguard:
         raise ValueError(f"Invalid mode specified: {self.mode}")
 
-    def _add_running_index(self, X: pd.DataFrame, item_id=None) -> pd.DataFrame:
+    def _add_running_index(
+        self, X: pd.DataFrame, item_id: Optional[str] = None
+    ) -> pd.DataFrame:
         """
-        Helper function to calculate and add the running index.
+        Helper function to calculate and add the running index to a DataFrame.
+
+        This function sorts the data by timestamp, computes a sequential index,
+        and applies an offset if the data is identified as a prediction set
+        (i.e., target column is all NaN).
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame for a single item or the entire dataset.
+        item_id : str, optional
+            The item identifier, required when `mode` is "per_item" to
+            calculate the correct offset for prediction data. By default None.
+
+        Returns
+        -------
+        pd.DataFrame
+            The DataFrame with the "running_index" column added.
         """
         X = X.copy()
 
@@ -135,8 +170,10 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         X = X.join(ts_index["running_index"])
 
         # --- If data is for prediction (no target), add an offset ---
-        # This logic assumes that if all target values are NaN, it's a forecast horizon.
+        # Differentiate train/test sets by checking the target column.
+        # This logic assumes the test set's target values are always NaN.
         if X[self.target_col_name].isnull().all():
+            # This block is for the testing set, whose target values are always NaNs.
             offset = 0
             if self.mode == "global_timestamp":
                 offset = len(self.train_data)

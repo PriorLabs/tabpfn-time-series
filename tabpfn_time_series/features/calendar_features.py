@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 import logging
-
+from typing import Any, Dict, List, Optional
 
 import gluonts.time_feature
 
@@ -14,25 +14,32 @@ logger = logging.getLogger(__name__)
 class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
     """
     Wrapper for CalendarFeature to provide sklearn-style transform interface.
-
-    Parameters
-    ----------
-    components : list of str, optional
-        Calendar components to extract.
-    seasonal_features : dict, optional
-        Seasonal features to extract.
-
-    Notes
-    -----
-    Stateless; fit does nothing.
     """
 
     def __init__(
         self,
-        components=None,
-        seasonal_features=None,
+        components: Optional[List[str]] = None,
+        seasonal_features: Optional[Dict[str, List[float]]] = None,
         column_config: ColumnConfig = DefaultColumnConfig(),
     ):
+        """
+        Initializes the CalendarFeatureTransformer.
+
+        Parameters
+        ----------
+        components : Optional[List[str]], optional
+            A list of basic calendar components to extract from the timestamp.
+            These correspond to pandas.DatetimeIndex attributes (e.g., 'year', 'month').
+            Defaults to ["year"].
+        seasonal_features : Optional[Dict[str, List[float]]], optional
+            A dictionary mapping seasonal features to their corresponding periods for
+            sine/cosine transformation. The keys are feature names from gluonts.time_feature
+            (e.g., 'day_of_week'), and the values are lists of periods.
+            Defaults to a standard set of time-based seasonal features.
+        column_config : ColumnConfig, optional
+            Configuration object specifying the names of timestamp, target, and item ID columns.
+            Defaults to DefaultColumnConfig().
+        """
         self.components = components or ["year"]
         self.seasonal_features = seasonal_features or {
             # (feature, natural seasonality)
@@ -49,19 +56,27 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
         self.target_col_name = column_config.target_col_name
         self.item_id_col_name = column_config.item_id_col_name
 
-    def fit(self, X, y=None):
+    def fit(
+        self, X: pd.DataFrame, y: Optional[Any] = None
+    ) -> "CalendarFeatureTransformer":
         """
-        Fit the transformer on the training data.
+        Fits the transformer by validating the input DataFrame.
+
+        This method checks for the presence of the required timestamp column.
+        As this transformer is stateless, it performs no actual fitting.
 
         Parameters
         ----------
         X : pd.DataFrame
-            Must contain columns: "item_id", "timestamp", "target" as the training data
-        y : Ignored
+            The input DataFrame, which must contain the timestamp column
+            specified in `column_config`.
+        y : Any, optional
+            Ignored. This parameter exists for scikit-learn compatibility.
 
         Returns
         -------
-        self
+        CalendarFeatureTransformer
+            The fitted transformer instance.
         """
         assert self.timestamp_col_name is not None, (
             "timestamp_col_name must be provided"
@@ -72,7 +87,23 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds calendar and seasonal features to the DataFrame.
+
+        This method takes the input DataFrame, extracts date and time features from
+        the timestamp column, and appends them as new columns.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The DataFrame to transform. It must contain the timestamp column.
+
+        Returns
+        -------
+        pd.DataFrame
+            A new DataFrame with the added calendar and seasonal feature columns.
+        """
         X_copy = X.copy()
 
         # Ensure the index is a DatetimeIndex

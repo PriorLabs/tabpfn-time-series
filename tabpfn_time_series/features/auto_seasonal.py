@@ -24,32 +24,8 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
     during the `fit` phase using Fast Fourier Transform (FFT). It then generates
     sine and cosine features for these detected periods in the `transform` phase.
 
-    Parameters
-    ----------
-    max_top_k : int, optional
-        The maximum number of dominant periods to identify, by default 5.
-    do_detrend : bool, optional
-        Whether to detrend the series before FFT, by default True.
-    detrend_type : Literal["first_diff", "loess", "linear", "constant"], optional
-        The detrending method to use, by default "linear".
-    use_peaks_only : bool, optional
-        If True, considers only local peaks in the FFT spectrum, by default True.
-    apply_hann_window : bool, optional
-        If True, applies a Hann window to reduce spectral leakage, by default True.
-    zero_padding_factor : int, optional
-        Factor for zero-padding to improve frequency resolution, by default 2.
-    round_to_closest_integer : bool, optional
-        If True, rounds detected periods to the nearest integer, by default True.
-    validate_with_acf : bool, optional
-        If True, validates periods with the Autocorrelation Function, by default False.
-    sampling_interval : float, optional
-        Time interval between samples, by default 1.0.
-    magnitude_threshold : Optional[float], optional
-        Threshold for filtering frequency components, by default 0.05.
-    relative_threshold : bool, optional
-        If True, `magnitude_threshold` is a fraction of the max FFT magnitude, by default True.
-    exclude_zero : bool, optional
-        If True, excludes periods of 0 from the results, by default True.
+    This transformer supports multi-item time series, fitting and transforming
+    each item independently based on its `item_id_col_name`.
 
     Notes
     -----
@@ -74,6 +50,39 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         exclude_zero: bool = True,
         column_config: ColumnConfig = DefaultColumnConfig(),
     ):
+        """
+        Initializes the AutoSeasonalFeatureTransformer.
+
+        Parameters
+        ----------
+        max_top_k : int, optional
+            The maximum number of dominant periods to identify, by default 5.
+        do_detrend : bool, optional
+            Whether to detrend the series before FFT, by default True.
+        detrend_type : Literal["first_diff", "loess", "linear", "constant"], optional
+            The detrending method to use, by default "linear".
+        use_peaks_only : bool, optional
+            If True, considers only local peaks in the FFT spectrum, by default True.
+        apply_hann_window : bool, optional
+            If True, applies a Hann window to reduce spectral leakage, by default True.
+        zero_padding_factor : int, optional
+            Factor for zero-padding to improve frequency resolution, by default 2.
+        round_to_closest_integer : bool, optional
+            If True, rounds detected periods to the nearest integer, by default True.
+        validate_with_acf : bool, optional
+            If True, validates periods with the Autocorrelation Function, by default False.
+        sampling_interval : float, optional
+            Time interval between samples, by default 1.0.
+        magnitude_threshold : Optional[float], optional
+            Threshold for filtering frequency components, by default 0.05.
+        relative_threshold : bool, optional
+            If True, `magnitude_threshold` is a fraction of the max FFT magnitude, by default True.
+        exclude_zero : bool, optional
+            If True, excludes periods of 0 from the results, by default True.
+        column_config : ColumnConfig, optional
+            Configuration object specifying column names for timestamp, target, and item ID.
+            Defaults to `DefaultColumnConfig()`.
+        """
         self.max_top_k = max_top_k
         self.do_detrend = do_detrend
         self.detrend_type = detrend_type
@@ -91,9 +100,26 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         self.target_col_name = column_config.target_col_name
         self.item_id_col_name = column_config.item_id_col_name
 
-    def fit(self, X: pd.DataFrame, y=None):
+    def fit(
+        self, X: pd.DataFrame, y: Optional[pd.Series] = None
+    ) -> "AutoSeasonalFeatureTransformer":
         """
-        Fit the transformer on the training data.
+        Fits the transformer to the data by detecting seasonal periods for each item.
+
+        This method iterates through each time series item specified by `item_id_col_name`,
+        detects its dominant seasonal periods, and stores them internally.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input data, containing columns for timestamp, target, and item ID.
+        y : pd.Series, optional
+            Ignored. This parameter exists for compatibility with scikit-learn pipelines.
+
+        Returns
+        -------
+        AutoSeasonalFeatureTransformer
+            The fitted transformer instance.
         """
         assert self.timestamp_col_name is not None, (
             "timestamp_col_name must be provided"
@@ -116,9 +142,27 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
             self.fitted_autoseasonal_per_item[group_name] = self.fit_item(group_data)
         return self
 
-    def transform(self, X: pd.DataFrame):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """
-        Transform the DataFrame by adding the seasonal features.
+        Transforms the data by adding seasonal features.
+
+        For each time series item, this method adds sine and cosine features based
+        on the seasonal periods detected during the `fit` stage.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input data to transform.
+
+        Returns
+        -------
+        pd.DataFrame
+            The transformed DataFrame with added seasonal features.
+
+        Raises
+        ------
+        ValueError
+            If an item ID is present in `X` that was not seen during `fit`.
         """
 
         all_transformed_items = []
@@ -148,21 +192,21 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
 
     def fit_item(self, X: pd.DataFrame) -> dict:
         """
-        Detects seasonal periods from the target time series.
+        Detects seasonal periods for a single time series item.
 
-        This method analyzes the provided time series (`y` or `X['target']`)
-        to find the most significant seasonal periods using FFT and stores
-        them for the `transform` step.
+        This method analyzes the target series of a single item to find the most
+        significant seasonal periods using FFT and stores them.
 
         Parameters
         ----------
         X : pd.DataFrame
-            The input data. If `y` is None, `X` must contain a 'target' column.
+            The input data for a single item, containing a target column.
 
         Returns
         -------
         dict
-            A dictionary with "periods_" and "train_df" for the item.
+            A dictionary containing the detected `periods_` and the original
+            `train_df` for the item.
         """
 
         # save the train_df
@@ -191,27 +235,29 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         return {"periods_": periods_, "train_df": train_df}
 
     def transform_item(
-        self, X: pd.DataFrame, periods_: List, train_df: pd.DataFrame
+        self, X: pd.DataFrame, periods_: List[float], train_df: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        Adds seasonal features (sine and cosine) to the DataFrame.
+        Adds seasonal features (sine and cosine) to a single item's DataFrame.
 
-        This method uses the periods detected during the `fit` phase to
-        generate and append seasonal features to the input DataFrame.
+        This method uses the periods detected during fitting to generate and
+        append seasonal features. It correctly handles time indices for both
+        training and forecasting horizons.
 
         Parameters
         ----------
         X : pd.DataFrame
-            The input data to transform.
-        periods_ : List
-            The list of seasonal periods for this item.
+            The input data to transform for a single item.
+        periods_ : List[float]
+            The list of seasonal periods detected for this item.
         train_df : pd.DataFrame
-            The training data for this item.
+            The training DataFrame for this item, used to establish the correct
+            time index for forecasting.
 
         Returns
         -------
         pd.DataFrame
-            The DataFrame with the added seasonal features.
+            The DataFrame for the item with added seasonal features.
         """
         X_transformed = X.copy()
         if not X["target"].isnull().all():
@@ -243,7 +289,8 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         """
         Identifies dominant seasonal periods in a time series using FFT.
 
-        This is a helper method that contains the core logic for period detection.
+        This is a static helper method that contains the core logic for period
+        detection based on the spectral density of the signal.
         """
         # Extract parameters from kwargs
         max_top_k = kwargs.get("max_top_k", 5)
