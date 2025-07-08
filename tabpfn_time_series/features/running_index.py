@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 import logging
-
+from joblib import Parallel, delayed
 from typing import Literal, Optional, Any
 
 
@@ -42,6 +42,7 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         self,
         column_config: ColumnConfig = DefaultColumnConfig(),
         mode: Literal["per_item", "global_timestamp"] = "per_item",
+        n_jobs: int = -1,
     ):
         """
         Initializes the transformer.
@@ -55,8 +56,12 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
             - "per_item": Index restarts for each item.
             - "global_timestamp": A single index across all items.
             By default "per_item".
+        n_jobs : int, optional
+            The number of jobs to run in parallel for "per_item" mode.
+            -1 means using all available processors. By default -1.
         """
         self.mode = mode
+        self.n_jobs = n_jobs
         self.train_data = None
         self.timestamp_col_name = column_config.timestamp_col_name
         self.target_col_name = column_config.target_col_name
@@ -122,12 +127,17 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         X = X.copy()
 
         if self.mode == "per_item":
-            all_item_X_out = []
-            for group_name, group_data in X.groupby(self.item_id_col_name):
-                transformed_group = self._add_running_index(
-                    group_data, item_id=group_name
-                )
-                all_item_X_out.append(transformed_group)
+            # The list of processed DataFrames is generated in parallel
+            all_item_X_out = Parallel(n_jobs=self.n_jobs)(
+                delayed(self._add_running_index)(group_data, item_id=group_name)
+                for group_name, group_data in X.groupby(self.item_id_col_name)
+            )
+            # all_item_X_out = []
+            # for group_name, group_data in X.groupby(self.item_id_col_name):
+            #     transformed_group = self._add_running_index(
+            #         group_data, item_id=group_name
+            #     )
+            #     all_item_X_out.append(transformed_group)
             return pd.concat(all_item_X_out)
 
         elif self.mode == "global_timestamp":

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 import logging
-
+from joblib import Parallel, delayed
 from typing import List, Literal, Optional, Tuple
 
 from scipy import fft
@@ -49,6 +49,7 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         relative_threshold: bool = True,
         exclude_zero: bool = True,
         column_config: ColumnConfig = DefaultColumnConfig(),
+        n_jobs: int = -1,
     ):
         """
         Initializes the AutoSeasonalFeatureTransformer.
@@ -82,6 +83,9 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         column_config : ColumnConfig, optional
             Configuration object specifying column names for timestamp, target, and item ID.
             Defaults to `DefaultColumnConfig()`.
+        n_jobs : int, optional
+            The number of jobs to run in parallel for "per_item" mode.
+            -1 means using all available processors. By default -1.
         """
         self.max_top_k = max_top_k
         self.do_detrend = do_detrend
@@ -99,6 +103,7 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         self.timestamp_col_name = column_config.timestamp_col_name
         self.target_col_name = column_config.target_col_name
         self.item_id_col_name = column_config.item_id_col_name
+        self.n_jobs = n_jobs
 
     def fit(
         self, X: pd.DataFrame, y: Optional[pd.Series] = None
@@ -136,10 +141,17 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
             f"item_id_col_name {self.item_id_col_name} not in X.columns"
         )
 
-        self.fitted_autoseasonal_per_item = {}
+        # --- Parallelized version of fitting per item---
         grouped = X.groupby(self.item_id_col_name)
-        for group_name, group_data in grouped:
-            self.fitted_autoseasonal_per_item[group_name] = self.fit_item(group_data)
+        group_names = [name for name, _ in grouped]
+
+        # Run fit_item for each group in parallel
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.fit_item)(group_data) for _, group_data in grouped
+        )
+
+        # Combine the group names and results into the final dictionary
+        self.fitted_autoseasonal_per_item = dict(zip(group_names, results))
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -164,23 +176,28 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         ValueError
             If an item ID is present in `X` that was not seen during `fit`.
         """
+        # Fail fast if any item in X was not seen during fit
+        seen_items = set(self.fitted_autoseasonal_per_item.keys())
+        transform_items = set(X[self.item_id_col_name].unique())
+        missing_items = transform_items - seen_items
+        if missing_items:
+            raise ValueError(
+                f"No fitted data found for item_id(s) {missing_items}. "
+                "Cannot create seasonal features for new items."
+            )
 
-        all_transformed_items = []
+        # --- Parallelized version ---
         grouped = X.groupby(self.item_id_col_name)
-        for group_name, group_data in grouped:
-            if group_name in self.fitted_autoseasonal_per_item:
-                item_params = self.fitted_autoseasonal_per_item[group_name]
-                transformed_group = self.transform_item(
-                    group_data,
-                    periods_=item_params["periods_"],
-                    train_df=item_params["train_df"],
-                )
-                all_transformed_items.append(transformed_group)
-            else:
-                raise ValueError(
-                    f"No fitted training data found for item_id '{group_name}'. "
-                    "Cannot create running_index for new items."
-                )
+
+        all_transformed_items = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.transform_item)(
+                group_data,
+                periods_=self.fitted_autoseasonal_per_item[group_name]["periods_"],
+                train_df=self.fitted_autoseasonal_per_item[group_name]["train_df"],
+            )
+            for group_name, group_data in grouped
+        )
+
         if not all_transformed_items:
             X_transformed = X.copy()
             for i in range(self.max_top_k):
