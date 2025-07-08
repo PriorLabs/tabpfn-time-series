@@ -132,13 +132,7 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
                 delayed(self._add_running_index)(group_data, item_id=group_name)
                 for group_name, group_data in X.groupby(self.item_id_col_name)
             )
-            # all_item_X_out = []
-            # for group_name, group_data in X.groupby(self.item_id_col_name):
-            #     transformed_group = self._add_running_index(
-            #         group_data, item_id=group_name
-            #     )
-            #     all_item_X_out.append(transformed_group)
-            return pd.concat(all_item_X_out)
+            return pd.concat(all_item_X_out).reindex(X.index)
 
         elif self.mode == "global_timestamp":
             return self._add_running_index(X)

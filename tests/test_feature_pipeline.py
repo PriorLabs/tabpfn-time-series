@@ -8,6 +8,15 @@ from tabpfn_time_series.features import (
     AutoSeasonalFeatureTransformer,
 )
 from sklearn.pipeline import Pipeline
+import logging
+
+# Configure basic logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Get a logger for this module
+logger = logging.getLogger(__name__)
 
 
 def is_autogluon_tsdf(df):
@@ -168,7 +177,7 @@ test_data = pd.DataFrame(
 
 def test_per_item_mode():
     """Tests the default 'per_item' grouping behavior."""
-    print("--- Running Test Case 1: Per-Item Mode ---")
+    logger.info("--- Running Test Case 1: Per-Item Mode ---")
 
     # 1. Define the pipeline
     per_item_pipeline = [("running_index", RunningIndexFeatureTransformer())]
@@ -179,19 +188,16 @@ def test_per_item_mode():
     # 3. Fit and transform the data
     result_df = grouped_transformer.fit_transform(test_data)
 
-    print("\nOriginal Data:")
-    print(test_data)
-    print("\nTransformed Data (Per-Item):")
-    print(result_df)
+    logger.info("\nOriginal Data:")
+    logger.info(test_data)
+    logger.info("\nTransformed Data (Per-Item):")
+    logger.info(result_df)
 
     # 4. Assert the expected outcome
     # The running_index should be the cumulative count within each group after sorting by index
     expected_index_A = [1, 0, 2]  # For original rows 10, 12, 14
     expected_index_B = [0, 1]  # For original rows 11, 13
 
-    # print("\nresult_df:")
-    # print(result_df.loc[result_df['item_id'] == 'A', 'running_index'].tolist())
-    # print(result_df.loc[result_df['item_id'] == 'B', 'running_index'].tolist())
     assert (
         result_df.loc[result_df["item_id"] == "A", "running_index"].tolist()
         == expected_index_A
@@ -202,12 +208,12 @@ def test_per_item_mode():
     )
     # assert result_df.index.equals(test_data.index), "Original index was not preserved"
 
-    print("\n✅ Test Case 1 Passed!")
+    logger.info("\n✅ Test Case 1 Passed!")
 
 
 def test_global_mode():
     """Tests the global processing with group_by_column=None."""
-    print("\n\n--- Running Test Case 2: Global Timestamp Mode ---")
+    logger.info("\n\n--- Running Test Case 2: Global Timestamp Mode ---")
 
     # 1. Define the pipeline
     global_pipeline_steps = [
@@ -223,10 +229,10 @@ def test_global_mode():
     # 3. Fit and transform the data
     result_df = global_transformer.fit_transform(test_data)
 
-    print("\nOriginal Data:")
-    print(test_data)
-    print("\nTransformed Data (Global Timestamp):")
-    print(result_df)
+    logger.info("\nOriginal Data:")
+    logger.info(test_data)
+    logger.info("\nTransformed Data (Global Timestamp):")
+    logger.info(result_df)
 
     # 4. Assert the expected outcome
     # The global index should correspond to the chronological order of timestamps
@@ -236,7 +242,7 @@ def test_global_mode():
     assert result_df["running_index"].tolist() == expected_global_index
     # assert result_df.index.equals(test_data.index), "Original index was not preserved"
 
-    print("\n✅ Test Case 2 Passed!")
+    logger.info("\n✅ Test Case 2 Passed!")
 
 
 # --- New Isolated Unit Tests for Transformers ---
@@ -484,7 +490,7 @@ def test_autoseasonal_handles_non_seasonal_fallback(non_seasonal_data):
 
     # The key assertion: Instead of finding 0 periods, the fallback should
     # kick in and find a number of periods equal to `max_top_k`.
-    print(f"Detected periods: {detected_params['periods_']}")
+    logger.info(f"Detected periods: {detected_params['periods_']}")
     assert len(detected_params["periods_"]) == k
     assert detected_params["periods_"][0] != 0  # Ensure it found a valid period
 

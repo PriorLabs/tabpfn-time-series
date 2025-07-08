@@ -283,8 +283,6 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
             time_idx = np.arange(len(X_transformed))
             time_idx += len(train_df)
 
-        # time_idx = np.arange(len(X_transformed))
-
         # Generate features for detected periods
         for i, period in enumerate(periods_):
             if period > 1:  # Avoid creating features for non-periodic signals
