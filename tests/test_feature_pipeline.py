@@ -1,28 +1,13 @@
 import pandas as pd
 import numpy as np
-
-# from tabpfn_time_series.features.feature_pipeline import (
-#     RunningIndexFeatureTransformer,
-#     FeatureTransformer,
-# )
 import pytest
 from autogluon.timeseries import TimeSeriesDataFrame
-
 from tabpfn_time_series.features import (
-    FeatureTransformer,
     RunningIndexFeatureTransformer,
     CalendarFeatureTransformer,
     AutoSeasonalFeatureTransformer,
 )
-# from tabpfn_time_series.features.utils_pipeline import (
-#     from_autogluon_tsdf_to_df,
-#     from_df_to_autogluon_tsdf,
-# )
-
-
-# Run the test
-# test_per_item_mode()
-# test_global_mode()
+from sklearn.pipeline import Pipeline
 
 
 def is_autogluon_tsdf(df):
@@ -151,159 +136,6 @@ def test_conversion_to_tsdf():
     assert not is_pure_pandas_df(new_tsdf)
 
 
-# def test_feature_pipeline():
-#     # old implementation
-#     from tabpfn_time_series.features_old import (
-#         RunningIndexFeature,
-#         CalendarFeature,
-#         AutoSeasonalFeature,
-#     )
-#     from tabpfn_time_series.features.utils import (
-#         from_autogluon_tsdf_to_df,
-#         from_df_to_autogluon_tsdf,
-#         load_data,
-#     )
-
-#     dataset_metadata = {
-#         "monash_tourism_monthly": {"prediction_length": 24},
-#         "m4_hourly": {"prediction_length": 48},
-#     }
-
-#     dataset_choice = "monash_tourism_monthly"
-#     num_time_series_subset = 2
-#     prediction_length = dataset_metadata[dataset_choice]["prediction_length"]
-
-#     # Loading Time Series Data Frames
-#     tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
-#         dataset_choice, num_time_series_subset, dataset_metadata
-#     )
-
-#     # Original Feature Transformer
-#     from tabpfn_time_series.features_old import FeatureTransformer
-
-#     selected_features = [
-#         RunningIndexFeature(),
-#         CalendarFeature(),
-#         AutoSeasonalFeature(),
-#     ]
-
-#     # Transform the data using the original feature transformer
-#     feature_transformer = FeatureTransformer(selected_features)
-#     train_tsdf_original, test_tsdf_original = feature_transformer.transform(
-#         train_tsdf, test_tsdf
-#     )
-
-#     import torch
-
-#     if torch.cuda.is_available():
-#         # Your code to run on GPU
-#         print("CUDA is available! Running predictions on GPU.")
-#         # Predict using TabPFNTimeSeriesPredictor
-#         from tabpfn_time_series import TabPFNTimeSeriesPredictor, TabPFNMode
-
-#         predictor = TabPFNTimeSeriesPredictor(
-#             tabpfn_mode=TabPFNMode.LOCAL,
-#         )
-
-#         pred = predictor.predict(train_tsdf_original, test_tsdf_original)
-
-#         from tabpfn_time_series.features.utils import (
-#             quick_mase_evaluation,
-#         )
-
-#         _, average_mase_original = quick_mase_evaluation(
-#             train_tsdf, test_tsdf_ground_truth, pred, prediction_length
-#         )
-
-#     # New Feature Transformer
-#     from tabpfn_time_series.features import (
-#         RunningIndexFeatureTransformer,
-#         FeatureTransformer,
-#     )
-
-#     # load data
-#     tsdf, train_tsdf, test_tsdf_ground_truth, test_tsdf = load_data(
-#         dataset_choice, num_time_series_subset, dataset_metadata
-#     )
-
-#     # convert to pandas dataframe
-#     df = from_autogluon_tsdf_to_df(tsdf)
-#     assert not is_autogluon_tsdf(df)
-#     assert is_pure_pandas_df(df)
-
-#     # convert tsdf to pandas dataframe
-#     train_df, test_df, ground_truth = train_test_split_time_series(
-#         df, prediction_length
-#     )
-
-#     # Set up pipeline
-#     pipeline = [
-#         ("running_index", RunningIndexFeatureTransformer()),
-#         ("calendar", CalendarFeatureTransformer()),
-#         ("auto_seasonal", AutoSeasonalFeatureTransformer()),
-#     ]
-
-#     feat_transformer = FeatureTransformer(pipeline_steps=pipeline)
-
-#     # 1. Fit on the training data AND transform it in one step
-#     train_feat_PDs = feat_transformer.fit_transform(train_df)
-
-#     # 2. ONLY transform the test data using what was learned from train
-#     test_feat_PDs = feat_transformer.transform(test_df)
-
-#     train_feat_tsdf = from_df_to_autogluon_tsdf(train_feat_PDs)
-#     test_feat_tsdf = from_df_to_autogluon_tsdf(test_feat_PDs)
-
-#     assert set(train_tsdf_original.columns) == set(train_feat_tsdf.columns)
-#     assert set(test_tsdf_original.columns) == set(test_feat_tsdf.columns)
-
-#     assert len(train_feat_tsdf) == len(train_tsdf)
-#     assert len(test_feat_tsdf) == len(test_tsdf)
-
-#     def test_column_values(tsdf_original, tsdf_new):
-#         is_same = True
-#         for col in tsdf_new.columns:
-#             if col in tsdf_original.columns:
-#                 is_same &= True
-#                 # check if the column is the same
-#                 if tsdf_original[col].equals(tsdf_new[col]):
-#                     is_same &= True
-#                 else:
-#                     is_same &= False
-#                     raise ValueError(f"Column {col} is not the same")
-#             else:
-#                 is_same &= False
-#                 raise ValueError(f"Column {col} is not in tsdf_original")
-
-#         return is_same
-
-#     assert test_column_values(train_tsdf_original, train_feat_tsdf)
-#     assert test_column_values(test_tsdf_original, test_feat_tsdf)
-
-#     assert train_feat_tsdf.equals(train_tsdf_original)
-#     assert test_feat_tsdf.equals(test_tsdf_original)
-
-#     import torch
-
-#     if torch.cuda.is_available():
-#         print("CUDA is available! Running predictions on GPU.")
-#         predictor = TabPFNTimeSeriesPredictor(
-#             tabpfn_mode=TabPFNMode.LOCAL,
-#         )
-
-#         pred = predictor.predict(train_feat_tsdf, test_feat_tsdf)
-
-#         from tabpfn_time_series.features.utils import (
-#             quick_mase_evaluation,
-#         )
-
-#         _, average_mase_new = quick_mase_evaluation(
-#             train_tsdf, test_tsdf_ground_truth, pred, prediction_length
-#         )
-
-#         assert average_mase_original == average_mase_new
-
-
 # --- Test Data ---
 # We'll use this DataFrame for both tests.
 # The timestamps are intentionally mixed to ensure sorting logic is tested.
@@ -342,7 +174,7 @@ def test_per_item_mode():
     per_item_pipeline = [("running_index", RunningIndexFeatureTransformer())]
 
     # 2. Instantiate the main transformer (uses group_by_column='item_id' by default)
-    grouped_transformer = FeatureTransformer(pipeline_steps=per_item_pipeline)
+    grouped_transformer = Pipeline(per_item_pipeline)
 
     # 3. Fit and transform the data
     result_df = grouped_transformer.fit_transform(test_data)
@@ -386,9 +218,7 @@ def test_global_mode():
     ]
 
     # 2. Instantiate the main transformer for global processing
-    global_transformer = FeatureTransformer(
-        pipeline_steps=global_pipeline_steps,
-    )
+    global_transformer = Pipeline(global_pipeline_steps)
 
     # 3. Fit and transform the data
     result_df = global_transformer.fit_transform(test_data)
@@ -624,14 +454,39 @@ def test_autoseasonal_detects_period(seasonal_data):
     assert np.isclose(detected_periods[0], 10, atol=0.1)
 
 
-# def test_autoseasonal_handles_non_seasonal(non_seasonal_data):
-#     """Tests behavior with non-seasonal (random) data."""
-#     transformer = AutoSeasonalFeatureTransformer(max_top_k=1, magnitude_threshold=0.5)
-#     transformer.fit(non_seasonal_data)
+def test_autoseasonal_handles_non_seasonal_fallback(non_seasonal_data):
+    """
+    Tests the fallback behavior of AutoSeasonalFeatureTransformer with non-seasonal data.
 
-#     # With a high threshold, no significant period should be found
-#     detected_params = transformer.fitted_autoseasonal_per_item["R1"]
-#     assert len(detected_params["periods_"]) == 0
+    When `use_peaks_only` is True but no peaks are found above the threshold,
+    the intended logic is to fall back to considering all frequencies and
+    selecting the top `max_top_k` based on magnitude. This test validates
+    that behavior.
+    """
+    # 1. Setup the transformer
+    # Use a very high magnitude_threshold to ensure find_peaks returns empty,
+    # which forces the fallback logic to trigger.
+    # We expect it to find `max_top_k` periods from the fallback.
+    k = 3
+    transformer = AutoSeasonalFeatureTransformer(
+        max_top_k=k,
+        use_peaks_only=True,
+        magnitude_threshold=1.1,  # Set impossibly high to guarantee no peaks
+        do_detrend=False,
+    )
+
+    # 2. Fit the transformer on the non-seasonal (random) data
+    transformer.fit(non_seasonal_data)
+
+    # 3. Assert the outcome
+    # Access the fitted parameters for the item 'R1'
+    detected_params = transformer.fitted_autoseasonal_per_item["R1"]
+
+    # The key assertion: Instead of finding 0 periods, the fallback should
+    # kick in and find a number of periods equal to `max_top_k`.
+    print(f"Detected periods: {detected_params['periods_']}")
+    assert len(detected_params["periods_"]) == k
+    assert detected_params["periods_"][0] != 0  # Ensure it found a valid period
 
 
 def test_autoseasonal_transform_creates_features(seasonal_data):

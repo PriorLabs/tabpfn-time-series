@@ -13,12 +13,12 @@ from tabpfn_time_series import (
     TabPFNMode,
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
 )
-from tabpfn_time_series.features.feature_pipeline import (
+from tabpfn_time_series.features import (
     RunningIndexFeatureTransformer,
     AutoSeasonalFeatureTransformer,
     CalendarFeatureTransformer,
-    FeatureTransformer,
 )
+from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class TabPFNTSPredictor:
         else:
             pipeline_steps = feature_pipeline_steps
 
-        self.feature_transformer = FeatureTransformer(pipeline_steps=pipeline_steps)
+        self.feature_transformer = Pipeline(pipeline_steps)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")

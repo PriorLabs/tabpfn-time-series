@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import gluonts.time_feature
 
-from .pipeline import ColumnConfig, DefaultColumnConfig
+from .pipeline_configs import ColumnConfig, DefaultColumnConfig
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import logging
 from typing import Literal, Optional, Any
 
 
-from .pipeline import ColumnConfig, DefaultColumnConfig
+from .pipeline_configs import ColumnConfig, DefaultColumnConfig
 
 logger = logging.getLogger(__name__)
 

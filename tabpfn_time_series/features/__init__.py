@@ -1,8 +1,8 @@
-from .pipeline import (
-    FeatureTransformer,
+from .pipeline_configs import (
     ColumnConfig,
     DefaultColumnConfig,
 )
+
 from .running_index import RunningIndexFeatureTransformer
 from .calendar_features import CalendarFeatureTransformer
 from .auto_seasonal import AutoSeasonalFeatureTransformer, detrend
