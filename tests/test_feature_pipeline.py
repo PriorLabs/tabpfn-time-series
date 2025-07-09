@@ -3,9 +3,11 @@ import numpy as np
 import pytest
 from autogluon.timeseries import TimeSeriesDataFrame
 from tabpfn_time_series.features import (
+    BaseFeatureTransformer,
     RunningIndexFeatureTransformer,
     CalendarFeatureTransformer,
     AutoSeasonalFeatureTransformer,
+    DefaultColumnConfig,
 )
 from sklearn.pipeline import Pipeline
 import logging
@@ -568,3 +570,68 @@ def test_autoseasonal_transform_prediction_offset(seasonal_data):
         check_names=False,
         atol=1e-9,
     )
+
+
+# --- Tests for BaseFeatureTransformer Validation ---
+
+
+class TestableTransformer(BaseFeatureTransformer):
+    """A minimal concrete implementation of BaseFeatureTransformer for testing."""
+
+    def __init__(self, column_config=DefaultColumnConfig(), required_columns=None):
+        super().__init__(column_config)
+        # Allow overriding required_columns for specific tests
+        if required_columns is not None:
+            self._required_columns = required_columns
+
+    # transform must be implemented, but does nothing for this test
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return X
+
+
+def test_validate_data_missing_column_raises_error():
+    """
+    Tests that ValueError is raised if a required column is missing from the DataFrame.
+    """
+    # This transformer requires 'timestamp_col_name'
+    transformer = TestableTransformer(required_columns=["timestamp_col_name"])
+
+    # DataFrame is missing the 'timestamp' column
+    invalid_df = pd.DataFrame({"item_id": ["A"], "target": [1]})
+
+    with pytest.raises(
+        ValueError, match="Required column 'timestamp' not found in DataFrame."
+    ):
+        transformer.fit(invalid_df)
+
+
+def test_validate_data_missing_attribute_raises_error():
+    """
+    Tests that ValueError is raised if the transformer instance is missing a required column name attribute.
+    """
+    transformer = TestableTransformer(required_columns=["custom_column_name"])
+    # The transformer is not configured with 'custom_column_name'
+
+    valid_df = pd.DataFrame({"timestamp": [pd.to_datetime("2023-01-01")]})
+
+    with pytest.raises(ValueError, match="Attribute 'custom_column_name' is not set."):
+        transformer.fit(valid_df)
+
+
+def test_validate_data_success_case():
+    """
+    Tests that no error is raised when the DataFrame and configuration are valid.
+    """
+    # This transformer requires both timestamp and item_id columns.
+    transformer = TestableTransformer(
+        required_columns=["timestamp_col_name", "item_id_col_name"]
+    )
+
+    valid_df = pd.DataFrame(
+        {"timestamp": [pd.to_datetime("2023-01-01")], "item_id": ["A"], "target": [10]}
+    )
+
+    try:
+        transformer.fit(valid_df)
+    except ValueError:
+        pytest.fail("ValueError was raised unexpectedly on valid data.")

@@ -2,10 +2,10 @@ from .pipeline_configs import (
     ColumnConfig,
     DefaultColumnConfig,
 )
-
-from .running_index import RunningIndexFeatureTransformer
+from .base import BaseFeatureTransformer
+from .running_index_features import RunningIndexFeatureTransformer
 from .calendar_features import CalendarFeatureTransformer
-from .auto_seasonal import AutoSeasonalFeatureTransformer, detrend
+from .auto_seasonal_features import AutoSeasonalFeatureTransformer, detrend
 
 from .utils import (
     train_test_split_time_series,
@@ -16,7 +16,7 @@ from .utils import (
 )
 
 __all__ = [
-    "FeatureTransformer",
+    "BaseFeatureTransformer",
     "RunningIndexFeatureTransformer",
     "CalendarFeatureTransformer",
     "AutoSeasonalFeatureTransformer",

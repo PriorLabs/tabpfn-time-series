@@ -1,17 +1,17 @@
 import pandas as pd
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
 import logging
 from typing import Any, Dict, List, Optional
 
 import gluonts.time_feature
 
 from .pipeline_configs import ColumnConfig, DefaultColumnConfig
+from .base import BaseFeatureTransformer
 
 logger = logging.getLogger(__name__)
 
 
-class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
+class CalendarFeatureTransformer(BaseFeatureTransformer):
     """
     Wrapper for CalendarFeature to provide sklearn-style transform interface.
     """
@@ -40,6 +40,7 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
             Configuration object specifying the names of timestamp, target, and item ID columns.
             Defaults to DefaultColumnConfig().
         """
+        super().__init__(column_config)
         self.components = components or ["year"]
         self.seasonal_features = seasonal_features or {
             # (feature, natural seasonality)
@@ -52,9 +53,7 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
             "week_of_year": [52],
             "month_of_year": [12],
         }
-        self.timestamp_col_name = column_config.timestamp_col_name
-        self.target_col_name = column_config.target_col_name
-        self.item_id_col_name = column_config.item_id_col_name
+        self._required_columns = ["timestamp_col_name"]
 
     def fit(
         self, X: pd.DataFrame, y: Optional[Any] = None
@@ -78,13 +77,7 @@ class CalendarFeatureTransformer(BaseEstimator, TransformerMixin):
         CalendarFeatureTransformer
             The fitted transformer instance.
         """
-        assert self.timestamp_col_name is not None, (
-            "timestamp_col_name must be provided"
-        )
-        assert self.timestamp_col_name in X.columns, (
-            f"timestamp_col_name {self.timestamp_col_name} not in X.columns"
-        )
-
+        super().fit(X, y)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:

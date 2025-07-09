@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
 import logging
 from joblib import Parallel, delayed
 from typing import List, Literal, Optional, Tuple
@@ -11,11 +10,12 @@ from statsmodels.tsa.stattools import acf
 
 
 from .pipeline_configs import ColumnConfig, DefaultColumnConfig
+from .base import BaseFeatureTransformer
 
 logger = logging.getLogger(__name__)
 
 
-class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
+class AutoSeasonalFeatureTransformer(BaseFeatureTransformer):
     """
     A scikit-learn compatible transformer that automatically detects and creates
     seasonal features from a time series.
@@ -87,6 +87,7 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
             The number of jobs to run in parallel for "per_item" mode.
             -1 means using all available processors. By default -1.
         """
+        super().__init__(column_config)
         self.max_top_k = max_top_k
         self.do_detrend = do_detrend
         self.detrend_type = detrend_type
@@ -100,10 +101,12 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         self.relative_threshold = relative_threshold
         self.exclude_zero = exclude_zero
         self.train_df = None
-        self.timestamp_col_name = column_config.timestamp_col_name
-        self.target_col_name = column_config.target_col_name
-        self.item_id_col_name = column_config.item_id_col_name
         self.n_jobs = n_jobs
+        self._required_columns = [
+            "timestamp_col_name",
+            "target_col_name",
+            "item_id_col_name",
+        ]
 
     def fit(
         self, X: pd.DataFrame, y: Optional[pd.Series] = None
@@ -126,20 +129,7 @@ class AutoSeasonalFeatureTransformer(BaseEstimator, TransformerMixin):
         AutoSeasonalFeatureTransformer
             The fitted transformer instance.
         """
-        assert self.timestamp_col_name is not None, (
-            "timestamp_col_name must be provided"
-        )
-        assert self.target_col_name is not None, "target_col_name must be provided"
-        assert self.item_id_col_name is not None, "item_id_col_name must be provided"
-        assert self.timestamp_col_name in X.columns, (
-            f"timestamp_col_name {self.timestamp_col_name} not in X.columns"
-        )
-        assert self.target_col_name in X.columns, (
-            f"target_col_name {self.target_col_name} not in X.columns"
-        )
-        assert self.item_id_col_name in X.columns, (
-            f"item_id_col_name {self.item_id_col_name} not in X.columns"
-        )
+        super().fit(X, y)
 
         # --- Parallelized version of fitting per item---
         grouped = X.groupby(self.item_id_col_name)

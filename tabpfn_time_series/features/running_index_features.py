@@ -1,16 +1,16 @@
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
 import logging
 from joblib import Parallel, delayed
 from typing import Literal, Optional, Any
 
 
 from .pipeline_configs import ColumnConfig, DefaultColumnConfig
+from .base import BaseFeatureTransformer
 
 logger = logging.getLogger(__name__)
 
 
-class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
+class RunningIndexFeatureTransformer(BaseFeatureTransformer):
     """
     A transformer that adds a running index feature to a DataFrame.
 
@@ -60,12 +60,15 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
             The number of jobs to run in parallel for "per_item" mode.
             -1 means using all available processors. By default -1.
         """
+        super().__init__(column_config)
         self.mode = mode
         self.n_jobs = n_jobs
         self.train_data = None
-        self.timestamp_col_name = column_config.timestamp_col_name
-        self.target_col_name = column_config.target_col_name
-        self.item_id_col_name = column_config.item_id_col_name
+        self._required_columns = [
+            "timestamp_col_name",
+            "target_col_name",
+            "item_id_col_name",
+        ]
 
     def fit(
         self, X: pd.DataFrame, y: Optional[Any] = None
@@ -89,14 +92,7 @@ class RunningIndexFeatureTransformer(BaseEstimator, TransformerMixin):
         self : RunningIndexFeatureTransformer
             The fitted transformer instance.
         """
-        # --- Assertions to ensure data quality ---
-        for col in [
-            self.timestamp_col_name,
-            self.target_col_name,
-            self.item_id_col_name,
-        ]:
-            assert col is not None, f"{col} must be provided in column_config"
-            assert col in X.columns, f"Column '{col}' not found in the DataFrame."
+        super().fit(X, y)
 
         if self.mode == "per_item":
             self.train_data = {
