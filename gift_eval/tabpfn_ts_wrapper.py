@@ -1,4 +1,4 @@
-from typing import Iterator, List, Tuple, Any
+from typing import Iterator, Tuple
 import logging
 
 import numpy as np
@@ -10,24 +10,24 @@ from autogluon.timeseries import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
+    FeatureTransformer,
     TabPFNMode,
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
 )
 from tabpfn_time_series.features import (
-    RunningIndexFeatureTransformer,
-    AutoSeasonalFeatureTransformer,
-    CalendarFeatureTransformer,
+    RunningIndexFeature,
+    CalendarFeature,
+    AutoSeasonalFeature,
 )
-from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
 
 
 class TabPFNTSPredictor:
-    DEFAULT_FEATURES: List[Tuple[str, Any]] = [
-        ("running_index", RunningIndexFeatureTransformer()),
-        ("calendar", CalendarFeatureTransformer()),
-        ("auto_seasonal", AutoSeasonalFeatureTransformer()),
+    DEFAULT_FEATURES = [
+        RunningIndexFeature(),
+        CalendarFeature(),
+        AutoSeasonalFeature(),
     ]
 
     def __init__(
@@ -37,7 +37,6 @@ class TabPFNTSPredictor:
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         context_length: int = 4096,
         debug: bool = False,
-        feature_pipeline_steps: List[Tuple[str, Any]] = None,
     ):
         self.ds_prediction_length = ds_prediction_length
         self.ds_freq = ds_freq
@@ -47,13 +46,7 @@ class TabPFNTSPredictor:
         self.context_length = context_length
         self.debug = debug
 
-        # If no custom pipeline is provided, use the default one.
-        if feature_pipeline_steps is None:
-            pipeline_steps = self.DEFAULT_FEATURES
-        else:
-            pipeline_steps = feature_pipeline_steps
-
-        self.feature_transformer = Pipeline(pipeline_steps)
+        self.feature_transformer = FeatureTransformer(self.DEFAULT_FEATURES)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")
@@ -120,24 +113,9 @@ class TabPFNTSPredictor:
         test_tsdf = generate_test_X(
             train_tsdf, prediction_length=self.ds_prediction_length
         )
-
-        # New feature pipeline
-        from tabpfn_time_series.features_sklearn.utils_pipeline import (
-            from_autogluon_tsdf_to_df,
-            from_df_to_autogluon_tsdf,
+        train_tsdf, test_tsdf = self.feature_transformer.transform(
+            train_tsdf, test_tsdf
         )
-
-        # Fit and transform the feature transformer
-        train_transformed = self.feature_transformer.fit_transform(
-            from_autogluon_tsdf_to_df(train_tsdf)
-        )
-        test_transformed = self.feature_transformer.transform(
-            from_autogluon_tsdf_to_df(test_tsdf)
-        )
-
-        # Convert back to TimeSeriesDataFrame
-        train_tsdf = from_df_to_autogluon_tsdf(train_transformed)
-        test_tsdf = from_df_to_autogluon_tsdf(test_transformed)
 
         return train_tsdf, test_tsdf
 
