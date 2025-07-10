@@ -36,6 +36,11 @@ class RunningIndexFeatureTransformer(BaseFeatureTransformer):
         The name of the target variable column.
     item_id_col_name : str
         The name of the item identifier column.
+
+    Note
+    ----------
+    - This transformer distinguishes between training and testing (prediction) data by checking the target column.
+      The testing data's target values are always NaNs.
     """
 
     def __init__(
@@ -92,7 +97,7 @@ class RunningIndexFeatureTransformer(BaseFeatureTransformer):
         self : RunningIndexFeatureTransformer
             The fitted transformer instance.
         """
-        super().fit(X, y)
+        super().fit(X, y)  # validate the data
 
         if self.mode == "per_item":
             self.train_data = {

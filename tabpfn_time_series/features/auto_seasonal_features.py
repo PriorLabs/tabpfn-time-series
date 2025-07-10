@@ -29,9 +29,11 @@ class AutoSeasonalFeatureTransformer(BaseFeatureTransformer):
 
     Notes
     -----
-    This transformer currently only supports regularly-sampled time series.
-    It will not work as expected with time series that have irregular intervals
-    between observations.
+    - This transformer currently only supports regularly-sampled time series.
+      It will not work as expected with time series that have irregular intervals
+      between observations.
+    - This transformer distinguishes between training and testing (prediction) data by checking the target column.
+      The testing data's target values are always NaNs.
     """
 
     def __init__(
@@ -129,7 +131,7 @@ class AutoSeasonalFeatureTransformer(BaseFeatureTransformer):
         AutoSeasonalFeatureTransformer
             The fitted transformer instance.
         """
-        super().fit(X, y)
+        super().fit(X, y)  # validate the data
 
         # --- Parallelized version of fitting per item---
         grouped = X.groupby(self.item_id_col_name)

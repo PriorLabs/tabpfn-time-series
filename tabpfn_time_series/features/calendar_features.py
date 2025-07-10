@@ -77,7 +77,7 @@ class CalendarFeatureTransformer(BaseFeatureTransformer):
         CalendarFeatureTransformer
             The fitted transformer instance.
         """
-        super().fit(X, y)
+        super().fit(X, y)  # validate the data
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
