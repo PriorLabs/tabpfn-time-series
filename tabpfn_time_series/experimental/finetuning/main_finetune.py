@@ -5,11 +5,16 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
+
+from tabpfn_time_series.experimental.finetuning.utils.logging_utils import (
+    configure_logging,
+)
 from tabpfn_time_series.experimental.utils.general import OUTPUT_ROOT
 from tabpfn_time_series.experimental.finetuning.data.data_module import (
     TimeSeriesDataModule,
@@ -25,46 +30,6 @@ from tabpfn_time_series.experimental.finetuning.callbacks import (
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-
-
-class TeeStream:
-    """A stream that writes to both stdout and a file."""
-
-    def __init__(self, file_path: Path):
-        self.terminal = sys.stdout
-        self.log_file = open(file_path, "a", encoding="utf-8")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log_file.write(message)
-        self.log_file.flush()  # Ensure immediate write to file
-
-    def flush(self):
-        self.terminal.flush()
-        self.log_file.flush()
-
-    def close(self):
-        if hasattr(self.log_file, "close"):
-            self.log_file.close()
-
-
-def setup_file_logging(output_dir: Path, run_name: str) -> None:
-    """Set up file logging to save logs and stdout/stderr in the output directory."""
-    log_file = output_dir / f"{run_name}.log"
-
-    # Set up file handler for logging
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    file_handler.setFormatter(formatter)
-    logging.getLogger().addHandler(file_handler)
-
-    # Redirect both stdout and stderr to also write to the log file
-    tee_stream = TeeStream(log_file)
-    sys.stdout = tee_stream
-    sys.stderr = tee_stream
-
-    logger.info(f"Logging to file: {log_file}")
 
 
 def parse_args():
@@ -100,6 +65,18 @@ def parse_args():
         "--early_stopping",
         action="store_true",
         help="Enable early stopping when val/sql stops improving (patience=15).",
+    )
+
+    parser.add_argument(
+        "--validate_before_training",
+        action="store_true",
+        help="Run a full validation loop before starting training.",
+    )
+
+    parser.add_argument(
+        "--validate_dataset",
+        action="store_true",
+        help="Load all data to check for issues without training.",
     )
 
     # Data args
@@ -154,7 +131,10 @@ def parse_args():
         help="Currently, only batch size 1 is supported.",
     )
     parser.add_argument(
-        "--num_workers", type=int, default=4, help="Number of workers for dataloading."
+        "--num_workers",
+        type=int,
+        default=8,
+        help="Number of workers for dataloading. If None, will use all available cores.",
     )
     parser.add_argument("--past_length", type=int, default=2048, help="Context length.")
     parser.add_argument(
@@ -210,6 +190,33 @@ def parse_args():
     return args
 
 
+def _iterate_dataloader(dataloader, name: str):
+    """Helper to iterate through a dataloader and log progress."""
+    logger.info(f"Checking {name} data...")
+    count = 0
+    for i, _ in enumerate(tqdm(dataloader, desc=f"Checking {name} data")):
+        count += 1
+
+    if count == 0:
+        logger.warning(f"{name} dataloader is empty.")
+    else:
+        logger.info(f"Processed a total of {count} {name} batches.")
+        logger.info(f"{name} data loaded successfully.")
+
+
+def validate_dataset(data_module: TimeSeriesDataModule):
+    """
+    Iterates through the entire dataset to check for integrity issues.
+    """
+    logger.info("--- Validating dataset integrity ---")
+    logger.info("This will iterate through all data without training.")
+    data_module.setup("fit")
+    _iterate_dataloader(data_module.train_dataloader(), "training")
+
+    data_module.setup("validate")
+    _iterate_dataloader(data_module.val_dataloader(), "validation")
+
+
 def main(args):
     # Set seed for reproducibility
     pl.seed_everything(args.seed, workers=True)
@@ -231,17 +238,17 @@ def main(args):
 
     # Set up directories
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    optimizer_suffix = "sf" if args.use_schedulefree else "adam"
     run_name = (
         f"{timestamp}_{args.dataset.replace('/', '_')}"
         f"_past{args.past_length}_future{args.future_length}"
         f"_lr{args.lr}_lambda{args.l2_sp_lambda}"
-        f"_{optimizer_suffix}_seed{args.seed}"
+        f"_sampling{args.disable_sampling}_seed{args.seed}"
     )
     output_dir = Path(args.output_dir) / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    setup_file_logging(output_dir, run_name)
+    # Centralized logging setup
+    configure_logging(output_dir, run_name)
 
     logger.info("--- Starting Fine-tuning ---")
     logger.info("Arguments:")
@@ -271,6 +278,15 @@ def main(args):
         future_length=args.future_length if not args.debug else 20,
         enable_sampling=not args.disable_sampling,
     )
+
+    if args.validate_dataset:
+        try:
+            validate_dataset(data_module)
+            logger.info("--- Dataset validation successful ---")
+            sys.exit(0)
+        except Exception as e:
+            logger.error(f"Dataset validation failed: {e}", exc_info=True)
+            sys.exit(1)
 
     # Set up trainer
     if not args.no_wandb:
@@ -355,14 +371,18 @@ def main(args):
 
     trainer = pl.Trainer(**trainer_kwargs)
 
+    if args.validate_before_training:
+        logger.info("--- Running validation before training ---")
+        trainer.validate(model, datamodule=data_module)
+
     # Start fine-tuning
     trainer.fit(model, datamodule=data_module)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+    # The root logger is now configured by the `configure_logging` function
+    # inside the `main` function. We can still log here, but the format
+    # will be basic until `configure_logging` is called.
     logger.info("Starting Fine-tuning Script")
 
     arguments = parse_args()

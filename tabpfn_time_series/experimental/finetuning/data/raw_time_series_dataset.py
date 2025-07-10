@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Literal, List, Iterator, Iterable
+from itertools import islice
 
 import numpy as np
 import torch
@@ -191,8 +192,8 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
             dummy_value=np.nan,
         )
 
-        # Only filter for training mode to remove all-NaN samples
-        if self.mode is not DatasetMode.TRAINING:
+        # Filter out invalid samples for training and validation.
+        if self.mode is DatasetMode.TEST:
             return splitter
 
         return Chain(
@@ -207,9 +208,10 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
             ]
         )
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[DataEntry]:
         """
         Creates an iterator that interleaves samples from the source datasets.
+        If multiple workers are used, the data is sharded among them.
         """
         transform = self._create_transformation_chain()
         is_train = self.mode == DatasetMode.TRAINING
@@ -223,16 +225,28 @@ class RawTimeSeriesDataset(IterableDataset, ShuffleMixin):
             transformed = transform.apply(source, is_train=is_train)
             transformed_iterators.append(iter(transformed))
 
-        # The main sampling loop
-        while True:
-            # Choose a source dataset iterator based on probabilities
-            dataset_idx = np.random.choice(len(self.datasets), p=self.probabilities)
+        def _interleave_source() -> Iterator[DataEntry]:
+            """A generator that interleaves samples from the source datasets."""
+            # The main sampling loop
+            while True:
+                # Choose a source dataset iterator based on probabilities
+                dataset_idx = np.random.choice(len(self.datasets), p=self.probabilities)
 
-            try:
-                # Yield the next available sample from the chosen iterator
-                yield next(transformed_iterators[dataset_idx])
+                try:
+                    # Yield the next available sample from the chosen iterator
+                    yield next(transformed_iterators[dataset_idx])
 
-            except StopIteration:
-                # This will only be reached in non-training modes when an
-                # iterator is exhausted. We stop the entire iteration.
-                break
+                except StopIteration:
+                    # This will only be reached in non-training modes when an
+                    # iterator is exhausted. We stop the entire iteration.
+                    return
+
+        iterable = _interleave_source()
+
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            # If in a worker process, split the workload.
+            # Each worker will process a different slice of the iterable.
+            iterable = islice(iterable, worker_info.id, None, worker_info.num_workers)
+
+        yield from iterable
