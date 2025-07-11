@@ -5,9 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tabpfn_time_series"
 version = "1.0.0"
-authors = [
-  { name="Liam Shi Bin Hoo", email="hoos@tf.uni-freiburg.de" },
-]
+authors = [{ name = "Liam Shi Bin Hoo", email = "hoos@tf.uni-freiburg.de" }]
 description = "Zero-shot time series forecasting with TabPFNv2"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,9 +21,10 @@ dependencies = [
     "autogluon.timeseries>=1.2",
     "tabpfn-client>=0.1.7",
     "tabpfn>=2.0.9",
-    "datasets>=3.3.2",
+    "datasets>=4.0",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
+    "tomli>=2.2.1",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +37,7 @@ dev = [
     "twine",
     "build",
     "pytest",
+    "ipykernel>=6.29.5",
 ]
 
 [tool.hatch.build.targets.wheel]
