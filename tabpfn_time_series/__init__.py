@@ -1,13 +1,9 @@
 from pathlib import Path
 
 try:
-    # For Python 3.11+
-    import tomllib
-
-    # For Python <3.11
-    # import tomli as tomllib
+    import tomllib  # Python 3.11+
 except ImportError:
-    import tomli as tomllib
+    import tomli as tomllib  # Python <3.11, requires 'tomli' package
 
 with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as f:
     __version__ = tomllib.load(f)["project"]["version"]
