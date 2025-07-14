@@ -18,12 +18,15 @@ from tabpfn_time_series.experimental.finetuning.utils.logging_utils import (
 from tabpfn_time_series.experimental.utils.general import OUTPUT_ROOT
 from tabpfn_time_series.experimental.finetuning.data.data_module import (
     TimeSeriesDataModule,
+    OverfitTestDataModule,
+    SyntheticDataModule,
 )
 from tabpfn_time_series.experimental.finetuning.lightning_model import (
     FinetuneTabPFNModule,
 )
 from tabpfn_time_series.experimental.finetuning.callbacks import (
     MetricWorseningVisualizationCallback,
+    ValidationVisualizationCallback,
 )
 
 
@@ -34,6 +37,14 @@ load_dotenv()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune TabPFN for Time Series.")
+
+    parser.add_argument(
+        "--tags",
+        type=str,
+        nargs="+",
+        default=[],
+        help="Tags to add to the run.",
+    )
 
     parser.add_argument("--debug", action="store_true", help="Run in debug mode.")
     parser.add_argument("--verbose", action="store_true", help="Run in verbose mode.")
@@ -48,8 +59,15 @@ def parse_args():
     )
     parser.add_argument(
         "--overfit_test",
+        type=int,
+        default=None,
+        metavar="N_SERIES",
+        help="Run an overfitting test on a small subset of N_SERIES from the dataset.",
+    )
+    parser.add_argument(
+        "--use_synthetic_data",
         action="store_true",
-        help="Run an overfit test on a single batch to check for bugs.",
+        help="Use synthetic data for debugging and testing.",
     )
     parser.add_argument(
         "--mini",
@@ -80,9 +98,7 @@ def parse_args():
     )
 
     # Data args
-    parser.add_argument(
-        "--dataset", type=str, required=True, help="Name of the dataset to use."
-    )
+    parser.add_argument("--dataset", type=str, help="Name of the dataset to use.")
 
     # Model args
     parser.add_argument(
@@ -136,11 +152,11 @@ def parse_args():
         default=8,
         help="Number of workers for dataloading. If None, will use all available cores.",
     )
-    parser.add_argument("--past_length", type=int, default=2048, help="Context length.")
+    parser.add_argument("--past_length", type=int, default=1024, help="Context length.")
     parser.add_argument(
         "--future_length",
         type=int,
-        default=512,
+        default=48,
         help="Prediction length for training samples.",
     )
     parser.add_argument(
@@ -165,6 +181,11 @@ def parse_args():
         action="store_true",
         help="Enable automatic visualization when validation metrics worsen.",
     )
+    parser.add_argument(
+        "--visualize_every_val",
+        action="store_true",
+        help="Enable visualization of random samples after every validation run.",
+    )
 
     # Wandb args
     parser.add_argument(
@@ -174,6 +195,42 @@ def parse_args():
         help="Wandb project name.",
     )
     parser.add_argument("--wandb_entity", type=str, default=None, help="Wandb entity.")
+
+    # Synthetic data args
+    synth_group = parser.add_argument_group("Synthetic Data Generation")
+    synth_group.add_argument(
+        "--synthetic_num_train_series",
+        type=int,
+        default=100,
+        help="Number of training series to generate.",
+    )
+    synth_group.add_argument(
+        "--synthetic_num_val_series",
+        type=int,
+        default=20,
+        help="Number of validation series to generate.",
+    )
+    synth_group.add_argument(
+        "--synthetic_series_length",
+        type=int,
+        default=512,
+        help="Length of each generated series.",
+    )
+    synth_group.add_argument(
+        "--synthetic_slope", type=float, default=0.1, help="Slope of linear trend."
+    )
+    synth_group.add_argument(
+        "--synthetic_intercept",
+        type=float,
+        default=0.0,
+        help="Intercept of linear trend.",
+    )
+    synth_group.add_argument(
+        "--synthetic_noise_std",
+        type=float,
+        default=0.1,
+        help="Standard deviation of noise.",
+    )
 
     # Schedule-free optimizer args
     parser.add_argument(
@@ -221,6 +278,14 @@ def main(args):
     # Set seed for reproducibility
     pl.seed_everything(args.seed, workers=True)
 
+    # Configure logging based on args
+    log_level = logging.INFO
+    if args.debug or args.verbose:
+        log_level = logging.DEBUG
+
+    if args.overfit_test:
+        args.tags.append("overfit_test")
+
     # Define configs
     tabpfn_model_config = {
         "device": args.accelerator,
@@ -229,6 +294,8 @@ def main(args):
     }
     if args.debug:
         tabpfn_model_config["n_estimators"] = 2
+        args.past_length = 30
+        args.future_length = 20
 
     training_config = {
         "lr": args.lr,
@@ -236,19 +303,26 @@ def main(args):
         "use_schedulefree": args.use_schedulefree,
     }
 
+    if args.use_synthetic_data:
+        assert args.dataset is None, (
+            "Dataset cannot be provided when using synthetic data"
+        )
+        args.tags.append("synthetic")
+        args.dataset = "synthetic"
+
     # Set up directories
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = (
         f"{timestamp}_{args.dataset.replace('/', '_')}"
         f"_past{args.past_length}_future{args.future_length}"
         f"_lr{args.lr}_lambda{args.l2_sp_lambda}"
-        f"_sampling{args.disable_sampling}_seed{args.seed}"
+        f"_sampling{not args.disable_sampling}_seed{args.seed}"
     )
     output_dir = Path(args.output_dir) / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Centralized logging setup
-    configure_logging(output_dir, run_name)
+    configure_logging(output_dir, run_name, log_level=log_level)
 
     logger.info("--- Starting Fine-tuning ---")
     logger.info("Arguments:")
@@ -256,11 +330,15 @@ def main(args):
         logger.info(f"  {arg_name}: {arg_value}")
 
     # The storage path for gift_eval datasets is typically at the repo root + /gift_eval/data
-    storage_path = Path(os.getenv("DATASET_STORAGE_PATH"))
-    if not storage_path.exists():
-        logger.error(f"Dataset storage path not found: {storage_path}")
-        logger.error("Please run `cd gift_eval && ./setup.sh` to download the data.")
-        exit(1)
+    storage_path = None
+    if not args.use_synthetic_data:
+        storage_path = Path(os.getenv("DATASET_STORAGE_PATH"))
+        if not storage_path.exists():
+            logger.error(f"Dataset storage path not found: {storage_path}")
+            logger.error(
+                "Please run `cd gift_eval && ./setup.sh` to download the data."
+            )
+            exit(1)
 
     model = FinetuneTabPFNModule(
         training_config=training_config,
@@ -268,16 +346,44 @@ def main(args):
         seed=args.seed,
     )
 
-    data_module = TimeSeriesDataModule(
-        dataset_name=args.dataset,
-        dataset_storage_path=storage_path,
-        model=model.get_cpu_regressor_for_preprocessing(),
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        past_length=args.past_length if not args.debug else 30,
-        future_length=args.future_length if not args.debug else 20,
-        enable_sampling=not args.disable_sampling,
-    )
+    # Setup data module
+    if args.use_synthetic_data:
+        logger.info("--- Using Synthetic Data ---")
+        data_module = SyntheticDataModule(
+            model=model.get_cpu_regressor_for_preprocessing(),
+            num_train_series=args.synthetic_num_train_series,
+            num_val_series=args.synthetic_num_val_series,
+            series_length=args.synthetic_series_length,
+            slope=args.synthetic_slope,
+            intercept=args.synthetic_intercept,
+            noise_std=args.synthetic_noise_std,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            past_length=args.past_length,
+            future_length=args.future_length,
+            enable_sampling=not args.disable_sampling,
+            use_train_as_val=bool(args.overfit_test),
+        )
+        args.dataset = "synthetic"  # for logging purposes
+    else:
+        data_module_kwargs = {
+            "dataset_name": args.dataset,
+            "dataset_storage_path": storage_path,
+            "model": model.get_cpu_regressor_for_preprocessing(),
+            "batch_size": args.batch_size,
+            "num_workers": args.num_workers,
+            "past_length": args.past_length,
+            "future_length": args.future_length,
+            "enable_sampling": not args.disable_sampling,
+        }
+
+        if args.overfit_test:
+            data_module = OverfitTestDataModule(
+                n_series=args.overfit_test,
+                **data_module_kwargs,
+            )
+        else:
+            data_module = TimeSeriesDataModule(**data_module_kwargs)
 
     if args.validate_dataset:
         try:
@@ -295,7 +401,7 @@ def main(args):
             entity=args.wandb_entity,
             name=run_name,
             save_dir=str(output_dir),
-            tags=[args.dataset],
+            tags=[args.dataset] + args.tags,
         )
     else:
         wandb_logger = None
@@ -345,6 +451,17 @@ def main(args):
         )
         callbacks.append(visualization_callback)
 
+    if args.visualize_every_val:
+        val_visualization_callback = ValidationVisualizationCallback(
+            output_dir=output_dir / "visualization_every_val",
+            num_samples=5,
+            random_seed=args.seed,
+        )
+        callbacks.append(val_visualization_callback)
+        logger.info(
+            f"Periodic validation visualization enabled (output dir: {val_visualization_callback.output_dir})"
+        )
+
     trainer_kwargs = {
         "max_steps": args.max_steps,
         "val_check_interval": args.val_check_interval,
@@ -362,12 +479,58 @@ def main(args):
         trainer_kwargs["limit_val_batches"] = 10
 
     if args.overfit_test:
-        logger.info("--- Running in overfit test mode ---")
-        trainer_kwargs["overfit_batches"] = 10
-        trainer_kwargs.pop("val_check_interval", None)
-        # Disable callbacks for overfit test (no checkpointing or visualization needed)
-        trainer_kwargs["callbacks"] = []
+        logger.info(
+            f"--- Running in overfit test mode with {args.overfit_test} series ---"
+        )
+
+        # For overfit test, we want the fastest feedback loop.
+        if args.accumulate_grad_batches != 1:
+            logger.warning(
+                f"Overfit test mode: Overriding `accumulate_grad_batches` "
+                f"(was {args.accumulate_grad_batches}) to 1 for fastest feedback."
+            )
         trainer_kwargs["accumulate_grad_batches"] = 1
+
+        # Validate once per epoch. Since batch_size=1 and we forced
+        # accumulate_grad_batches=1, an epoch has N_SERIES batches/training steps.
+        # We set the validation interval to match the number of series.
+        val_check_interval = args.overfit_test
+        if args.val_check_interval != val_check_interval:
+            logger.info(
+                f"Overfit test mode: Setting `val_check_interval` to {val_check_interval} "
+                f"to validate exactly once per epoch (was {args.val_check_interval})."
+            )
+        trainer_kwargs["val_check_interval"] = val_check_interval
+
+        # For overfit test, we usually disable callbacks like checkpointing.
+        # We'll keep visualization callbacks if they were explicitly enabled.
+        if trainer_kwargs["callbacks"]:
+            logger.info(
+                "Overfit test mode: Disabling ModelCheckpoint and EarlyStopping callbacks, but keeping visualization callbacks."
+            )
+            trainer_kwargs["callbacks"] = [
+                cb
+                for cb in trainer_kwargs["callbacks"]
+                if isinstance(
+                    cb,
+                    (
+                        MetricWorseningVisualizationCallback,
+                        ValidationVisualizationCallback,
+                    ),
+                )
+            ]
+        if args.overfit_test and args.use_synthetic_data:
+            args.max_steps = max(
+                args.max_steps, args.overfit_test * 5
+            )  # Ensure enough steps
+            logger.info(
+                f"Overfit test with synthetic data: Ensuring max_steps is at least {args.max_steps}"
+            )
+        elif args.max_steps > 512:
+            logger.warning(
+                f"Overfit test mode is on, but max_steps ({args.max_steps}) is high. "
+                "Consider reducing it for a quick check (e.g., --max_steps 256)."
+            )
 
     trainer = pl.Trainer(**trainer_kwargs)
 
@@ -386,9 +549,6 @@ if __name__ == "__main__":
     logger.info("Starting Fine-tuning Script")
 
     arguments = parse_args()
-
-    if arguments.debug or arguments.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     main(arguments)
 

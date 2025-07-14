@@ -34,7 +34,10 @@ class StreamToLogger:
 
 
 def configure_logging(
-    output_dir: Path, run_name: str, should_log_to_file: bool = True
+    output_dir: Path,
+    run_name: str,
+    should_log_to_file: bool = True,
+    log_level: int = logging.INFO,
 ) -> None:
     """
     Configures the root logger to redirect stdout/stderr and optionally log to a file.
@@ -42,7 +45,7 @@ def configure_logging(
     """
     # Get the root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(log_level)
 
     # Clear existing handlers to prevent conflicts or duplicates
     for handler in root_logger.handlers[:]:

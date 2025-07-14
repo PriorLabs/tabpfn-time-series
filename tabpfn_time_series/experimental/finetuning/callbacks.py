@@ -367,3 +367,198 @@ class MetricWorseningVisualizationCallback(Callback, MonitorMixin):
         plt.close()
 
         logger.debug(f"Saved visualization to {plot_path}")
+
+
+class ValidationVisualizationCallback(Callback):
+    """PyTorch Lightning callback to visualize predictions after every validation run.
+
+    This callback automatically generates visualizations of random validation samples
+    at the end of each validation epoch.
+    """
+
+    def __init__(
+        self,
+        output_dir: str = "output/visualizations",
+        num_samples: int = 5,
+        random_seed: Optional[int] = None,
+    ):
+        """Initialize the callback.
+
+        Args:
+            output_dir: Directory to save visualization plots.
+            num_samples: Number of validation samples to visualize per validation run.
+            random_seed: Random seed for reproducible sample selection (optional).
+        """
+        super().__init__()
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.num_samples = num_samples
+        self.random_seed = random_seed
+        self.rng = random.Random(random_seed)
+        self.current_val_run_samples: List[Dict[str, Any]] = []
+
+        logger.info("Initialized ValidationVisualizationCallback:")
+        logger.info(f"  Output dir: {self.output_dir}")
+        logger.info(f"  Samples per validation run: {self.num_samples}")
+        logger.info(f"  Random seed: {self.random_seed}")
+
+    def on_validation_batch_end(
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        """Store validation samples from current run."""
+        if "prediction_data" in outputs:
+            prediction_data = outputs["prediction_data"].copy()
+            # Add the metrics for this sample
+            prediction_data["sample_metrics"] = {
+                metric: outputs[metric]
+                for metric in ["mse", "mae", "r2", "mase", "sql"]
+                if metric in outputs
+            }
+            # Add metadata about which validation run this came from
+            prediction_data["validation_step"] = trainer.global_step
+            prediction_data["validation_epoch"] = trainer.current_epoch
+            self.current_val_run_samples.append(prediction_data)
+        else:
+            logger.warning(
+                f"No prediction_data found in validation outputs for batch {batch_idx}. "
+                "Make sure the Lightning module returns prediction_data."
+            )
+
+    def on_validation_end(
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
+    ) -> None:
+        """Generate visualizations at the end of the validation run."""
+        if not self.current_val_run_samples:
+            logger.warning("No validation samples collected to visualize.")
+            return
+
+        num_to_visualize = min(self.num_samples, len(self.current_val_run_samples))
+        logger.info(
+            f"At step {trainer.global_step}, generating visualizations for "
+            f"{num_to_visualize} random samples."
+        )
+
+        samples_to_visualize = self.rng.sample(
+            self.current_val_run_samples, num_to_visualize
+        )
+
+        self._visualize_validation_samples(
+            samples=samples_to_visualize,
+            global_step=trainer.global_step,
+        )
+
+        # Clear current validation run data
+        self.current_val_run_samples = []
+
+    def _visualize_validation_samples(
+        self,
+        samples: List[Dict[str, Any]],
+        global_step: int,
+    ) -> None:
+        """Generate and save visualizations for the given samples."""
+        if not samples:
+            logger.warning("No validation samples provided for visualization")
+            return
+
+        # Create validation-run-specific output directory
+        run_dir = self.output_dir / f"step_{global_step}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(
+            f"Visualizing {len(samples)} validation samples at step {global_step}"
+        )
+
+        # Generate visualizations
+        for i, sample in enumerate(samples):
+            try:
+                self._create_and_save_plot(
+                    sample=sample,
+                    sample_idx=i,
+                    global_step=global_step,
+                    output_dir=run_dir,
+                )
+            except Exception as e:
+                logger.error(f"Failed to visualize sample {i + 1}: {e}", exc_info=True)
+                plt.close()  # Ensure plot is closed even on error
+
+        logger.info(f"Visualization complete. Plots saved to {run_dir}")
+
+    def _create_and_save_plot(
+        self,
+        sample: Dict[str, Any],
+        sample_idx: int,
+        global_step: int,
+        output_dir: Path,
+    ) -> None:
+        """Create and save a single visualization plot."""
+        y_train = sample["y_train_raw"]
+        y_test = sample["y_test_raw"]
+        full_pred = sample["full_pred_on_test"]
+        batch_idx = sample["batch_idx"]
+        sample_validation_epoch = sample.get("validation_epoch", "unknown")
+
+        prediction = full_pred["median"]
+
+        plt.figure(figsize=(15, 7))
+
+        train_indices = range(len(y_train))
+        plt.plot(train_indices, y_train, label="Training Context", color="blue")
+
+        future_indices = range(len(y_train), len(y_train) + len(y_test))
+        plt.plot(future_indices, y_test, label="Ground Truth", color="green")
+        plt.plot(
+            future_indices,
+            prediction,
+            label="Model Prediction",
+            color="red",
+            linestyle="--",
+        )
+
+        if "quantiles" in full_pred:
+            quantiles = full_pred["quantiles"]
+            if len(quantiles) >= 9:
+                lower_bound = quantiles[0]
+                upper_bound = quantiles[-1]
+                plt.fill_between(
+                    future_indices,
+                    lower_bound,
+                    upper_bound,
+                    alpha=0.2,
+                    color="red",
+                    label="80% Prediction Interval",
+                )
+
+        sample_metrics_info = ""
+        if "sample_metrics" in sample:
+            sample_metrics = sample["sample_metrics"]
+            mase_val = sample_metrics.get("mase", "N/A")
+            sql_val = sample_metrics.get("sql", "N/A")
+            mase_str = f"{mase_val:.3f}" if isinstance(mase_val, float) else mase_val
+            sql_str = f"{sql_val:.3f}" if isinstance(sql_val, float) else sql_val
+            sample_metrics_info = f" | Sample MASE: {mase_str}, SQL: {sql_str}"
+
+        plt.title(
+            f"Sample {sample_idx + 1} from epoch {sample_validation_epoch} - "
+            f"Validation at Step {global_step}{sample_metrics_info}"
+        )
+        plt.xlabel("Time Step")
+        plt.ylabel("Value")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        plot_path = (
+            output_dir
+            / f"sample_{sample_idx + 1}_epoch_{sample_validation_epoch}_batch_{batch_idx}.png"
+        )
+        plt.savefig(plot_path, bbox_inches="tight", dpi=150)
+        plt.close()
+
+        logger.debug(f"Saved visualization to {plot_path}")
