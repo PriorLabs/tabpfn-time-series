@@ -1,9 +1,8 @@
 name: (Release) Publish Python distributions to PyPI
 
 on:
-  push:
-    branches:
-      - release
+  release:
+    types: [published]
 
 jobs:
   build-and-publish-release:
@@ -16,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
