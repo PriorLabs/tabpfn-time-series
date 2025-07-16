@@ -62,3 +62,4 @@ uv pip install -e ".[dev]"
 [![colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/demo.ipynb)
 
 The demo should explain it all. 😉
+# Test
