@@ -29,13 +29,6 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system hatch
 
-      # - name: Get package version
-      #   id: get_version
-      #   run: echo "version=$(hatch version)" >> $GITHUB_OUTPUT
-
-      # - name: Set development version
-      #   run: hatch version ${{ steps.get_version.outputs.version }}.dev${{ github.run_number }}
-
       - name: Build with dynamic version
         run: hatch build
 
