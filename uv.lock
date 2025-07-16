@@ -3404,7 +3404,6 @@ dependencies = [
     { name = "statsmodels" },
     { name = "tabpfn" },
     { name = "tabpfn-client" },
-    { name = "tomli" },
     { name = "tqdm" },
 ]
 
@@ -3442,7 +3441,6 @@ requires-dist = [
     { name = "submitit", marker = "extra == 'dev'", specifier = ">=1.5.2" },
     { name = "tabpfn", specifier = ">=2.0.9" },
     { name = "tabpfn-client", specifier = ">=0.1.7" },
-    { name = "tomli", specifier = ">=2.2.1" },
     { name = "tqdm" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "wandb", marker = "extra == 'dev'", specifier = ">=0.19.8" },
