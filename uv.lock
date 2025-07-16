@@ -3294,7 +3294,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn-time-series"
-version = "1.0.1"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
