@@ -1,4 +1,4 @@
-name: (Test)Publish Python distributions to TestPyPI
+name: (Test) Publish Python distributions to TestPyPI
 
 on:
   pull_request:
