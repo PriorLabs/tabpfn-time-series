@@ -31,11 +31,17 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system hatch
 
+      - name: Get package version
+        id: get_version
+        run: echo "version=$(hatch version)" >> $GITHUB_OUTPUT
+
       - name: Build with Hatch
         run: hatch build
 
       - name: Publish to TestPyPI
         if: github.event_name == 'pull_request'
+        env:
+          HATCH_PROJECT_VERSION: ${{ steps.get_version.outputs.version }}.dev${{ github.run_number }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
