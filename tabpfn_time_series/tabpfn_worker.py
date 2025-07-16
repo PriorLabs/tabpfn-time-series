@@ -127,9 +127,10 @@ class TabPFNClient(TabPFNWorker):
 
         init()
 
-        self.config = config.copy()
-        self.config["tabpfn_internal"]["model_path"] = self._parse_model_name(
-            self.config["tabpfn_internal"]["model_path"]
+        # Parse the model name (only needed for TabPFNClient)
+        config = config.copy()
+        config["tabpfn_internal"]["model_path"] = self._parse_model_name(
+            config["tabpfn_internal"]["model_path"]
         )
 
         super().__init__(config, num_workers)
@@ -145,9 +146,14 @@ class TabPFNClient(TabPFNWorker):
         available_models = TabPFNRegressor.list_available_models()
 
         for m in available_models:
-            if m == model_name:
+            # Model names from tabpfn_client are abbreviated
+            # e.g. "tabpfn-v2-regressor-2noar4o2.ckpt" -> "2noar4o2"
+            if m in model_name:
                 return m
-        raise ValueError(f"Model {model_name} not found. Available models: {available_models}")
+        raise ValueError(
+            f"Model {model_name} not found. Available models: {available_models}."
+            "Note that model names from tabpfn_client are abbreviated (e.g. 'tabpfn-v2-regressor-2noar4o2.ckpt' -> '2noar4o2')"
+        )
 
 
 class LocalTabPFN(TabPFNWorker):
