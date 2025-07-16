@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 import datasets
-from autogluon.timeseries import TimeSeriesDataFrame
+from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 
 
 def generate_test_X(

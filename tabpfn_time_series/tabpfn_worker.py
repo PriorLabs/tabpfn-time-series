@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 import torch
 from scipy.stats import norm
-from autogluon.timeseries import TimeSeriesDataFrame
 
+from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import split_time_series_to_X_y
 from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_QUANTILE_CONFIG
 

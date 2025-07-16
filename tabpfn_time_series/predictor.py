@@ -1,8 +1,7 @@
 import logging
 from enum import Enum
 
-from autogluon.timeseries import TimeSeriesDataFrame
-
+from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.tabpfn_worker import TabPFNClient, LocalTabPFN, MockTabPFN
 from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_CONFIG
 

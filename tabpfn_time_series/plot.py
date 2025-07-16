@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from autogluon.timeseries import TimeSeriesDataFrame
+from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 
 
 def is_subset(tsdf_A: TimeSeriesDataFrame, tsdf_B: TimeSeriesDataFrame) -> bool:

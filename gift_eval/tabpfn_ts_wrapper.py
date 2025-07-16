@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
 from gluonts.itertools import batcher
-from autogluon.timeseries import TimeSeriesDataFrame
 
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series import (
@@ -13,6 +12,7 @@ from tabpfn_time_series import (
     FeatureTransformer,
     TabPFNMode,
     TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
+    TimeSeriesDataFrame,
 )
 from tabpfn_time_series.features import (
     RunningIndexFeature,
