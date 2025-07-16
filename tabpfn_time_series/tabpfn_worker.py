@@ -145,9 +145,9 @@ class TabPFNClient(TabPFNWorker):
         available_models = TabPFNRegressor.list_available_models()
 
         for m in available_models:
-            if m in model_name:
+            if m == model_name:
                 return m
-        raise ValueError(f"Model {model_name} not found")
+        raise ValueError(f"Model {model_name} not found. Available models: {available_models}")
 
 
 class LocalTabPFN(TabPFNWorker):
