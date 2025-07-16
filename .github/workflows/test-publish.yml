@@ -28,12 +28,15 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system hatch
 
-      - name: Get package version
-        id: get_version
-        run: echo "version=$(hatch version)" >> $GITHUB_OUTPUT
+      # - name: Get package version
+      #   id: get_version
+      #   run: echo "version=$(hatch version)" >> $GITHUB_OUTPUT
+
+      # - name: Set development version
+      #   run: hatch version ${{ steps.get_version.outputs.version }}.dev${{ github.run_number }}
 
       - name: Build with dynamic version
-        run: HATCH_PROJECT_VERSION=${{ steps.get_version.outputs.version }}.dev${{ github.run_number }} hatch build
+        run: hatch build
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
