@@ -124,14 +124,15 @@ class TabPFNClient(TabPFNWorker):
     ):
         # Initialize the TabPFN client (e.g. sign up, login, etc.)
         from tabpfn_client import init
+
         init()
 
         self.config = config.copy()
-        self.config["tabpfn_internal"]["model_path"] = \
-            self._parse_model_name(self.config["tabpfn_internal"]["model_path"])
-        
-        super().__init__(config, num_workers)
+        self.config["tabpfn_internal"]["model_path"] = self._parse_model_name(
+            self.config["tabpfn_internal"]["model_path"]
+        )
 
+        super().__init__(config, num_workers)
 
     def _get_tabpfn_engine(self):
         from tabpfn_client import TabPFNRegressor
@@ -140,6 +141,7 @@ class TabPFNClient(TabPFNWorker):
 
     def _parse_model_name(self, model_name: str) -> str:
         from tabpfn_client import TabPFNRegressor
+
         available_models = TabPFNRegressor.list_available_models()
 
         for m in available_models:
