@@ -35,9 +35,6 @@ jobs:
         id: get_version
         run: echo "version=$(hatch version)" >> $GITHUB_OUTPUT
 
-      - name: Build with Hatch
-        run: hatch build
-
       - name: Publish to TestPyPI
         if: github.event_name == 'pull_request'
         env:
