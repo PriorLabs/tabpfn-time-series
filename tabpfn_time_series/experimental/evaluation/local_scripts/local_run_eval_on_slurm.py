@@ -9,6 +9,10 @@ import submitit
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
+from contextlib import contextmanager
+import tempfile
+import stat
+import shutil
 
 from tabpfn_time_series.experimental.evaluation.dataset_definition import (
     ALL_DATASETS,
@@ -197,6 +201,68 @@ def is_valid_frequency(freq):
         return False
 
 
+def requires_acknowledgement(partition_name):
+    """Check if a partition requires acknowledgement (e.g., bosch partitions)."""
+    return partition_name and "bosch" in partition_name.lower()
+
+
+@contextmanager
+def sbatch_auto_acknowledge():
+    """Context manager that creates a temporary sbatch wrapper for auto-acknowledgement."""
+    # Find the real sbatch path
+    real_sbatch = shutil.which("sbatch")
+    if not real_sbatch:
+        raise RuntimeError("Could not find sbatch command")
+
+    # Create temporary wrapper script
+    wrapper_content = f"""#!/bin/bash
+echo "y" | {real_sbatch} "$@"
+"""
+
+    # Create temporary directory and wrapper script
+    temp_dir = tempfile.mkdtemp()
+    wrapper_path = os.path.join(temp_dir, "sbatch")
+
+    try:
+        with open(wrapper_path, "w") as f:
+            f.write(wrapper_content)
+
+        # Make wrapper executable
+        os.chmod(wrapper_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+
+        # Temporarily modify PATH to use our wrapper
+        original_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{temp_dir}:{original_path}"
+
+        yield
+
+    finally:
+        # Restore original PATH and clean up
+        os.environ["PATH"] = original_path
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def submit_jobs(executor, datasets_and_terms, dataset_storage_path, args):
+    """Submit evaluation jobs using the provided executor."""
+    jobs = []
+
+    with executor.batch():
+        for dataset, term in datasets_and_terms:
+            # Create the job
+            job = EvaluationJob(
+                dataset,
+                dataset_storage_path,
+                term,
+                args,
+            )
+
+            # Submit the job
+            submitted_job = executor.submit(job)
+            jobs.append(submitted_job)
+
+    return jobs
+
+
 class EvaluationJob:
     def __init__(
         self,
@@ -251,6 +317,7 @@ class EvaluationJob:
 
 
 def main():
+    """Main function to submit evaluation jobs on SLURM using submitit."""
     args = parse_arguments()
     args.job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
@@ -284,10 +351,10 @@ def main():
     executor.update_parameters(
         name=args.job_name,
         nodes=1,
-        tasks_per_node=1,
-        # cpus_per_task=args.cpus,
-        # slurm_mem=f"{args.mem}GB",
-        slurm_gres=f"gpu:{args.ngpus}",
+        tasks_per_node=1,  # Each job runs exactly 1 task/process
+        cpus_per_task=args.cpus,  # CPUs allocated to that single task
+        slurm_mem=f"{args.mem}GB",  # Memory allocation per job
+        slurm_gres=f"gpu:{args.ngpus}",  # GPUs allocated to the job
         slurm_partition=args.cluster_partition,
         slurm_array_parallelism=total_jobs,
         timeout_min=23 * 60,  # 23 hours in minutes (within 24h limit)
@@ -295,21 +362,15 @@ def main():
         slurm_additional_parameters={"export": f"ALL,HF_HOME={os.getenv('HF_HOME')}"},
     )
 
-    jobs = []
-    # Submit all jobs at once using batch context
-    with executor.batch():
-        for dataset, term in datasets_and_terms:
-            # Create the job
-            job = EvaluationJob(
-                dataset,
-                dataset_storage_path,
-                term,
-                args,
-            )
-
-            # Submit the job
-            submitted_job = executor.submit(job)
-            jobs.append(submitted_job)
+    # Submit jobs with automatic acknowledgement if needed
+    if requires_acknowledgement(args.cluster_partition):
+        print(
+            f"Partition '{args.cluster_partition}' requires acknowledgement - using auto-acknowledgement"
+        )
+        with sbatch_auto_acknowledge():
+            jobs = submit_jobs(executor, datasets_and_terms, dataset_storage_path, args)
+    else:
+        jobs = submit_jobs(executor, datasets_and_terms, dataset_storage_path, args)
 
     print(f"Submitted {len(jobs)} jobs")
     print(f"Logs will be saved to: {log_dir}")
