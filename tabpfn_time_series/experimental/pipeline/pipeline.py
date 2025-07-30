@@ -297,9 +297,11 @@ class TimeSeriesEvalPipeline:
             train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
         # Generate test data and features
+        logger.info("Generating test X")
         test_tsdf = generate_test_X(
             train_tsdf, prediction_length=self.ds_prediction_length
         )
+        logger.info("Applying feature transformations")
         train_tsdf, test_tsdf = self.feature_transformer.transform(
             train_tsdf, test_tsdf
         )

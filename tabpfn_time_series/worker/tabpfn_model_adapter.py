@@ -18,7 +18,6 @@ def process_tabpfn_pred_output(
 ) -> dict[str, np.ndarray]:
     """Translates raw TabPFN output to the standardized dictionary format."""
     result = {"target": pred_output[output_selection]}
-
     result.update({q: q_pred for q, q_pred in zip(quantiles, pred_output["quantiles"])})
 
     return result

@@ -107,11 +107,12 @@ class GPUParallelWorker(ParallelWorker):
         test_tsdf: TimeSeriesDataFrame,
     ):
         if self.num_gpus == 1:
-            return self._prediction_routine_per_gpu(
+            predictions = self._prediction_routine_per_gpu(
                 train_tsdf,
                 test_tsdf,
                 gpu_id=0,
             )
+            return TimeSeriesDataFrame(predictions)
 
         # Split data into chunks for parallel inference on each GPU
         #   since the time series are of different lengths, we shuffle
