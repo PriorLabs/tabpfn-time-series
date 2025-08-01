@@ -1,4 +1,5 @@
 from copy import deepcopy
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Type, TypeAlias, Union
 
 import numpy as np
@@ -26,7 +27,31 @@ Expected structure:
 """
 
 
-class ModelAdapter:
+PredictionOutput: TypeAlias = Dict[Union[str, float], np.ndarray]
+"""
+Structure for model prediction outputs.
+
+Required key:
+- "target": Array of predictions (must always be present)
+
+Optional keys: 
+- float values (e.g., 0.1, 0.5, 0.9): Quantile predictions when requested
+
+Type contract:
+- result["target"] -> np.ndarray (always present)
+- result[0.1] -> np.ndarray (present only if 0.1 quantile was requested)
+
+Example usage:
+- Simple predictions: {"target": np.array([1, 2, 3])}
+- Probabilistic: {
+        "target": np.array([1, 2, 3]),
+        0.1: np.array([0.5, 1.5, 2.5]),
+        0.9: np.array([1.5, 2.5, 3.5]),
+    }
+"""
+
+
+class BaseModelAdapter(ABC):
     """Base model adapter for scikit-learn compatible models."""
 
     def __init__(
@@ -52,7 +77,8 @@ class ModelAdapter:
         train_X: Union[np.ndarray, pd.DataFrame],
         train_y: Union[np.ndarray, pd.Series],
         test_X: Union[np.ndarray, pd.DataFrame],
-    ) -> np.ndarray:
+        quantiles: list[float] = None,
+    ) -> PredictionOutput:
         """
         Train model and make predictions.
 
@@ -60,9 +86,10 @@ class ModelAdapter:
             train_X: Training features
             train_y: Training targets
             test_X: Test features
+            quantiles: List of quantiles to use for probabilistic output
 
         Returns:
-            Predictions as numpy array
+            Predictions as PredictionOutput
         """
         model = self.model_class(**self.model_config)
 
@@ -78,6 +105,59 @@ class ModelAdapter:
             test_X = test_X.values
 
         model.fit(train_X, train_y, **fit_kwargs)
-        pred_output = model.predict(test_X, **predict_kwargs)
+        raw_pred_output = model.predict(test_X, **predict_kwargs)
 
-        return pred_output
+        return self.postprocess_pred_output(
+            raw_pred_output=raw_pred_output,
+            quantiles=quantiles,
+        )
+
+    @abstractmethod
+    def postprocess_pred_output(
+        self,
+        raw_pred_output: Any,
+        quantiles: list[float],
+    ) -> PredictionOutput:
+        """
+        Postprocess the raw prediction output to match the PredictionOutput structure.
+        This method is expected to be implemented by subclasses.
+
+        Args:
+            raw_pred_output: Raw prediction output from the model
+            quantiles: List of quantiles to use for probabilistic output
+
+        Returns:
+            PredictionOutput
+        """
+        pass
+
+
+class PointPredictionModelAdapter(BaseModelAdapter):
+    """
+    Adapter for models that only produce point predictions.
+
+    Converts point predictions to the standard PredictionOutput format.
+    For quantile predictions, uses the same point value for all quantiles.
+
+    Note: This adapter DOES NOT compute/approximate the quantiles, but simply
+    mocks the output from point prediction to probabilistic output.
+    """
+
+    def postprocess_pred_output(
+        self,
+        raw_pred_output: Any,
+        quantiles: list[float],
+    ) -> PredictionOutput:
+        return PointPredictionModelAdapter._mock_probabilistic_output(
+            raw_pred_output,
+            quantiles,
+        )
+
+    @staticmethod
+    def _mock_probabilistic_output(
+        raw_pred_output: Any,
+        quantiles: list[float],
+    ) -> PredictionOutput:
+        result: PredictionOutput = {"target": raw_pred_output}
+        result.update({q: raw_pred_output for q in quantiles})
+        return result

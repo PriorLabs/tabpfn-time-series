@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Dict, Type
 
 from sklearn.base import RegressorMixin
 from tabpfn import TabPFNRegressor
@@ -8,25 +9,24 @@ from tabpfn_client import (
 )
 
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
-from tabpfn_time_series.worker.model_adapter import ModelAdapter
+from tabpfn_time_series.worker.model_adapter import BaseModelAdapter, PredictionOutput
 
 
-def process_tabpfn_pred_output(
-    pred_output: dict,
-    output_selection: str,
-    quantiles: list[float | str],
-) -> dict[str, np.ndarray]:
-    """Translates raw TabPFN output to the standardized dictionary format."""
-    result = {"target": pred_output[output_selection]}
-    result.update({q: q_pred for q, q_pred in zip(quantiles, pred_output["quantiles"])})
+def parse_tabpfn_client_model_name(model_name: str) -> str:
+    available_models = TabPFNClientRegressor.list_available_models()
+    for m in available_models:
+        if m in model_name:
+            return m
 
-    return result
+    raise ValueError(
+        f"Model {model_name} not found. Available models: {available_models}."
+    )
 
 
-class BaseTabPFNModelAdapter(ModelAdapter):
+class TabPFNModelAdapter(BaseModelAdapter):
     def __init__(
         self,
-        model_class: RegressorMixin,
+        model_class: Type[RegressorMixin],
         model_config: dict,
         tabpfn_output_selection: str,
     ):
@@ -42,83 +42,50 @@ class BaseTabPFNModelAdapter(ModelAdapter):
 
         self.tabpfn_output_selection = tabpfn_output_selection
 
-    def predict(
+        if model_class == TabPFNClientRegressor:
+            self._init_tabpfn_client_regressor(self.model_config)
+        elif model_class == TabPFNRegressor:
+            self._init_local_tabpfn_regressor(self.model_config)
+        else:
+            raise ValueError(
+                f"Expected TabPFN-family regressor, got {self.tabpfn_class}"
+            )
+
+    def postprocess_pred_output(
         self,
-        train_X: np.ndarray,
-        train_y: np.ndarray,
-        test_X: np.ndarray,
-        quantiles: list[float | str] = DEFAULT_QUANTILE_CONFIG,
-    ):
-        tabpfn_pred_output = super().predict(
-            train_X=train_X,
-            train_y=train_y,
-            test_X=test_X,
+        raw_pred_output: Dict[str, np.ndarray],
+        quantiles: list[float],
+    ) -> PredictionOutput:
+        # Translate TabPFN output to the standardized dictionary format
+        assert quantiles == DEFAULT_QUANTILE_CONFIG, (
+            "Quantiles must be the default quantiles for TabPFN"
+        )
+        result: PredictionOutput = {
+            "target": raw_pred_output[self.tabpfn_output_selection]
+        }
+        result.update(
+            {q: raw_pred_output["quantiles"][i] for i, q in enumerate(quantiles)}
         )
 
-        return process_tabpfn_pred_output(
-            tabpfn_pred_output,
-            self.tabpfn_output_selection,
-            quantiles,
-        )
-
-
-class TabPFNClientModelAdapter(BaseTabPFNModelAdapter):
-    def __init__(
-        self,
-        tabpfn_config: dict,
-        tabpfn_output_selection: str,
-    ):
-        super().__init__(
-            model_class=TabPFNClientRegressor,
-            model_config=tabpfn_config,
-            tabpfn_output_selection=tabpfn_output_selection,
-        )
-
-        # Perform initialization of the TabPFN client (authentication)
-        tabpfn_client_init()
-
-        # Parse the model name to get the correct model path
-        # that is supported by the TabPFN client
-        self.model_config["model_path"] = self._parse_model_name(
-            self.model_config["model_path"]
-        )
-
-    def _parse_model_name(self, model_name: str) -> str:
-        available_models = TabPFNClientRegressor.list_available_models()
-
-        for m in available_models:
-            if m in model_name:
-                return m
-        raise ValueError(
-            f"Model {model_name} not found. Available models: {available_models}."
-        )
-
-
-class LocalTabPFNModelAdapter(BaseTabPFNModelAdapter):
-    def __init__(
-        self,
-        tabpfn_config: dict,
-        tabpfn_output_selection: str,
-    ):
-        super().__init__(
-            model_class=TabPFNRegressor,
-            model_config=tabpfn_config,
-            tabpfn_output_selection=tabpfn_output_selection,
-        )
-
-        # Download the model if needed (for once)
-        self.model_config["model_path"] = self._download_model(
-            self.model_config["model_path"]
-        )
+        return result
 
     @staticmethod
-    def _download_model(model_name: str):
+    def _init_tabpfn_client_regressor(tabpfn_config: dict):
+        # Initialize the TabPFN client (authentication)
+        tabpfn_client_init()
+
+        # Parse the model name to get the correct model path that is
+        # supported by the TabPFN client (slightly different naming convention)
+        if "model_path" in tabpfn_config:
+            model_name = parse_tabpfn_client_model_name(tabpfn_config["model_path"])
+            tabpfn_config["model_path"] = model_name
+
+    @staticmethod
+    def _init_local_tabpfn_regressor(tabpfn_config: dict):
         from tabpfn.model.loading import resolve_model_path, download_model
 
-        # Resolve the model path
-        # If the model path is not specified, this resolves to the default model path
         model_path, _, model_name, which = resolve_model_path(
-            model_name,
+            tabpfn_config["model_path"] if "model_path" in tabpfn_config else None,
             which="regressor",
         )
 
@@ -130,4 +97,4 @@ class LocalTabPFNModelAdapter(BaseTabPFNModelAdapter):
                 model_name=model_name,
             )
 
-        return model_path
+        tabpfn_config["model_path"] = model_path

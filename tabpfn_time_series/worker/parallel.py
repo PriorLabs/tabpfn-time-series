@@ -42,6 +42,7 @@ class ParallelWorker(ABC):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        **kwargs,
     ):
         pass
 
@@ -50,6 +51,7 @@ class ParallelWorker(ABC):
         item_id: str,
         single_train_tsdf: TimeSeriesDataFrame,
         single_test_tsdf: TimeSeriesDataFrame,
+        **kwargs,
     ) -> pd.DataFrame:
         test_index = single_test_tsdf.index
         train_X, train_y = split_time_series_to_X_y(single_train_tsdf.copy())
@@ -58,7 +60,7 @@ class ParallelWorker(ABC):
 
         # TODO: solve the issue of constant target
 
-        results = self.inference_routine(train_X, train_y, test_X)
+        results = self.inference_routine(train_X, train_y, test_X, **kwargs)
         self._assert_valid_inference_output(results)
 
         result = pd.DataFrame(results, index=test_index)
@@ -90,11 +92,12 @@ class GPUParallelWorker(ParallelWorker):
     def __init__(
         self,
         inference_routine: Callable,
+        num_gpus: int = None,
         num_workers_per_gpu: int = 1,
     ):
         super().__init__(inference_routine)
 
-        self.num_gpus = torch.cuda.device_count()
+        self.num_gpus = num_gpus or torch.cuda.device_count()
         self.num_workers_per_gpu = num_workers_per_gpu
         self.total_num_workers = self.num_gpus * self.num_workers_per_gpu
 
@@ -105,6 +108,7 @@ class GPUParallelWorker(ParallelWorker):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        **kwargs,
     ):
         if (
             self.total_num_workers == 1
@@ -114,6 +118,7 @@ class GPUParallelWorker(ParallelWorker):
                 train_tsdf,
                 test_tsdf,
                 gpu_id=0,
+                **kwargs,
             )
             return TimeSeriesDataFrame(predictions)
 
@@ -152,6 +157,7 @@ class GPUParallelWorker(ParallelWorker):
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
         gpu_id: int,
+        **kwargs,
     ):
         # Set GPU
         torch.cuda.set_device(gpu_id)
@@ -162,6 +168,7 @@ class GPUParallelWorker(ParallelWorker):
                 item_id,
                 train_tsdf.loc[item_id],
                 test_tsdf.loc[item_id],
+                **kwargs,
             )
             all_pred.append(predictions)
 
@@ -172,10 +179,12 @@ class GPUParallelWorker(ParallelWorker):
 
 
 class CPUParallelWorker(ParallelWorker):
+    _DEFAULT_NUM_WORKERS = 8
+
     def __init__(
         self,
         inference_routine: Callable,
-        num_workers: int = 8,
+        num_workers: int = _DEFAULT_NUM_WORKERS,
     ):
         super().__init__(inference_routine)
         self.num_workers = num_workers
@@ -184,6 +193,7 @@ class CPUParallelWorker(ParallelWorker):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        **kwargs,
     ):
         predictions = Parallel(
             n_jobs=min(self.num_workers, len(train_tsdf.item_ids)),
@@ -193,6 +203,7 @@ class CPUParallelWorker(ParallelWorker):
                 item_id,
                 train_tsdf.loc[item_id],
                 test_tsdf.loc[item_id],
+                **kwargs,
             )
             for item_id in tqdm(train_tsdf.item_ids, desc="Predicting time series")
         )

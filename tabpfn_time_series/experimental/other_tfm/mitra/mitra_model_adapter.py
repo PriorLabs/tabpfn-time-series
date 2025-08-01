@@ -3,11 +3,12 @@ import numpy as np
 
 from dotenv import load_dotenv
 
-from tabpfn_time_series.worker.model_adapter import ModelAdapter
+from tabpfn_time_series.worker.model_adapter import (
+    PointPredictionModelAdapter,
+    PredictionOutput,
+)
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 
-
-# from autogluon.tabular import TabularDataset, TabularPredictor
 from autogluon.tabular.models.mitra.sklearn_interface import MitraRegressor
 from autogluon.core.data import LabelCleaner
 from autogluon.features.generators import AutoMLPipelineFeatureGenerator
@@ -16,7 +17,7 @@ from autogluon.features.generators import AutoMLPipelineFeatureGenerator
 load_dotenv()
 
 
-class MitraModelAdapter(ModelAdapter):
+class MitraModelAdapter(PointPredictionModelAdapter):
     """Model adapter for AutoGluon TabularPredictor with time series focus."""
 
     def __init__(
@@ -37,20 +38,8 @@ class MitraModelAdapter(ModelAdapter):
         train_y: np.ndarray,
         test_X: np.ndarray,
         quantiles: list[float | str] = DEFAULT_QUANTILE_CONFIG,
-    ):
-        """
-        Train AutoGluon TabularPredictor and make predictions.
-
-        Args:
-            train_X: Training features
-            train_y: Training targets
-            test_X: Test features
-            quantiles: Quantiles for uncertainty estimation
-
-        Returns:
-            Dictionary containing predictions and quantile estimates
-        """
-
+    ) -> PredictionOutput:
+        # ---- Perform feature engineering and label cleaning
         feature_generator, label_cleaner = (
             AutoMLPipelineFeatureGenerator(),
             LabelCleaner.construct(problem_type="regression", y=train_y),
@@ -61,13 +50,9 @@ class MitraModelAdapter(ModelAdapter):
         )
         test_X = feature_generator.transform(test_X)
 
-        pred_output = super().predict(
+        return super().predict(
             train_X=train_X,
             train_y=train_y,
             test_X=test_X,
+            quantiles=quantiles,
         )
-
-        result = {"target": pred_output}
-        result.update({q: pred_output for q in quantiles})
-
-        return result

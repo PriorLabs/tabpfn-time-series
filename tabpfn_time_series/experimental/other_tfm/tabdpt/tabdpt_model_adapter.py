@@ -1,5 +1,4 @@
 import os
-import numpy as np
 from pathlib import Path
 import logging
 
@@ -8,15 +7,14 @@ from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from tabdpt import TabDPTRegressor
 
-from tabpfn_time_series.worker.model_adapter import ModelAdapter
-from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
+from tabpfn_time_series.worker.model_adapter import PointPredictionModelAdapter
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 
-class TabDPTModelAdapter(ModelAdapter):
+class TabDPTModelAdapter(PointPredictionModelAdapter):
     _DEFAULT_MODEL_CONFIG = {
         "use_flash": False,
         "compile": False,
@@ -31,36 +29,22 @@ class TabDPTModelAdapter(ModelAdapter):
         model_config: dict = _DEFAULT_MODEL_CONFIG,
         inference_config: dict = {},
     ):
-        # self._download_model(self._MODEL_NAME, self._MODEL_PATH)
-        # model_config["model_path"] = str(self._MODEL_PATH / self._MODEL_NAME)
-
         model_config["model_path"] = os.getenv("TABDPT_MODEL_PATH")
+        assert model_config["model_path"] is not None, "TABDPT_MODEL_PATH is not set"
+        assert model_config["model_path"].endswith(self._MODEL_NAME), (
+            f"Model path must end with '{self._MODEL_NAME}', "
+            f"but got: {model_config['model_path']}"
+        )
+
+        # ---- Download the model if needed (for once)
+        if not Path(model_config["model_path"]).exists():
+            self._download_model(self._MODEL_NAME, self._MODEL_PATH)
+
         super().__init__(
             model_class=TabDPTRegressor,
             model_config=model_config,
             inference_config=inference_config,
         )
-
-    def predict(
-        self,
-        train_X: np.ndarray,
-        train_y: np.ndarray,
-        test_X: np.ndarray,
-        quantiles: list[float | str] = DEFAULT_QUANTILE_CONFIG,
-    ):
-        pred_output = super().predict(
-            train_X=train_X,
-            train_y=train_y,
-            test_X=test_X,
-        )
-
-        # TabDPT doesn't return uncertainty estimates
-        # so workaround, we will return the estimated target instead
-        # Therefore, we ignore the uncertainty estimates.
-        result = {"target": pred_output}
-        result.update({q: pred_output for q in quantiles})
-
-        return result
 
     @staticmethod
     def _download_model(model_name: str, model_path: str) -> str:

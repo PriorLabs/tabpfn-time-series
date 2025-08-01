@@ -7,7 +7,9 @@ from tabpfn_time_series import TabPFNTimeSeriesPredictor
 from tabpfn_time_series.experimental.noisy_transform.tabpfn_noisy_transform_predictor import (
     TabPFNNoisyTranformPredictor,
 )
-from tabpfn_time_series.predictor import GenericTimeSeriesPredictor
+from tabpfn_time_series.experimental.evaluation.predictor import (
+    GenericTimeSeriesPredictor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +32,8 @@ class PipelineConfig:
 
     # Mapping of string model adapter names to actual classes
     _MODEL_ADAPTER_MAPPING: ClassVar[Dict[str, str]] = {
-        "TabDPTModelAdapter": "tabpfn_time_series.experimental.other_tfm.TabDPTModelAdapter",
-        "MitraModelAdapter": "tabpfn_time_series.experimental.other_tfm.MitraModelAdapter",
+        "TabDPTModelAdapter": "tabpfn_time_series.experimental.other_tfm.tabdpt.TabDPTModelAdapter",
+        "MitraModelAdapter": "tabpfn_time_series.experimental.other_tfm.mitra.MitraModelAdapter",
         "LinearRegressionModelAdapter": "tabpfn_time_series.experimental.other_tfm.linear_regression.LinearRegressionModelAdapter",
     }
 

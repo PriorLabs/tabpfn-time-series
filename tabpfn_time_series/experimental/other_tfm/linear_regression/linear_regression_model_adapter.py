@@ -1,11 +1,11 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from tabpfn_time_series.worker.model_adapter import ModelAdapter
+from tabpfn_time_series.worker.model_adapter import BaseModelAdapter
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 
 
-class LinearRegressionModelAdapter(ModelAdapter):
+class LinearRegressionModelAdapter(BaseModelAdapter):
     """Linear Regression model adapter for time series forecasting."""
 
     _DEFAULT_MODEL_CONFIG = {

@@ -48,10 +48,12 @@ dev = [
 ]
 eval_tfm = [
     "tabpfn_time_series[dev]",
-    "tabdpt"
-    # "tabdpt @ file:///$(pwd)/TabDPT-inference",
+    "tabdpt",
     # autogluon installed separately via ./autogluon/full_install.sh
 ]
+
+[tool.uv.sources]
+tabdpt = { path = "TabDPT-inference", editable = true }
 
 [tool.hatch.version]
 source = "vcs"
@@ -64,9 +66,6 @@ exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
-
-[tool.uv.sources]
-tabdpt = { path = "TabDPT-inference", editable = true }
 
 [project.urls]
 "Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
