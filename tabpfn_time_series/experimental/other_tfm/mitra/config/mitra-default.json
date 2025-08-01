@@ -1,21 +1,16 @@
 {
     "predictor_name": "GenericTimeSeriesPredictor",
     "predictor_config": {
-        "model_adapter_class": "TabDPTModelAdapter",
+        "model_adapter_class": "MitraModelAdapter",
         "model_adapter_config": {
             "model_config": {
-                "use_flash": false,
-                "compile": false,
                 "device": "cuda",
-                "inf_batch_size": 512
-            },
-            "inference_config": {
-                "predict": {
-                    "n_ensembles": 8,
-                    "context_size": 10000,
-                    "seed": 42
-                }
+                "fine_tune": false,
+                "n_estimators": 4
             }
+        },
+        "worker_config": {
+            "num_workers_per_gpu": 1
         }
     },
     "features": {
@@ -35,5 +30,5 @@
             }
         }
     },
-    "context_length": 4096
+    "context_length": 2048
 }

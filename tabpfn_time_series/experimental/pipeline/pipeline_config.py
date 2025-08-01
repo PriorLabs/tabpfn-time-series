@@ -31,6 +31,14 @@ class PipelineConfig:
     # Mapping of string model adapter names to actual classes
     _MODEL_ADAPTER_MAPPING: ClassVar[Dict[str, str]] = {
         "TabDPTModelAdapter": "tabpfn_time_series.experimental.other_tfm.TabDPTModelAdapter",
+        "MitraModelAdapter": "tabpfn_time_series.experimental.other_tfm.MitraModelAdapter",
+        "LinearRegressionModelAdapter": "tabpfn_time_series.experimental.other_tfm.linear_regression.LinearRegressionModelAdapter",
+    }
+
+    # Mapping of string worker class names to actual classes
+    _WORKER_CLASS_MAPPING: ClassVar[Dict[str, str]] = {
+        "CPUParallelWorker": "tabpfn_time_series.worker.parallel.CPUParallelWorker",
+        "GPUParallelWorker": "tabpfn_time_series.worker.parallel.GPUParallelWorker",
     }
 
     @classmethod
@@ -39,6 +47,7 @@ class PipelineConfig:
             config = json.load(f)
         instance = cls(**config)
         cls.resolve_model_adapter_imports(instance.predictor_config)
+        cls.resolve_worker_class_imports(instance.predictor_config)
         return instance
 
     @classmethod
@@ -98,4 +107,47 @@ class PipelineConfig:
         except (ImportError, AttributeError) as e:
             raise ImportError(
                 f"Failed to import {model_adapter_class} from {module_path}: {e}"
+            )
+
+    @classmethod
+    def resolve_worker_class_imports(cls, predictor_config: dict) -> None:
+        """
+        Resolve string worker class names to actual class objects in predictor_config.
+
+        Modifies the predictor_config dict in place by replacing string worker_class
+        values with their corresponding imported class objects.
+
+        Args:
+            predictor_config: Configuration dictionary that may contain a 'worker_class' key
+
+        Raises:
+            ValueError: If an unknown worker class is specified
+            ImportError: If the specified worker class cannot be imported
+        """
+        if "worker_class" not in predictor_config:
+            return
+
+        worker_class = predictor_config["worker_class"]
+        if not isinstance(worker_class, str):
+            # Already resolved or is an actual class
+            return
+
+        if worker_class not in cls._WORKER_CLASS_MAPPING:
+            available_classes = list(cls._WORKER_CLASS_MAPPING.keys())
+            raise ValueError(
+                f"Unknown worker class: {worker_class}. "
+                f"Available classes: {available_classes}"
+            )
+
+        # Import the class dynamically
+        module_path = cls._WORKER_CLASS_MAPPING[worker_class]
+        module_name, class_name = module_path.rsplit(".", 1)
+
+        try:
+            module = __import__(module_name, fromlist=[class_name])
+            class_obj = getattr(module, class_name)
+            predictor_config["worker_class"] = class_obj
+        except (ImportError, AttributeError) as e:
+            raise ImportError(
+                f"Failed to import {worker_class} from {module_path}: {e}"
             )

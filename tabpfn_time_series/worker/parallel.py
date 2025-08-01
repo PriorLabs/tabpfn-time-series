@@ -106,7 +106,10 @@ class GPUParallelWorker(ParallelWorker):
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
     ):
-        if self.num_gpus == 1:
+        if (
+            self.total_num_workers == 1
+            or len(train_tsdf.item_ids) < self.total_num_workers
+        ):
             predictions = self._prediction_routine_per_gpu(
                 train_tsdf,
                 test_tsdf,

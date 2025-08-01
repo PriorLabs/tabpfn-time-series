@@ -1,21 +1,22 @@
 {
     "predictor_name": "GenericTimeSeriesPredictor",
     "predictor_config": {
-        "model_adapter_class": "TabDPTModelAdapter",
+        "model_adapter_class": "LinearRegressionModelAdapter",
         "model_adapter_config": {
             "model_config": {
-                "use_flash": false,
-                "compile": false,
-                "device": "cuda",
-                "inf_batch_size": 512
+                "fit_intercept": true,
+                "copy_X": true,
+                "n_jobs": -1,
+                "positive": false
             },
             "inference_config": {
-                "predict": {
-                    "n_ensembles": 8,
-                    "context_size": 10000,
-                    "seed": 42
-                }
+                "fit": {},
+                "predict": {}
             }
+        },
+        "worker_class": "CPUParallelWorker",
+        "worker_config": {
+            "num_workers": 32
         }
     },
     "features": {
@@ -36,4 +37,4 @@
         }
     },
     "context_length": 4096
-}
+} 

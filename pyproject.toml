@@ -26,6 +26,8 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "ujson>=5.10.0",
+    "tool>=0.8.0",
+    "pip>=25.1.1",
 ]
 
 [project.optional-dependencies]
@@ -42,10 +44,13 @@ dev = [
     "pytest",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.3",
+    "seaborn>=0.13.2",
 ]
-eval_tabdpt = [
+eval_tfm = [
     "tabpfn_time_series[dev]",
-    "tabdpt @ git+https://github.com/liam-sbhoo/TabDPT-inference.git"
+    "tabdpt"
+    # "tabdpt @ file:///$(pwd)/TabDPT-inference",
+    # autogluon installed separately via ./autogluon/full_install.sh
 ]
 
 [tool.hatch.version]
@@ -59,6 +64,9 @@ exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]
+
+[tool.uv.sources]
+tabdpt = { path = "TabDPT-inference", editable = true }
 
 [project.urls]
 "Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"

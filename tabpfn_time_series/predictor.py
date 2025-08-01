@@ -1,5 +1,6 @@
 import logging
 from enum import Enum
+import time
 from typing import Type, TypeAlias, Dict, Any
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
@@ -48,7 +49,12 @@ class TimeSeriesPredictor:
 
         logger.info(f"Predicting {len(train_tsdf.item_ids)} time series...")
 
-        return self.worker.predict(train_tsdf, test_tsdf)
+        start_time = time.time()
+        predictions = self.worker.predict(train_tsdf, test_tsdf)
+        end_time = time.time()
+        logger.info(f"Prediction time: {end_time - start_time} seconds")
+
+        return predictions
 
 
 class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):

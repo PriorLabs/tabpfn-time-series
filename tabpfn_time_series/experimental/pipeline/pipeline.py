@@ -12,7 +12,8 @@ from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 
 from tabpfn_time_series.experimental.features import (
-    FeatureTransformer,
+    # FeatureTransformer,
+    FastFeatureTransformer,
     RunningIndexFeature,
     CalendarFeature,
     AdditionalCalendarFeature,
@@ -77,7 +78,7 @@ class TimeSeriesEvalPipeline:
             logger.warning("No valid features found, using defaults")
             self.selected_features = self.FALLBACK_FEATURES
 
-        self.feature_transformer = FeatureTransformer(self.selected_features)
+        self.feature_transformer = FastFeatureTransformer(self.selected_features)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")
@@ -283,6 +284,15 @@ class TimeSeriesEvalPipeline:
             test_data_input, self.use_covariates
         )
 
+        # Generate test data (before dropping NaNs)
+        # This matters because some time series has NaNs in the last few timesteps
+        logger.info("Generating test X")
+        test_tsdf = generate_test_X(
+            train_tsdf,
+            prediction_length=self.ds_prediction_length,
+            freq=self.ds_freq,
+        )
+
         # Handle NaN values
         train_tsdf = self.handle_nan_values(train_tsdf)
 
@@ -296,11 +306,7 @@ class TimeSeriesEvalPipeline:
             )
             train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
-        # Generate test data and features
-        logger.info("Generating test X")
-        test_tsdf = generate_test_X(
-            train_tsdf, prediction_length=self.ds_prediction_length
-        )
+        # Generate features
         logger.info("Applying feature transformations")
         train_tsdf, test_tsdf = self.feature_transformer.transform(
             train_tsdf, test_tsdf
@@ -313,4 +319,5 @@ class TimeSeriesEvalPipeline:
             )
             train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
+        logger.info("Data preprocessing complete")
         return train_tsdf, test_tsdf

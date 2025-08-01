@@ -29,24 +29,6 @@ def _extract_max_timestamps(
     return last_timestamps, item_identifiers
 
 
-def _determine_frequency(train_data: TimeSeriesDataFrame) -> str:
-    """Get the time frequency, inferring it if necessary."""
-    frequency_string = train_data.freq
-
-    if frequency_string is None:
-        first_item_id = train_data.item_ids[0]
-        first_series = train_data.loc[first_item_id]
-        frequency_string = pd.infer_freq(first_series.index)
-
-        if frequency_string is None:
-            raise ValueError(
-                "Cannot determine time frequency. Please ensure your data has "
-                "regular time intervals (e.g., daily, monthly, yearly)."
-            )
-
-    return frequency_string
-
-
 def _create_future_timestamps(
     last_timestamps: np.ndarray, frequency: str, num_future_steps: int
 ) -> List[pd.Timestamp]:
@@ -105,6 +87,7 @@ def _create_future_timestamps_parallel(
 def generate_test_X(
     train_tsdf: TimeSeriesDataFrame,
     prediction_length: int,
+    freq: str,
 ) -> TimeSeriesDataFrame:
     """
     Create test data for forecasting by generating future time periods.
@@ -125,7 +108,6 @@ def generate_test_X(
     """
     # Extract basic information
     last_timestamps, item_ids = _extract_max_timestamps(train_tsdf)
-    frequency = _determine_frequency(train_tsdf)
     num_items = len(item_ids)
 
     # Automatically choose processing method based on dataset size
@@ -133,12 +115,12 @@ def generate_test_X(
         # Use parallel processing for large datasets
         num_workers = min(os.cpu_count() - 1, num_items)
         future_timestamps = _create_future_timestamps_parallel(
-            last_timestamps, frequency, prediction_length, num_workers
+            last_timestamps, freq, prediction_length, num_workers
         )
     else:
         # Use single-threaded processing for smaller datasets
         future_timestamps = _create_future_timestamps(
-            last_timestamps, frequency, prediction_length
+            last_timestamps, freq, prediction_length
         )
 
     # Build the test DataFrame
