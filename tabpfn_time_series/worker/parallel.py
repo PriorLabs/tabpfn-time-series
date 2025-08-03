@@ -11,25 +11,6 @@ from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import split_time_series_to_X_y
 
 
-# The inference routine should return a dictionary with the following structure.
-#
-# {
-#     "target": np.ndarray,  # Predictions for the mean
-#     **{
-#         f"{q}": np.ndarray  # Predictions for quantile q
-#         for q in quantiles
-#     },
-# }
-# For example:
-# {
-#     'target': array([0.5, 0.5, 0.5]),
-#     '0.1': array([0.4, 0.4, 0.4]),
-#     '0.5': array([0.5, 0.5, 0.5]),
-#     '0.9': array([0.6, 0.6, 0.6])
-# }
-InferenceRoutine = Callable[[np.ndarray, np.ndarray, np.ndarray], dict[str, np.ndarray]]
-
-
 class ParallelWorker(ABC):
     def __init__(
         self,

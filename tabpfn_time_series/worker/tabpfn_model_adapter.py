@@ -48,7 +48,7 @@ class TabPFNModelAdapter(BaseModelAdapter):
             self._init_local_tabpfn_regressor(self.model_config)
         else:
             raise ValueError(
-                f"Expected TabPFN-family regressor, got {self.tabpfn_class}"
+                f"Expected TabPFN-family regressor, got {self.model_class}"
             )
 
     def postprocess_pred_output(

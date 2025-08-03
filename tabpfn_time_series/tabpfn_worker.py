@@ -232,7 +232,18 @@ class LocalTabPFN(TabPFNWorker):
     def _get_tabpfn_engine(self):
         from tabpfn import TabPFNRegressor
 
-        return TabPFNRegressor(**self.config["tabpfn_internal"], random_state=0)
+        # Create a copy of the config to avoid modifying the original
+        config = self.config["tabpfn_internal"].copy()
+
+        # Handle model path if specified
+        if "model_path" in config:
+            config["model_path"] = self._parse_model_path(config["model_path"])
+
+        # Initialize the TabPFNRegressor with fixed random state for reproducibility
+        return TabPFNRegressor(**config, random_state=0)
+
+    def _parse_model_path(self, model_name: str) -> str:
+        return f"tabpfn-v2-regressor-{model_name}.ckpt"
 
     def _prediction_routine_per_gpu(
         self,
