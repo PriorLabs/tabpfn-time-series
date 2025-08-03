@@ -1,8 +1,9 @@
 name: In pull request
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
+      - beta
       - dev
 
 jobs:
@@ -10,7 +11,12 @@ jobs:
     name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout PR code safely
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
       - name: Ruff Linting
         uses: astral-sh/ruff-action@v3
         with:
@@ -32,7 +38,11 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout PR code safely
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
       
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -41,14 +51,6 @@ jobs:
           
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
       - name: Install the project
         run: uv sync --locked --all-extras --dev

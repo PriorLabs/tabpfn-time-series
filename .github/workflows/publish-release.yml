@@ -1,0 +1,39 @@
+name: (Release) Publish Python distributions to PyPI
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  build-and-publish-release:
+    name: (Release) Build and publish Python distributions to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: uv pip install --system hatch
+
+      - name: Build with static version
+        run: hatch build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }} 

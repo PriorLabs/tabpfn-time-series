@@ -32,7 +32,7 @@ Concretely, we:
 For more details, please refer to our [paper](https://arxiv.org/abs/2501.02945v3).
  <!-- and our [poster](docs/tabpfn-ts-neurips-poster.pdf) (presented at NeurIPS 2024 TRL and TSALM workshops). -->
 
-## 👉 **Why gives us a try?**
+## 👉 **Why give us a try?**
 - **Zero-shot forecasting**: this method is extremely fast and requires no training, making it highly accessible for experimenting with your own problems.
 - **Point and probabilistic forecasting**: it provides accurate point forecasts as well as probabilistic forecasts.
 - **Support for exogenous variables**: if you have exogenous variables, this method can seemlessly incorporate them into the forecasting model.

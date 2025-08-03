@@ -1,0 +1,41 @@
+name: (Test) Publish Python distributions to TestPyPI
+
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  build-and-publish-test:
+    name: (Test) Build and publish Python distributions to TestPyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: uv pip install --system hatch
+
+      - name: Build with dynamic version
+        run: hatch build
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: false
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }} 

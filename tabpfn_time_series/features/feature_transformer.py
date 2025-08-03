@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from autogluon.timeseries import TimeSeriesDataFrame
+from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.features.feature_generator_base import (
     FeatureGenerator,
 )
