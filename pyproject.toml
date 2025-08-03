@@ -19,7 +19,7 @@ dependencies = [
     "pandas>=2.1.2, <2.2.0",
     "gluonts>=0.16.0",
     "tabpfn-client>=0.1.7",
-    "tabpfn>=2.0.9",
+    "tabpfn>=2.1.0",
     "statsmodels>=0.14.5",
     "datasets>=4.0",
     "python-dotenv>=1.1.0",
@@ -39,6 +39,7 @@ dev = [
     "hatch-vcs",
     "pytest",
     "ipykernel>=6.29.5",
+    "matplotlib>=3.10.3",
 ]
 
 [tool.hatch.version]
