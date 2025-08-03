@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import RegressorMixin
 
+from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
+
 
 InferenceConfig: TypeAlias = Dict[str, Any]
 """
@@ -77,7 +79,7 @@ class BaseModelAdapter(ABC):
         train_X: Union[np.ndarray, pd.DataFrame],
         train_y: Union[np.ndarray, pd.Series],
         test_X: Union[np.ndarray, pd.DataFrame],
-        quantiles: list[float] = None,
+        quantiles: list[float] = DEFAULT_QUANTILE_CONFIG,
     ) -> PredictionOutput:
         """
         Train model and make predictions.
