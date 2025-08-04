@@ -8,7 +8,8 @@ dynamic = ["version"]
 authors = [{ name = "Liam Shi Bin Hoo", email = "hoos@tf.uni-freiburg.de" }]
 description = "Zero-shot time series forecasting with TabPFNv2"
 readme = "README.md"
-requires-python = ">=3.10"
+# requires-python = ">=3.10"
+requires-python = ">=3.11"  # for development
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
@@ -24,6 +25,9 @@ dependencies = [
     "datasets>=4.0",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
+    "ujson>=5.10.0",
+    "tool>=0.8.0",
+    "pip>=25.1.1",
 ]
 
 [project.optional-dependencies]
@@ -40,10 +44,22 @@ dev = [
     "pytest",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.3",
+    "seaborn>=0.13.2",
 ]
+eval_tfm = [
+    "tabpfn_time_series[dev]",
+    "tabdpt",
+    # autogluon installed separately via ./autogluon/full_install.sh
+]
+
+[tool.uv.sources]
+tabdpt = { path = "TabDPT-inference", editable = true }
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 exclude = ["docs", "gift_eval", "tabpfn_time_series/experimental"]

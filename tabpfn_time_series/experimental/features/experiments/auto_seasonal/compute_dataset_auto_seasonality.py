@@ -16,11 +16,11 @@ from tabpfn_time_series.experimental.evaluation.evaluate_utils import (
     construct_evaluation_data,
 )
 from tabpfn_time_series.experimental.features.auto_features import AutoSeasonalFeature
-from tabpfn_time_series.experimental.pipeline import TabPFNTSPipeline
+from tabpfn_time_series.experimental.pipeline import TimeSeriesEvalPipeline
 from tabpfn_time_series.experimental.utils.general import find_repo_root
 
-handle_nan_values = TabPFNTSPipeline.handle_nan_values
-convert_to_timeseries_dataframe = TabPFNTSPipeline.convert_to_timeseries_dataframe
+handle_nan_values = TimeSeriesEvalPipeline.handle_nan_values
+convert_to_timeseries_dataframe = TimeSeriesEvalPipeline.convert_to_timeseries_dataframe
 
 
 logger = logging.getLogger(__name__)

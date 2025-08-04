@@ -1,36 +1,146 @@
+import os
 import pandas as pd
 import numpy as np
+from typing import Tuple, List
+from joblib import Parallel, delayed
 
 import datasets
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 
 
+def _extract_max_timestamps(
+    train_data: TimeSeriesDataFrame,
+) -> Tuple[np.ndarray, pd.Index]:
+    """Find the last timestamp for each time series item."""
+    item_identifiers = train_data.item_ids
+
+    if train_data.index.is_monotonic_increasing:
+        # Fast path: data is sorted, use index pointers
+        index_pointers = train_data.get_indptr()
+        all_timestamps = train_data.index.get_level_values("timestamp")
+        last_timestamps = all_timestamps[index_pointers[1:] - 1]
+    else:
+        # Slow path: data is unsorted, use groupby
+        last_timestamps_by_item = train_data.groupby(level="item_id", sort=False)[
+            train_data.columns[0]
+        ].apply(lambda group: group.index.get_level_values("timestamp").max())
+        last_timestamps = last_timestamps_by_item.values
+
+    return last_timestamps, item_identifiers
+
+
+def _create_future_timestamps(
+    last_timestamps: np.ndarray, frequency: str, num_future_steps: int
+) -> List[pd.Timestamp]:
+    """Generate future timestamps starting from each item's last timestamp."""
+    time_offset = pd.tseries.frequencies.to_offset(frequency)
+    future_timestamps = []
+
+    for last_timestamp in last_timestamps:
+        forecast_start = last_timestamp + time_offset
+        item_future_timestamps = pd.date_range(
+            start=forecast_start, periods=num_future_steps, freq=frequency
+        )
+        future_timestamps.extend(item_future_timestamps)
+
+    return future_timestamps
+
+
+def _create_future_timestamps_parallel(
+    last_timestamps: np.ndarray, frequency: str, num_future_steps: int, num_workers: int
+) -> List[pd.Timestamp]:
+    """Generate future timestamps using parallel processing for large datasets."""
+
+    def process_chunk(timestamp_chunk, chunk_index):
+        time_offset = pd.tseries.frequencies.to_offset(frequency)
+        chunk_futures = []
+
+        for last_timestamp in timestamp_chunk:
+            forecast_start = last_timestamp + time_offset
+            timestamps = pd.date_range(
+                start=forecast_start, periods=num_future_steps, freq=frequency
+            )
+            chunk_futures.extend(timestamps)
+
+        return chunk_futures, chunk_index
+
+    # Split into chunks
+    chunk_size = max(1, len(last_timestamps) // num_workers)
+    chunks = [
+        last_timestamps[i : i + chunk_size]
+        for i in range(0, len(last_timestamps), chunk_size)
+    ]
+
+    # Process in parallel
+    results = Parallel(n_jobs=num_workers, backend="threading")(
+        delayed(process_chunk)(chunk, idx) for idx, chunk in enumerate(chunks)
+    )
+
+    # Reassemble in correct order
+    future_timestamps = []
+    for chunk_futures, _ in sorted(results, key=lambda x: x[1]):
+        future_timestamps.extend(chunk_futures)
+
+    return future_timestamps
+
+
 def generate_test_X(
     train_tsdf: TimeSeriesDataFrame,
     prediction_length: int,
-):
-    test_dfs = []
-    for item_id in train_tsdf.item_ids:
-        last_train_timestamp = train_tsdf.xs(item_id, level="item_id").index.max()
-        first_test_timestamp = pd.date_range(
-            start=last_train_timestamp, periods=2, freq=train_tsdf.freq
-        )[-1]
-        test_dfs.append(
-            pd.DataFrame(
-                {
-                    "target": np.full(prediction_length, np.nan),
-                    "timestamp": pd.date_range(
-                        start=first_test_timestamp,
-                        periods=prediction_length,
-                        freq=train_tsdf.freq,
-                    ),
-                    "item_id": item_id,
-                }
-            )
+    freq: str,
+) -> TimeSeriesDataFrame:
+    """
+    Create test data for forecasting by generating future time periods.
+
+    Automatically adapts to dataset size - uses parallel processing for 1000+ items,
+    single-threaded processing for smaller datasets.
+
+    Example:
+        If your training data ends on 2023-12-31 and prediction_length=7,
+        this creates test data for 2024-01-01 through 2024-01-07.
+
+    Args:
+        train_tsdf: Historical time series data used for training
+        prediction_length: Number of future time steps to generate per item
+
+    Returns:
+        test_tsdf: Test dataset with future timestamps and NaN targets
+    """
+    # Extract basic information
+    last_timestamps, item_ids = _extract_max_timestamps(train_tsdf)
+    num_items = len(item_ids)
+
+    # Automatically choose processing method based on dataset size
+    if num_items >= 50:
+        # Use parallel processing for large datasets
+        num_workers = min(os.cpu_count() - 1, num_items)
+        future_timestamps = _create_future_timestamps_parallel(
+            last_timestamps, freq, prediction_length, num_workers
+        )
+    else:
+        # Use single-threaded processing for smaller datasets
+        future_timestamps = _create_future_timestamps(
+            last_timestamps, freq, prediction_length
         )
 
-    test_tsdf = TimeSeriesDataFrame.from_data_frame(pd.concat(test_dfs))
-    assert test_tsdf.item_ids.equals(train_tsdf.item_ids)
+    # Build the test DataFrame
+    total_points = num_items * prediction_length
+    repeated_item_ids = np.repeat(item_ids.values, prediction_length)
+    nan_targets = np.full(total_points, np.nan, dtype=np.float64)
+
+    test_dataframe = pd.DataFrame(
+        {
+            "target": nan_targets,
+            "timestamp": future_timestamps,
+            "item_id": repeated_item_ids,
+        }
+    )
+
+    # Convert and validate
+    test_tsdf = TimeSeriesDataFrame.from_data_frame(test_dataframe)
+
+    if not test_tsdf.item_ids.equals(train_tsdf.item_ids):
+        raise ValueError("Mismatch between training and test item IDs")
 
     return test_tsdf
 

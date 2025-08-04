@@ -1,4 +1,4 @@
-from .pipeline import TabPFNTSPipeline
+from .pipeline import TimeSeriesEvalPipeline
 from .pipeline_config import PipelineConfig
 
-__all__ = ["TabPFNTSPipeline", "PipelineConfig"]
+__all__ = ["TimeSeriesEvalPipeline", "PipelineConfig"]

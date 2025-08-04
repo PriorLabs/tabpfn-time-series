@@ -1,5 +1,5 @@
-from autogluon.timeseries import TimeSeriesDataFrame
 from tabpfn_time_series import (
+    TimeSeriesDataFrame,
     TabPFNTimeSeriesPredictor,
     TabPFNMode,
 )

@@ -5,7 +5,7 @@ from .basic_features import (
     PeriodicSinCosineFeature,
 )
 from .auto_features import AutoSeasonalFeature
-from .feature_transformer import FeatureTransformer
+from .feature_transformer import FeatureTransformer, FastFeatureTransformer
 
 __all__ = [
     "RunningIndexFeature",
@@ -14,4 +14,5 @@ __all__ = [
     "AutoSeasonalFeature",
     "PeriodicSinCosineFeature",
     "FeatureTransformer",
+    "FastFeatureTransformer",
 ]

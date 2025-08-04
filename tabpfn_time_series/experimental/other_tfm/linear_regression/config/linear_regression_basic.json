@@ -1,10 +1,23 @@
 {
-    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_name": "GenericTimeSeriesPredictor",
     "predictor_config": {
-        "tabpfn_config": {
-            "model_path": "tabpfn-v2-regressor-2noar4o2.ckpt"
+        "model_adapter_class": "LinearRegressionModelAdapter",
+        "model_adapter_config": {
+            "model_config": {
+                "fit_intercept": true,
+                "copy_X": true,
+                "n_jobs": -1,
+                "positive": false
+            },
+            "inference_config": {
+                "fit": {},
+                "predict": {}
+            }
         },
-        "tabpfn_output_selection": "median"
+        "worker_class": "CPUParallelWorker",
+        "worker_config": {
+            "num_workers": 32
+        }
     },
     "features": {
         "RunningIndexFeature": {},
@@ -24,4 +37,4 @@
         }
     },
     "context_length": 4096
-}
+} 

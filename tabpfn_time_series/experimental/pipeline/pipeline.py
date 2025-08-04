@@ -6,17 +6,14 @@ import pandas as pd
 from gluonts.model.forecast import QuantileForecast, Forecast
 from gluonts.itertools import batcher
 from gluonts.dataset.field_names import FieldName
-from autogluon.timeseries import TimeSeriesDataFrame
-from torch.cuda import is_available as torch_cuda_is_available
 
+from tabpfn_time_series import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import generate_test_X
-from tabpfn_time_series import (
-    TabPFNMode,
-    TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
-)
+from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 
 from tabpfn_time_series.experimental.features import (
-    FeatureTransformer,
+    # FeatureTransformer,
+    FastFeatureTransformer,
     RunningIndexFeature,
     CalendarFeature,
     AdditionalCalendarFeature,
@@ -42,7 +39,7 @@ COVARIATE_FIELD_TYPES = {
 }
 
 
-class TabPFNTSPipeline:
+class TimeSeriesEvalPipeline:
     FALLBACK_FEATURES = [
         RunningIndexFeature(),
         CalendarFeature(),
@@ -57,13 +54,10 @@ class TabPFNTSPipeline:
     ):
         self.ds_prediction_length = ds_prediction_length
         self.ds_freq = ds_freq
+
         predictor_class = PipelineConfig.get_predictor_class(config.predictor_name)
-        self.tabpfn_predictor = predictor_class(
-            tabpfn_mode=TabPFNMode.LOCAL
-            if torch_cuda_is_available()
-            else TabPFNMode.CLIENT,
-            config=config.predictor_config,
-        )
+        self.predictor = predictor_class(**config.predictor_config)
+
         self.context_length = config.context_length
         self.slice_before_featurization = config.slice_before_featurization
         self.use_covariates = config.use_covariates
@@ -84,7 +78,7 @@ class TabPFNTSPipeline:
             logger.warning("No valid features found, using defaults")
             self.selected_features = self.FALLBACK_FEATURES
 
-        self.feature_transformer = FeatureTransformer(self.selected_features)
+        self.feature_transformer = FastFeatureTransformer(self.selected_features)
 
     def predict(self, test_data_input) -> Iterator[Forecast]:
         logger.debug(f"len(test_data_input): {len(test_data_input)}")
@@ -102,12 +96,12 @@ class TabPFNTSPipeline:
         train_tsdf, test_tsdf = self._preprocess_test_data(test_data_input)
 
         # Generate predictions
-        pred: TimeSeriesDataFrame = self.tabpfn_predictor.predict(train_tsdf, test_tsdf)
+        pred: TimeSeriesDataFrame = self.predictor.predict(train_tsdf, test_tsdf)
         pred = pred.drop(columns=["target"])
 
         # Pre-allocate forecasts list and get forecast quantile keys
         forecasts = [None] * len(pred.item_ids)
-        forecast_keys = list(map(str, TABPFN_TS_DEFAULT_QUANTILE_CONFIG))
+        forecast_keys = list(map(str, DEFAULT_QUANTILE_CONFIG))
 
         # Generate QuantileForecast objects for each time series
         for i, (_, item_data) in enumerate(pred.groupby(level="item_id")):
@@ -188,7 +182,9 @@ class TabPFNTSPipeline:
 
             # Add covariates if needed
             if use_covariates:
-                covariate_df = TabPFNTSPipeline._process_covariates(item, timestamp)
+                covariate_df = TimeSeriesEvalPipeline._process_covariates(
+                    item, timestamp
+                )
                 if not covariate_df.empty:
                     df = pd.concat([df, covariate_df], axis=1)
                 else:
@@ -288,6 +284,15 @@ class TabPFNTSPipeline:
             test_data_input, self.use_covariates
         )
 
+        # Generate test data (before dropping NaNs)
+        # This matters because some time series has NaNs in the last few timesteps
+        logger.info("Generating test X")
+        test_tsdf = generate_test_X(
+            train_tsdf,
+            prediction_length=self.ds_prediction_length,
+            freq=self.ds_freq,
+        )
+
         # Handle NaN values
         train_tsdf = self.handle_nan_values(train_tsdf)
 
@@ -301,10 +306,8 @@ class TabPFNTSPipeline:
             )
             train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
-        # Generate test data and features
-        test_tsdf = generate_test_X(
-            train_tsdf, prediction_length=self.ds_prediction_length
-        )
+        # Generate features
+        logger.info("Applying feature transformations")
         train_tsdf, test_tsdf = self.feature_transformer.transform(
             train_tsdf, test_tsdf
         )
@@ -316,4 +319,5 @@ class TabPFNTSPipeline:
             )
             train_tsdf = train_tsdf.slice_by_timestep(-self.context_length, None)
 
+        logger.info("Data preprocessing complete")
         return train_tsdf, test_tsdf

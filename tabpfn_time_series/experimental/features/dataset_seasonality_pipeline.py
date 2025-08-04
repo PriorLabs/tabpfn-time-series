@@ -6,7 +6,10 @@ import logging
 from gluonts.itertools import batcher
 from gluonts.model.forecast import Forecast
 
-from tabpfn_time_series.experimental.pipeline import PipelineConfig, TabPFNTSPipeline
+from tabpfn_time_series.experimental.pipeline import (
+    PipelineConfig,
+    TimeSeriesEvalPipeline,
+)
 from tabpfn_time_series.experimental.features import (
     FeatureTransformer,
     AutoSeasonalFeature,
@@ -16,7 +19,7 @@ from tabpfn_time_series.experimental.features import (
 logger = logging.getLogger(__name__)
 
 
-class DatasetSeasonalityPipeline(TabPFNTSPipeline):
+class DatasetSeasonalityPipeline(TimeSeriesEvalPipeline):
     def __init__(
         self,
         config: PipelineConfig,

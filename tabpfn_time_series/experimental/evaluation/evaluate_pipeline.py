@@ -188,11 +188,16 @@ if __name__ == "__main__":
     args.output_dir = Path(args.output_dir)
     args.terms = args.terms.split(",")
 
+    # Configure logging with timestamps
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
         logger.debug("Debug mode enabled")
-    else:
-        logging.basicConfig(level=logging.INFO)
 
     logger.info(f"Command Line Arguments: {vars(args)}")
 

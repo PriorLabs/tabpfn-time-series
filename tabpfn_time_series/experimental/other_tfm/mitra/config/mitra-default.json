@@ -1,10 +1,17 @@
 {
-    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_name": "GenericTimeSeriesPredictor",
     "predictor_config": {
-        "tabpfn_config": {
-            "model_path": "tabpfn-v2-regressor-2noar4o2.ckpt"
+        "model_adapter_class": "MitraModelAdapter",
+        "model_adapter_config": {
+            "model_config": {
+                "device": "cuda",
+                "fine_tune": false,
+                "n_estimators": 4
+            }
         },
-        "tabpfn_output_selection": "median"
+        "worker_config": {
+            "num_workers_per_gpu": 1
+        }
     },
     "features": {
         "RunningIndexFeature": {},
@@ -23,5 +30,5 @@
             }
         }
     },
-    "context_length": 4096
+    "context_length": 2048
 }

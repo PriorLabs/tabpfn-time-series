@@ -1,10 +1,22 @@
 {
-    "predictor_name": "TabPFNTimeSeriesPredictor",
+    "predictor_name": "GenericTimeSeriesPredictor",
     "predictor_config": {
-        "tabpfn_config": {
-            "model_path": "tabpfn-v2-regressor-2noar4o2.ckpt"
-        },
-        "tabpfn_output_selection": "median"
+        "model_adapter_class": "TabDPTModelAdapter",
+        "model_adapter_config": {
+            "model_config": {
+                "use_flash": false,
+                "compile": false,
+                "device": "cuda",
+                "inf_batch_size": 512
+            },
+            "inference_config": {
+                "predict": {
+                    "n_ensembles": 8,
+                    "context_size": 10000,
+                    "seed": 42
+                }
+            }
+        }
     },
     "features": {
         "RunningIndexFeature": {},

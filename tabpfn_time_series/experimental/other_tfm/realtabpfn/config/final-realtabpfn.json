@@ -2,7 +2,7 @@
     "predictor_name": "TabPFNTimeSeriesPredictor",
     "predictor_config": {
         "tabpfn_config": {
-            "model_path": "tabpfn-v2-regressor-2noar4o2.ckpt"
+            "model_path": "tabpfn-v2-regressor-2noar4o2-64z1mg5k.cpkt"
         },
         "tabpfn_output_selection": "median"
     },

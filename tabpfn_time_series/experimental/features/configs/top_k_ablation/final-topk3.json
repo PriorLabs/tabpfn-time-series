@@ -16,7 +16,7 @@
         },
         "AutoSeasonalFeature": {
             "config": {
-                "max_top_k": 5,
+                "max_top_k": 3,
                 "detrend_type": "linear",
                 "zero_padding_factor": 2,
                 "exclude_zero": true

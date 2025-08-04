@@ -1,12 +1,25 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+"""
+Script to submit evaluation jobs on SLURM using submitit.
+"""
+
 import os
 import argparse
 import submitit
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
+from contextlib import contextmanager
+import tempfile
+import stat
+import shutil
 
-from tabpfn_time_series.experimental.evaluation.dataset_definition import ALL_DATASETS
+from tabpfn_time_series.experimental.evaluation.dataset_definition import (
+    ALL_DATASETS,
+    DATASETS_WITH_COVARIATES,
+    SHORT_DATASETS,
+    MED_LONG_DATASETS,
+)
 
 
 load_dotenv()
@@ -15,15 +28,15 @@ EVALUATION_SCRIPT_PATH = Path(__file__).parent.parent / "evaluate_pipeline.py"
 
 
 HUGE_DATASETS = [
-    "bitbrains_fast_storage/5T",
-    "bitbrains_fast_storage/H",
     "bitbrains_rnd/5T",
-    "bitbrains_rnd/H",
+    "bitbrains_fast_storage/5T",
+    "electricity/15T",
     "LOOP_SEATTLE/5T",
     "LOOP_SEATTLE/H",
-    "LOOP_SEATTLE/D",
-    # Big (not huge)
-    "electricity/15T",
+    "temperature_rain_with_missing",
+    # "bitbrains_fast_storage/H",
+    # "bitbrains_rnd/H",
+    # "LOOP_SEATTLE/D",
 ]
 
 
@@ -40,6 +53,11 @@ def parse_arguments():
         "--dataset",
         default="all",
         help="Dataset to run, either a single dataset or 'all'",
+    )
+    parser.add_argument(
+        "--evaluate_covariates",
+        action="store_true",
+        help="Evaluate covariates",
     )
     parser.add_argument(
         "--config_path",
@@ -60,7 +78,7 @@ def parse_arguments():
     parser.add_argument(
         "--ngpus",
         type=int,
-        default=1,
+        required=True,
         help="Number of GPUs to use",
     )
     parser.add_argument(
@@ -75,6 +93,11 @@ def parse_arguments():
         help="Run fast evaluation, skip big datasets",
     )
     parser.add_argument(
+        "--huge",
+        action="store_true",
+        help="Run on huge datasets only",
+    )
+    parser.add_argument(
         "--debug_slurm",
         action="store_true",
         help="Debug SLURM jobs",
@@ -87,46 +110,85 @@ def parse_arguments():
     parser.add_argument(
         "--experiment_tag",
         type=str,
-        help="Tag to distinguish the experiment/study",
+        help="Comma-separated list of tags to distinguish the experiment/study",
         required=True,
+    )
+    parser.add_argument(
+        "--mem",
+        type=int,
+        default=128,
+        help="Memory allocation in GB",
+    )
+    parser.add_argument(
+        "--cpus",
+        type=int,
+        default=16,
+        help="Number of CPUs to request",
     )
 
     return parser.parse_args()
 
 
-def get_datasets_to_evaluate(args):
+def get_datasets_to_evaluate(args, terms):
     # If a single task is specified, check if it is valid
+    DATASET_COLLECTION = (
+        ALL_DATASETS if not args.evaluate_covariates else DATASETS_WITH_COVARIATES
+    )
+
     if args.dataset != "all":
-        if args.dataset not in ALL_DATASETS:
+        if args.dataset not in DATASET_COLLECTION:
             raise ValueError(f"Dataset {args.dataset} not found in dataset definition")
         datasets = [args.dataset]
     else:
-        datasets = ALL_DATASETS
+        datasets = DATASET_COLLECTION
 
     if args.debug_slurm:
         print("Debugging SLURM jobs")
         datasets = datasets[:1]
 
-    if args.fast:
+    # Dataset subset selection
+    assert not (args.huge and args.fast), "Cannot run on huge and fast datasets"
+    if args.huge:
+        print("Running on huge datasets only")
+        datasets = HUGE_DATASETS
+    elif args.fast:
         print("Running fast evaluation, skipping huge datasets")
         datasets = [ds for ds in datasets if ds not in HUGE_DATASETS]
 
     if args.freq:
-        assert is_valid_frequency(
-            args.freq
-        ), f"Frequency {args.freq} not supported. Must be a valid pandas frequency string."
-        assert (
-            args.dataset == "all"
-        ), "Cannot specify dataset when frequency is specified"
+        assert is_valid_frequency(args.freq), (
+            f"Frequency {args.freq} not supported. Must be a valid pandas frequency string."
+        )
+        assert args.dataset == "all", (
+            "Cannot specify dataset when frequency is specified"
+        )
         datasets = [ds for ds in datasets if ds.endswith(args.freq)]
 
     if args.exclude_freq:
-        assert is_valid_frequency(
-            args.exclude_freq
-        ), f"Frequency {args.exclude_freq} not supported. Must be a valid pandas frequency string."
+        assert is_valid_frequency(args.exclude_freq), (
+            f"Frequency {args.exclude_freq} not supported. Must be a valid pandas frequency string."
+        )
         datasets = [ds for ds in datasets if not ds.endswith(args.exclude_freq)]
 
-    return datasets
+    datasets_and_terms = []
+    for d in datasets:
+        for t in terms:
+            if t == ["short"] and d not in SHORT_DATASETS:
+                continue
+
+            if t in ["medium", "long"] and d not in MED_LONG_DATASETS:
+                continue
+
+            datasets_and_terms.append((d, t))
+
+    return datasets, datasets_and_terms
+
+
+def get_dataset_storage_path(args):
+    if args.evaluate_covariates:
+        return os.getenv("COVARIATE_DATASET_STORAGE_PATH")
+    else:
+        return os.getenv("DATASET_STORAGE_PATH")
 
 
 def is_valid_frequency(freq):
@@ -139,23 +201,136 @@ def is_valid_frequency(freq):
         return False
 
 
-def main():
-    args = parse_arguments()
-    job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    memory = 128
-    num_cpus = 16
-    num_gpus = args.ngpus
+def requires_acknowledgement(partition_name):
+    """Check if a partition requires acknowledgement (e.g., bosch partitions)."""
+    return partition_name and "bosch" in partition_name.lower()
 
-    datasets = get_datasets_to_evaluate(args)
+
+@contextmanager
+def sbatch_auto_acknowledge():
+    """Context manager that creates a temporary sbatch wrapper for auto-acknowledgement."""
+    # Find the real sbatch path
+    real_sbatch = shutil.which("sbatch")
+    if not real_sbatch:
+        raise RuntimeError("Could not find sbatch command")
+
+    # Create temporary wrapper script
+    wrapper_content = f"""#!/bin/bash
+echo "y" | {real_sbatch} "$@"
+"""
+
+    # Create temporary directory and wrapper script
+    temp_dir = tempfile.mkdtemp()
+    wrapper_path = os.path.join(temp_dir, "sbatch")
+
+    try:
+        with open(wrapper_path, "w") as f:
+            f.write(wrapper_content)
+
+        # Make wrapper executable
+        os.chmod(wrapper_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+
+        # Temporarily modify PATH to use our wrapper
+        original_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{temp_dir}:{original_path}"
+
+        yield
+
+    finally:
+        # Restore original PATH and clean up
+        os.environ["PATH"] = original_path
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def submit_jobs(executor, datasets_and_terms, dataset_storage_path, args):
+    """Submit evaluation jobs using the provided executor."""
+    jobs = []
+
+    with executor.batch():
+        for dataset, term in datasets_and_terms:
+            # Create the job
+            job = EvaluationJob(
+                dataset,
+                dataset_storage_path,
+                term,
+                args,
+            )
+
+            # Submit the job
+            submitted_job = executor.submit(job)
+            jobs.append(submitted_job)
+
+    return jobs
+
+
+class EvaluationJob:
+    def __init__(
+        self,
+        dataset,
+        dataset_storage_path,
+        term,
+        args,
+    ):
+        self.dataset = dataset
+        self.dataset_storage_path = dataset_storage_path
+        self.term = term
+        self.args = args
+
+    def __call__(self):
+        import sys
+        import os
+        import subprocess
+
+        # Print some debug information
+        print(f"Job running on node: {os.uname().nodename}")
+        print(f"CUDA devices: {os.environ.get('CUDA_VISIBLE_DEVICES', 'Not set')}")
+
+        # Construct command to run evaluate_pipeline.py
+        cmd = [sys.executable, "-u", str(EVALUATION_SCRIPT_PATH)]
+
+        # Add all required arguments
+        cmd.extend(
+            [
+                "--config_path",
+                self.args.config_path,
+                "--dataset",
+                self.dataset,
+                "--dataset_storage_path",
+                self.dataset_storage_path,
+                "--output_dir",
+                f"slurm/{self.args.job_name}",
+                "--enable_wandb",
+                "--wandb_tags",
+                self.args.experiment_tag,
+                "--terms",
+                self.term,
+            ]
+        )
+
+        if self.args.evaluate_covariates:
+            cmd.append("--evaluate_covariates")
+
+        # Execute the command
+        print(f"Running command: {' '.join(cmd)}")
+        process = subprocess.run(cmd, check=True)
+        return process.returncode
+
+
+def main():
+    """Main function to submit evaluation jobs on SLURM using submitit."""
+    args = parse_arguments()
+    args.job_name = f"time_series_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     terms = args.terms.split(",")
+    datasets, datasets_and_terms = get_datasets_to_evaluate(args, terms)
+    dataset_storage_path = get_dataset_storage_path(args)
     num_datasets = len(datasets)
-    num_terms = len(terms)
-    total_jobs = num_datasets * num_terms
+    total_jobs = len(datasets_and_terms)
 
     # Report the benchmark parameters
     print("\nRunning evaluation with the following parameters:")
     print(f" . CLUSTER_PARTITION: {args.cluster_partition}")
-    print(f" . # GPUS: {num_gpus}")
+    print(f" . # GPUS: {args.ngpus}")
     print(f" . # DATASETS: {num_datasets}")
     print(f" . DATASETS: {datasets}")
     print(f" . TERMS: {terms}")
@@ -166,51 +341,39 @@ def main():
         return
 
     # Setup submitit executor
-    executor = submitit.AutoExecutor(folder=f"slurm_logs/{job_name}")
+    log_dir = Path("slurm_logs") / args.job_name
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"EXCLUDE_CLUSTER_NODES: {os.getenv('EXCLUDE_CLUSTER_NODES')}")
+
+    # Initialize the executor
+    executor = submitit.AutoExecutor(folder=str(log_dir))
     executor.update_parameters(
-        name=job_name,
+        name=args.job_name,
         nodes=1,
-        tasks_per_node=1,
-        cpus_per_task=num_cpus,
-        mem_gb=memory,
-        slurm_gres=f"gpu:{num_gpus}",
+        tasks_per_node=1,  # Each job runs exactly 1 task/process
+        cpus_per_task=args.cpus,  # CPUs allocated to that single task
+        slurm_mem=f"{args.mem}GB",  # Memory allocation per job
+        slurm_gres=f"gpu:{args.ngpus}",  # GPUs allocated to the job
         slurm_partition=args.cluster_partition,
         slurm_array_parallelism=total_jobs,
-        slurm_setup=[f"source {os.getenv('ENVIRONMENT_BASHRC_PATH')}"],
-        # timeout_min=1439,  # 23 hours and 59 minutes
-        # slurm_additional_parameters={"exclude": os.getenv("EXCLUDE_CLUSTER_NODES")},
+        timeout_min=23 * 60,  # 23 hours in minutes (within 24h limit)
+        slurm_exclude=os.getenv("EXCLUDE_CLUSTER_NODES"),
+        slurm_additional_parameters={"export": f"ALL,HF_HOME={os.getenv('HF_HOME')}"},
     )
 
-    jobs = []
-    with executor.batch():
-        for dataset in datasets:
-            for term in terms:
-                cmd = ["python", str(EVALUATION_SCRIPT_PATH)]
-                script_args = [
-                    "--config_path",
-                    args.config_path,
-                    "--dataset",
-                    dataset,
-                    "--dataset_storage_path",
-                    os.getenv("DATASET_STORAGE_PATH"),
-                    "--output_dir",
-                    f"slurm/{job_name}",
-                    "--enable_wandb",
-                    "--wandb_tags",
-                    f"{args.experiment_tag}",
-                    "--terms",
-                    term,
-                ]
-
-                # if not args.cast_multivariate_to_univariate:
-                #     script_args.append("--no_cast_multivariate_to_univariate")
-
-                job = executor.submit(
-                    submitit.helpers.CommandFunction(cmd), *script_args
-                )
-                jobs.append(job)
+    # Submit jobs with automatic acknowledgement if needed
+    if requires_acknowledgement(args.cluster_partition):
+        print(
+            f"Partition '{args.cluster_partition}' requires acknowledgement - using auto-acknowledgement"
+        )
+        with sbatch_auto_acknowledge():
+            jobs = submit_jobs(executor, datasets_and_terms, dataset_storage_path, args)
+    else:
+        jobs = submit_jobs(executor, datasets_and_terms, dataset_storage_path, args)
 
     print(f"Submitted {len(jobs)} jobs")
+    print(f"Logs will be saved to: {log_dir}")
 
 
 if __name__ == "__main__":

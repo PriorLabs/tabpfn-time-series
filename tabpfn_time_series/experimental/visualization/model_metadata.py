@@ -13,7 +13,7 @@ MODEL_CATEGORIES = {
     "tabular_foundation": {
         "name": "Tabular Foundation Model",
         "color": "dodgerblue",
-        "models": ["TabPFN-TS"],
+        "models": ["TabPFN-TS", "TabDPT", "Mitra"],
     },
     "tabular_classical": {
         "name": "Tabular Classical Model",
