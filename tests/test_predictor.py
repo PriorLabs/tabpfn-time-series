@@ -21,7 +21,8 @@ from tabpfn_time_series.data_preparation import generate_test_X
 
 def create_test_data():
     # Create a simple time series dataframe for testing
-    dates = pd.date_range(start="2023-01-01", periods=10, freq="D")
+    freq = "D"
+    dates = pd.date_range(start="2023-01-01", periods=10, freq=freq)
     item_ids = [0, 1]
 
     # Create train data with target
@@ -43,7 +44,7 @@ def create_test_data():
     )
 
     # Generate test data
-    test_tsdf = generate_test_X(train_tsdf, prediction_length=5)
+    test_tsdf = generate_test_X(train_tsdf, prediction_length=5, freq=freq)
 
     # Create feature transformer with multiple feature generators
     feature_transformer = FeatureTransformer(
