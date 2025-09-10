@@ -2,6 +2,24 @@ import numpy as np
 from sklearn.metrics import mean_pinball_loss
 
 
+def compute_in_sample_naive_mae(
+    y_train: np.ndarray,
+    seasonality: int = 1,
+) -> float:
+    """
+    Compute in-sample naive MAE.
+    """
+    if len(y_train) <= seasonality:
+        raise ValueError("Training data must be longer than seasonality")
+
+    in_sample_naive_mae = (
+        np.abs(y_train[1:] - y_train[:-1])
+        if seasonality == 1
+        else np.abs(y_train[seasonality:] - y_train[:-seasonality])
+    )
+    return float(np.mean(in_sample_naive_mae))
+
+
 def compute_wql(
     y_test: np.ndarray,
     pred_quantiles: np.ndarray,
@@ -44,16 +62,10 @@ def compute_mase(
     # Forecast error
     forecast_error = np.abs(y_test - y_pred)
 
-    # Naive forecast error from training data
-    if seasonality == 1:
-        # Simple naive: use previous value
-        naive_error = np.abs(y_train[1:] - y_train[:-1])
-    else:
-        # Seasonal naive: use value from previous season
-        naive_error = np.abs(y_train[seasonality:] - y_train[:-seasonality])
+    # In-sample naive MAE
+    naive_mae = compute_in_sample_naive_mae(y_train, seasonality)
 
     # Avoid division by zero
-    naive_mae = np.mean(naive_error)
     if naive_mae == 0:
         return np.inf if np.mean(forecast_error) > 0 else 0.0
 
@@ -85,14 +97,10 @@ def compute_sql(
     # Compute WQL
     wql = compute_wql(y_test, pred_quantiles)
 
-    # Compute naive forecast error (same as in MASE)
-    if seasonality == 1:
-        naive_error = np.abs(y_train[1:] - y_train[:-1])
-    else:
-        naive_error = np.abs(y_train[seasonality:] - y_train[:-seasonality])
+    # In-sample naive MAE
+    naive_mae = compute_in_sample_naive_mae(y_train, seasonality)
 
     # Avoid division by zero
-    naive_mae = np.mean(naive_error)
     if naive_mae == 0:
         return np.inf if wql > 0 else 0.0
 
