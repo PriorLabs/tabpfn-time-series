@@ -48,14 +48,14 @@ dev = [
     "matplotlib>=3.10.3",
     "seaborn>=0.13.2",
 ]
-eval_tfm = [
-    "tabpfn_time_series[dev]",
-    "tabdpt",
-    # autogluon installed separately via ./autogluon/full_install.sh
-]
+# eval_tfm = [
+#    "tabpfn_time_series[dev]",
+#    "tabdpt",
+#    # autogluon installed separately via ./autogluon/full_install.sh
+# ]
 
-[tool.uv.sources]
-tabdpt = { path = "TabDPT-inference", editable = true }
+# [tool.uv.sources]
+# tabdpt = { path = "TabDPT-inference", editable = true }
 
 [tool.hatch.version]
 source = "vcs"
