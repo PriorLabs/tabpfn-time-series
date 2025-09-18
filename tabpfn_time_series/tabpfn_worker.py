@@ -1,6 +1,5 @@
 import logging
 from abc import ABC, abstractmethod
-from contextlib import nullcontext
 from enum import Enum
 from joblib import Parallel, delayed, parallel_config
 import backoff
@@ -53,15 +52,6 @@ class TabPFNWorker(ABC):
         self.config = config
         self.num_workers = num_workers
 
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,
-        base=1,
-        factor=2,
-        max_tries=5,
-        jitter=backoff.full_jitter,
-        giveup=_giveup_non_429,
-    )
     def predict(
         self,
         train_tsdf: TimeSeriesDataFrame,
@@ -96,6 +86,15 @@ class TabPFNWorker(ABC):
 
         return TimeSeriesDataFrame(predictions)
 
+    @backoff.on_exception(
+        backoff.expo,
+        Exception,
+        base=1,
+        factor=2,
+        max_tries=5,
+        jitter=backoff.full_jitter,
+        giveup=_giveup_non_429,
+    )
     def _prediction_routine(
         self,
         item_id: str,
