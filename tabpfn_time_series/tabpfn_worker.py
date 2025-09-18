@@ -43,7 +43,7 @@ def _predict_giveup_mixed(exc: Exception) -> bool:
         return False
 
     # Stop after first retry for non-429
-    return _retry_attempts.get() >= 1
+    return _retry_attempts.get() >= 2
 
 
 def _is_tabpfn_gcs_429(err: Exception) -> bool:
