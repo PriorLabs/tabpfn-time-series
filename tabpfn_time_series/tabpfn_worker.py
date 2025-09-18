@@ -1,3 +1,4 @@
+import contextvars
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -23,6 +24,28 @@ class TabPFNMode(Enum):
     MOCK = "tabpfn-mock"
 
 
+# Per-call attempt counter, isolated per thread & task
+_retry_attempts = contextvars.ContextVar("predict_attempts", default=0)
+
+
+def _reset_attempts(_details=None):
+    """Convenience function to reset the attempt counter."""
+    _retry_attempts.set(0)
+
+
+def _predict_giveup_mixed(exc: Exception) -> bool:
+    """Determine whether to give up on a prediction call or not.
+
+    Returns:
+        True if the prediction call should be given up on, False otherwise.
+    """
+    if _is_tabpfn_gcs_429(exc):
+        return False
+
+    # Stop after first retry for non-429
+    return _retry_attempts.get() >= 1
+
+
 def _is_tabpfn_gcs_429(err: Exception) -> bool:
     """Determine if an error is a 429 error raised from TabPFN API
     and relates to GCS 429 errors.
@@ -36,11 +59,6 @@ def _is_tabpfn_gcs_429(err: Exception) -> bool:
         "cloud.google.com/storage/docs/gcs429",
     )
     return any(m in str(err) for m in markers)
-
-
-def _giveup_non_429(err: Exception) -> bool:
-    """Convenience function to give up on non-429 errors."""
-    return not _is_tabpfn_gcs_429(err)
 
 
 class TabPFNWorker(ABC):
@@ -93,7 +111,8 @@ class TabPFNWorker(ABC):
         factor=2,
         max_tries=5,
         jitter=backoff.full_jitter,
-        giveup=_giveup_non_429,
+        giveup=_predict_giveup_mixed,
+        on_success=_reset_attempts,
     )
     def _prediction_routine(
         self,
@@ -101,6 +120,9 @@ class TabPFNWorker(ABC):
         single_train_tsdf: TimeSeriesDataFrame,
         single_test_tsdf: TimeSeriesDataFrame,
     ) -> pd.DataFrame:
+        # Increment attempt count at start of each try
+        _retry_attempts.set(_retry_attempts.get() + 1)
+
         # logger.debug(f"Predicting on item_id: {item_id}")
 
         test_index = single_test_tsdf.index
