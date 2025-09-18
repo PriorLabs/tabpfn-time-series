@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'linux'",
@@ -254,6 +254,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/6b/d52e42361e1aa00709585ecc30b3f9684b3ab62530771402248b1b1d6240/babel-2.17.0.tar.gz", hash = "sha256:0c54cffb19f690cdcc52a3b50bcbf71e07a808d1c80d549f2459b9d2cf0afb9d", size = 9951852, upload-time = "2025-02-01T15:17:41.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/b8/3fe70c75fe32afc4bb507f75563d39bc5642255d1d94f1f23604725780bf/babel-2.17.0-py3-none-any.whl", hash = "sha256:4d0b53093fdfb4b21c92b5213dba5a1b23885afa8383709427046b21c366e5f2", size = 10182537, upload-time = "2025-02-01T15:17:37.39Z" },
+]
+
+[[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001, upload-time = "2022-10-05T19:19:32.061Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148, upload-time = "2022-10-05T19:19:30.546Z" },
 ]
 
 [[package]]
@@ -613,6 +622,15 @@ wheels = [
 ]
 
 [[package]]
+name = "distro"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
+]
+
+[[package]]
 name = "docutils"
 version = "0.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -628,6 +646,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e5/81/df4fbe24dff8ba3934af99044188e20a98ed441ad17a274539b74e82e126/einops-0.8.1.tar.gz", hash = "sha256:de5d960a7a761225532e0f1959e5315ebeafc0cd43394732f103ca44b9837e84", size = 54805, upload-time = "2025-02-09T03:17:00.434Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/62/9773de14fe6c45c23649e98b83231fffd7b9892b6cf863251dc2afa73643/einops-0.8.1-py3-none-any.whl", hash = "sha256:919387eb55330f5757c6bea9165c5ff5cfe63a642682ea788a6d472576d81737", size = 64359, upload-time = "2025-02-09T03:17:01.998Z" },
+]
+
+[[package]]
+name = "eval-type-backport"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/ea/8b0ac4469d4c347c6a385ff09dc3c048c2d021696664e26c7ee6791631b5/eval_type_backport-0.2.2.tar.gz", hash = "sha256:f0576b4cf01ebb5bd358d02314d31846af5e07678387486e2c798af0e7d849c1", size = 9079, upload-time = "2024-12-21T20:09:46.005Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/31/55cd413eaccd39125368be33c46de24a1f639f2e12349b0361b4678f3915/eval_type_backport-0.2.2-py3-none-any.whl", hash = "sha256:cb6ad7c393517f476f96d456d0412ea80f0a8cf96f6892834cd9340149111b0a", size = 5830, upload-time = "2024-12-21T20:09:44.175Z" },
 ]
 
 [[package]]
@@ -662,11 +689,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.18.0"
+version = "3.19.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/10/c23352565a6544bdc5353e0b15fc1c563352101f30e24bf500207a54df9a/filelock-3.18.0.tar.gz", hash = "sha256:adbc88eabb99d2fec8c9c1b229b171f18afa655400173ddc653d5d01501fb9f2", size = 18075, upload-time = "2025-03-14T07:11:40.47Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/bb/0ab3e58d22305b6f5440629d20683af28959bf793d98d11950e305c1c326/filelock-3.19.1.tar.gz", hash = "sha256:66eda1888b0171c998b35be2bcc0f6d75c388a7ce20c3f3f37aa8e96c2dddf58", size = 17687, upload-time = "2025-08-14T16:56:03.016Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/36/2a115987e2d8c300a974597416d9de88f2444426de9571f4b59b2cca3acc/filelock-3.18.0-py3-none-any.whl", hash = "sha256:c401f4f8377c4464e6db25fff06205fd89bdd83b65eb0488ed1b160f780e21de", size = 16215, upload-time = "2025-03-14T07:11:39.145Z" },
+    { url = "https://files.pythonhosted.org/packages/42/14/42b2651a2f46b022ccd948bca9f2d5af0fd8929c4eec235b8d6d844fbe67/filelock-3.19.1-py3-none-any.whl", hash = "sha256:d38e30481def20772f5baf097c122c3babc4fcdb7e14e57049eb9d88c6dc017d", size = 15988, upload-time = "2025-08-14T16:56:01.633Z" },
 ]
 
 [[package]]
@@ -2173,11 +2200,11 @@ wheels = [
 
 [[package]]
 name = "platformdirs"
-version = "4.3.8"
+version = "4.4.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fe/8b/3c73abc9c759ecd3f1f7ceff6685840859e8070c4d947c93fae71f6a0bf2/platformdirs-4.3.8.tar.gz", hash = "sha256:3d512d96e16bcb959a814c9f348431070822a6496326a4be0911c40b5a74c2bc", size = 21362, upload-time = "2025-05-07T22:47:42.121Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/e8/21db9c9987b0e728855bd57bff6984f67952bea55d6f75e055c46b5383e8/platformdirs-4.4.0.tar.gz", hash = "sha256:ca753cf4d81dc309bc67b0ea38fd15dc97bc30ce419a7f58d13eb3bf14c4febf", size = 21634, upload-time = "2025-08-26T14:32:04.268Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/39/979e8e21520d4e47a0bbe349e2713c0aac6f3d853d0e5b34d76206c439aa/platformdirs-4.3.8-py3-none-any.whl", hash = "sha256:ff7059bb7eb1179e2685604f4aaf157cfd9535242bd23742eadc3c13542139b4", size = 18567, upload-time = "2025-05-07T22:47:40.376Z" },
+    { url = "https://files.pythonhosted.org/packages/40/4b/2028861e724d3bd36227adfa20d3fd24c3fc6d52032f4a93c133be5d17ce/platformdirs-4.4.0-py3-none-any.whl", hash = "sha256:abd01743f24e5287cd7a5db3752faf1a2d65353f38ec26d98e25a6db65958c85", size = 18654, upload-time = "2025-08-26T14:32:02.735Z" },
 ]
 
 [[package]]
@@ -2187,6 +2214,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "posthog"
+version = "6.7.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backoff" },
+    { name = "distro" },
+    { name = "python-dateutil" },
+    { name = "requests" },
+    { name = "six" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/f3/d9055bcd190980730bdc600318b34290e85fcb0afb1e31f83cdc33f92615/posthog-6.7.5.tar.gz", hash = "sha256:f4f32b4a4b0df531ae8f80f255a33a49e8880c8c1b62712e6b640535e33a905f", size = 118558, upload-time = "2025-09-16T12:40:34.431Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/b4/b40f8467252b4ff481e54a9767b211b4ff83114e6d0b6f481852d0ef3e46/posthog-6.7.5-py3-none-any.whl", hash = "sha256:95b00f915365939e63fa183635bad1caaf89cf4a24b63c8bb6983f2a22a56cb3", size = 136766, upload-time = "2025-09-16T12:40:32.741Z" },
 ]
 
 [[package]]
@@ -2554,6 +2598,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/e9/1f7efbe20d0b2b10f6718944b5d8ece9152390904f29a78e68d4e7961159/pydantic_core-2.33.2-pp311-pypy311_pp73-musllinux_1_1_armv7l.whl", hash = "sha256:de4b83bb311557e439b9e186f733f6c645b9417c84e2eb8203f3f820a4b988bf", size = 2239013, upload-time = "2025-04-23T18:33:26.621Z" },
     { url = "https://files.pythonhosted.org/packages/3c/b2/5309c905a93811524a49b4e031e9851a6b00ff0fb668794472ea7746b448/pydantic_core-2.33.2-pp311-pypy311_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:82f68293f055f51b51ea42fafc74b6aad03e70e191799430b90c13d643059ebb", size = 2238715, upload-time = "2025-04-23T18:33:28.656Z" },
     { url = "https://files.pythonhosted.org/packages/32/56/8a7ca5d2cd2cda1d245d34b1c9a942920a718082ae8e54e5f3e5a58b7add/pydantic_core-2.33.2-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:329467cecfb529c925cf2bbd4d60d2c509bc2fb52a20c1045bf09bb70971a9c1", size = 2066757, upload-time = "2025-04-23T18:33:30.645Z" },
+]
+
+[[package]]
+name = "pydantic-settings"
+version = "2.10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "typing-inspection" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/85/1ea668bbab3c50071ca613c6ab30047fb36ab0da1b92fa8f17bbc38fd36c/pydantic_settings-2.10.1.tar.gz", hash = "sha256:06f0062169818d0f5524420a360d632d5857b83cffd4d42fe29597807a1614ee", size = 172583, upload-time = "2025-06-24T13:26:46.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/f0/427018098906416f580e3cf1366d3b1abfb408a0652e9f31600c24a1903c/pydantic_settings-2.10.1-py3-none-any.whl", hash = "sha256:a60952460b99cf661dc25c29c0ef171721f98bfcb52ef8d9ea4c943d7c8cc796", size = 45235, upload-time = "2025-06-24T13:26:45.485Z" },
 ]
 
 [[package]]
@@ -3357,25 +3415,30 @@ wheels = [
 
 [[package]]
 name = "tabpfn"
-version = "2.0.9"
+version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
+    { name = "eval-type-backport" },
     { name = "huggingface-hub" },
+    { name = "joblib" },
     { name = "pandas" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "scikit-learn" },
     { name = "scipy" },
+    { name = "tabpfn-common-utils", extra = ["telemetry-interactive"] },
     { name = "torch" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/32/a705d6b426800e79338ed641cb7d96877e069289309455cb215df14126b6/tabpfn-2.0.9.tar.gz", hash = "sha256:7e6e006a61e8b08011c1a6761eef3c514c4ff16f5698ed655443c0704a3f93a6", size = 139991, upload-time = "2025-05-07T13:21:36.067Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/8b/ab7e3c71fc5fb6be61295ca1fb880b09df567257e9e4228d77cd79a4e1ec/tabpfn-2.2.1.tar.gz", hash = "sha256:706c03c3d3dc478118561761c29fa95727b6e239671922c4c40a8e4b3cc28fbf", size = 200487, upload-time = "2025-09-17T10:42:15.649Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/f8/b0e7ff83484acfbe670b2f56c28c6bcf09ae84284e624cd45755a8b7073c/tabpfn-2.0.9-py3-none-any.whl", hash = "sha256:04e3bb989e9328d510ea4fccb6c6a36c8269630685d460af4df5eb268206bf21", size = 128881, upload-time = "2025-05-07T13:21:34.227Z" },
+    { url = "https://files.pythonhosted.org/packages/91/e9/085c60d5e447083ac6705b7b8bfac90773eb4191c00ddc70607f4d8b339b/tabpfn-2.2.1-py3-none-any.whl", hash = "sha256:9aa3a0df8ecebcae5f426b1fec9bb2e2a690880bc8ad079191e8d959bf0f157b", size = 173723, upload-time = "2025-09-17T10:42:14.435Z" },
 ]
 
 [[package]]
 name = "tabpfn-client"
-version = "0.1.7"
+version = "0.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -3385,17 +3448,42 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "sseclient-py" },
     { name = "tqdm" },
+    { name = "typing-extensions" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/cc/97be739da8d4113c13b8c9fa031908d59210005d38f944e0d678717cf91c/tabpfn_client-0.1.7.tar.gz", hash = "sha256:f8b82318ce22240b7622a05bea2422204ddd5374df335a19284eea0e2252924e", size = 17066065, upload-time = "2025-03-18T12:58:03.737Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/8f/1bbca5db6561bc54f91ce41de99835a962a7a16c53bcfae0a7c5593f16a2/tabpfn_client-0.1.9.tar.gz", hash = "sha256:b68b27154686c37119a53b5063de79b45f4c0074fddf47b8813c5cd738b723cf", size = 1877401, upload-time = "2025-07-28T15:09:43.134Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/55/ba50a32b222616eb5653958fc94d91f54ab74109417ada52bb2aecb89a15/tabpfn_client-0.1.7-py3-none-any.whl", hash = "sha256:84245c893b06aa084795c31c04ec3f58186499dfcd7f6f2b8821f9a0a6028136", size = 1902270, upload-time = "2025-03-18T12:57:52.842Z" },
+    { url = "https://files.pythonhosted.org/packages/67/a5/82be418a16d7330eac880659b1ce7fbcff5c976ff79240b1446235e4ed40/tabpfn_client-0.1.9-py3-none-any.whl", hash = "sha256:51826f3a464b2d52d9c2772a6171c55a4c0ab22d9693f5bd2eb9fd5b0fd24640", size = 1895907, upload-time = "2025-07-28T15:09:41.605Z" },
+]
+
+[[package]]
+name = "tabpfn-common-utils"
+version = "0.1.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "filelock" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "platformdirs" },
+    { name = "posthog" },
+    { name = "scikit-learn" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/57/cecff3eed1c8068a7af14baf7dd2b3ae93c8f0770bce9402f2a3f74cdd68/tabpfn_common_utils-0.1.9.tar.gz", hash = "sha256:dd5213dc9736ff362826d46de9c54475ab3f7a4b4df73289d42edda088611b39", size = 1919585, upload-time = "2025-09-16T22:45:25.39Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/e0/04774d303b9ccb72c3aae9242fca55c0b8f540363a707612963ce55ed989/tabpfn_common_utils-0.1.9-py3-none-any.whl", hash = "sha256:69f0ee7a2f2689aa262e87b46d6d342002d68241711286a6917bf83ca51cadfd", size = 24872, upload-time = "2025-09-16T22:45:22.689Z" },
+]
+
+[package.optional-dependencies]
+telemetry-interactive = [
+    { name = "requests" },
 ]
 
 [[package]]
 name = "tabpfn-time-series"
 source = { editable = "." }
 dependencies = [
+    { name = "backoff" },
     { name = "datasets" },
     { name = "gluonts" },
     { name = "pandas" },
@@ -3424,6 +3512,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "backoff", specifier = ">=2.2.1" },
     { name = "build", marker = "extra == 'dev'" },
     { name = "datasets", specifier = ">=4.0" },
     { name = "gluonts", specifier = ">=0.16.0" },
