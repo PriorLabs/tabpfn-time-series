@@ -1,6 +1,9 @@
 import logging
 from abc import ABC, abstractmethod
-from joblib import Parallel, delayed
+from contextlib import nullcontext
+from enum import Enum
+from joblib import Parallel, delayed, parallel_config
+import backoff
 
 from tqdm import tqdm
 import pandas as pd
@@ -15,6 +18,32 @@ from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_QUANTILE_CONFIG
 logger = logging.getLogger(__name__)
 
 
+class TabPFNMode(Enum):
+    LOCAL = "tabpfn-local"
+    CLIENT = "tabpfn-client"
+    MOCK = "tabpfn-mock"
+
+
+def _is_tabpfn_gcs_429(err: Exception) -> bool:
+    """Determine if an error is a 429 error raised from TabPFN API
+    and relates to GCS 429 errors.
+
+    Returns:
+        True if the error is a 429 error raised from TabPFN API.
+    """
+    markers = (
+        "TooManyRequests: 429",
+        "rateLimitExceeded",
+        "cloud.google.com/storage/docs/gcs429",
+    )
+    return any(m in str(err) for m in markers)
+
+
+def _giveup_non_429(err: Exception) -> bool:
+    """Convenience function to give up on non-429 errors."""
+    return not _is_tabpfn_gcs_429(err)
+
+
 class TabPFNWorker(ABC):
     def __init__(
         self,
@@ -24,24 +53,43 @@ class TabPFNWorker(ABC):
         self.config = config
         self.num_workers = num_workers
 
+    @backoff.on_exception(
+        backoff.expo,
+        Exception,
+        base=1,
+        factor=2,
+        max_tries=5,
+        jitter=backoff.full_jitter,
+        giveup=_giveup_non_429,
+    )
     def predict(
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
     ):
-        predictions = Parallel(
-            n_jobs=self.num_workers,
-            backend="loky",
-        )(
-            delayed(self._prediction_routine)(
-                item_id,
-                train_tsdf.loc[item_id],
-                test_tsdf.loc[item_id],
-            )
-            for item_id in tqdm(train_tsdf.item_ids, desc="Predicting time series")
-        )
+        # Dynamically pick the backend based on the tabpfn_mode
+        use_threading_backend = tabpfn_mode == TabPFNMode.CLIENT
+        if use_threading_backend:
+            context = parallel_config(backend="threading")
+        else:
+            context = nullcontext()
 
-        predictions = pd.concat(predictions)
+        # Run the predictions in parallel
+        with context:
+            results = Parallel(
+                n_jobs=self.num_workers,
+            )(
+                delayed(self._prediction_routine)(
+                    item_id,
+                    train_tsdf.loc[item_id],
+                    test_tsdf.loc[item_id],
+                )
+                for item_id in tqdm(train_tsdf.item_ids, desc="Predicting time series")
+            )
+
+        # Convert list to DataFrame
+        predictions = pd.concat(results)
 
         # Sort predictions according to original item_ids order (important for MASE and WQL calculation)
         predictions = predictions.loc[train_tsdf.item_ids]
