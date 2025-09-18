@@ -73,7 +73,7 @@ class TabPFNWorker(ABC):
         if use_threading_backend:
             context = parallel_config(backend="threading")
         else:
-            context = nullcontext()
+            context = parallel_config(backend="loky")
 
         # Run the predictions in parallel
         with context:
