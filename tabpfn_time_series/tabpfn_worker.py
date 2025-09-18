@@ -227,6 +227,7 @@ class LocalTabPFN(TabPFNWorker):
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        tabpfn_mode: TabPFNMode = TabPFNMode.LOCAL
     ):
         total_num_workers = torch.cuda.device_count() * self.num_workers_per_gpu
 
