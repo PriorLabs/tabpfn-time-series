@@ -86,7 +86,9 @@ class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
     @patch("torch.cuda.is_available", return_value=True)
     @patch("torch.cuda.device_count", return_value=1)
     @patch("tabpfn_time_series.tabpfn_worker.LocalTabPFN._download_model")
-    def test_init_with_local_mode_with_gpu(self, mock_download, mock_device_count, mock_is_available):
+    def test_init_with_local_mode_with_gpu(
+        self, mock_download, mock_device_count, mock_is_available
+    ):
         """Test that the predictor initializes with LOCAL mode"""
         predictor = TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL)
         self.assertIsNotNone(predictor.tabpfn_worker)
