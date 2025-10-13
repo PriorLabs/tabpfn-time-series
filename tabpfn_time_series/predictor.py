@@ -8,6 +8,7 @@ from tabpfn_time_series.tabpfn_worker import (
     MockTabPFN,
 )
 from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_CONFIG
+from tabpfn_common_utils.telemetry import set_extension
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class TabPFNMode(Enum):
     MOCK = "tabpfn-mock"
 
 
+@set_extension("time-series")
 class TabPFNTimeSeriesPredictor:
     """
     Given a TimeSeriesDataFrame (multiple time series), perform prediction on each time series individually.
