@@ -2864,7 +2864,7 @@ wheels = [
 
 [[package]]
 name = "requests"
-version = "2.32.4"
+version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -2872,9 +2872,9 @@ dependencies = [
     { name = "idna" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/0a/929373653770d8a0d7ea76c37de6e41f11eb07559b103b1c02cafb3f7cf8/requests-2.32.4.tar.gz", hash = "sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422", size = 135258, upload-time = "2025-06-09T16:43:07.34Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf", size = 134517, upload-time = "2025-08-18T20:46:02.573Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/e4/56027c4a6b4ae70ca9de302488c5ca95ad4a39e190093d6c1a8ace08341b/requests-2.32.4-py3-none-any.whl", hash = "sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c", size = 64847, upload-time = "2025-06-09T16:43:05.728Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/db/4254e3eabe8020b458f1a747140d32277ec7a271daf1d235b70dc0b4e6e3/requests-2.32.5-py3-none-any.whl", hash = "sha256:2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6", size = 64738, upload-time = "2025-08-18T20:46:00.542Z" },
 ]
 
 [[package]]
@@ -3427,7 +3427,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "scikit-learn" },
     { name = "scipy" },
-    { name = "tabpfn-common-utils", extra = ["telemetry-interactive"] },
+    { name = "tabpfn-common-utils" },
     { name = "torch" },
     { name = "typing-extensions" },
 ]
@@ -3458,7 +3458,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn-common-utils"
-version = "0.1.9"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -3466,17 +3466,13 @@ dependencies = [
     { name = "pandas" },
     { name = "platformdirs" },
     { name = "posthog" },
+    { name = "requests" },
     { name = "scikit-learn" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/57/cecff3eed1c8068a7af14baf7dd2b3ae93c8f0770bce9402f2a3f74cdd68/tabpfn_common_utils-0.1.9.tar.gz", hash = "sha256:dd5213dc9736ff362826d46de9c54475ab3f7a4b4df73289d42edda088611b39", size = 1919585, upload-time = "2025-09-16T22:45:25.39Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/0a/dae8031fd9a478c0b6b682f1585d2e4e288727f569eb3316af3b981d1ec0/tabpfn_common_utils-0.2.2.tar.gz", hash = "sha256:d4a3b9acd7d36502ac75bfce549acda26aafbe9c1e7617052fbe1932c211d174", size = 1927582, upload-time = "2025-10-02T11:54:59.704Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/e0/04774d303b9ccb72c3aae9242fca55c0b8f540363a707612963ce55ed989/tabpfn_common_utils-0.1.9-py3-none-any.whl", hash = "sha256:69f0ee7a2f2689aa262e87b46d6d342002d68241711286a6917bf83ca51cadfd", size = 24872, upload-time = "2025-09-16T22:45:22.689Z" },
-]
-
-[package.optional-dependencies]
-telemetry-interactive = [
-    { name = "requests" },
+    { url = "https://files.pythonhosted.org/packages/7a/be/6307e7f8c55963aa74c72dbbe0e360b62a688a484f73227adf7cc1ddde02/tabpfn_common_utils-0.2.2-py3-none-any.whl", hash = "sha256:9ac650c252be49c34d12d210eceeeb3d9cdc7ac5396df7426e5b86b93ae5429e", size = 32104, upload-time = "2025-10-02T11:54:57.702Z" },
 ]
 
 [[package]]
@@ -3492,6 +3488,7 @@ dependencies = [
     { name = "statsmodels" },
     { name = "tabpfn" },
     { name = "tabpfn-client" },
+    { name = "tabpfn-common-utils" },
     { name = "tqdm" },
 ]
 
@@ -3530,6 +3527,7 @@ requires-dist = [
     { name = "submitit", marker = "extra == 'dev'", specifier = ">=1.5.2" },
     { name = "tabpfn", specifier = ">=2.0.9" },
     { name = "tabpfn-client", specifier = ">=0.1.7" },
+    { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "wandb", marker = "extra == 'dev'", specifier = ">=0.19.8" },
