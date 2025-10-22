@@ -33,6 +33,7 @@ from toolz import compose
 TEST_SPLIT = 0.1
 MAX_WINDOW = 20
 
+# Maps newer pandas frequency aliases (introduced in pandas 2.2.0) to legacy keys for backward compatibility.
 NEW_PANDAS_TS_ALIASES = {
     "Y": "A",
     "YE": "A",
