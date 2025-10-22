@@ -18,14 +18,18 @@ from gift_eval.data import (
 
 def test_new_pandas_aliases_mapping_simple():
     # Ensure expected new/alt aliases map to legacy keys we use
-    assert NEW_PANDAS_TS_ALIASES["Y"] == "A"
-    assert NEW_PANDAS_TS_ALIASES["YE"] == "A"
-    assert NEW_PANDAS_TS_ALIASES["QE"] == "Q"
-    assert NEW_PANDAS_TS_ALIASES["ME"] == "M"
-    assert NEW_PANDAS_TS_ALIASES["h"] == "H"
-    assert NEW_PANDAS_TS_ALIASES["min"] == "T"
-    assert NEW_PANDAS_TS_ALIASES["s"] == "S"
-    assert NEW_PANDAS_TS_ALIASES["us"] == "U"
+    expected_mappings = {
+        "Y": "A",
+        "YE": "A",
+        "QE": "Q",
+        "ME": "M",
+        "h": "H",
+        "min": "T",
+        "s": "S",
+        "us": "U",
+    }
+    for alias, expected in expected_mappings.items():
+        assert NEW_PANDAS_TS_ALIASES[alias] == expected
 
 
 def test_legacy_aliases_unchanged_simple():
