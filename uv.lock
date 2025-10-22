@@ -3492,7 +3492,7 @@ dependencies = [
     { name = "tqdm" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "build" },
     { name = "hatch" },
@@ -3510,29 +3510,33 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "backoff", specifier = ">=2.2.1" },
-    { name = "build", marker = "extra == 'dev'" },
     { name = "datasets", specifier = ">=4.0" },
     { name = "gluonts", specifier = ">=0.16.0" },
-    { name = "hatch", marker = "extra == 'dev'" },
-    { name = "hatch-vcs", marker = "extra == 'dev'" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
-    { name = "jupyter", marker = "extra == 'dev'" },
-    { name = "pandas", specifier = ">=2.1.2,<2.2.0" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pandas", specifier = ">=2.1.2" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = "~=0.12.0" },
     { name = "statsmodels", specifier = ">=0.14.5" },
-    { name = "submitit", marker = "extra == 'dev'", specifier = ">=1.5.2" },
     { name = "tabpfn", specifier = ">=2.0.9" },
     { name = "tabpfn-client", specifier = ">=0.1.7" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm" },
-    { name = "twine", marker = "extra == 'dev'" },
-    { name = "wandb", marker = "extra == 'dev'", specifier = ">=0.19.8" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "build" },
+    { name = "hatch" },
+    { name = "hatch-vcs" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "jupyter" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "ruff", specifier = "~=0.12.0" },
+    { name = "submitit", specifier = ">=1.5.2" },
+    { name = "twine" },
+    { name = "wandb", specifier = ">=0.19.8" },
+]
 
 [[package]]
 name = "terminado"

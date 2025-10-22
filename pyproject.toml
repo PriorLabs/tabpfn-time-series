@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "tqdm",
-    "pandas>=2.1.2, <2.2.0",
+    "pandas>=2.1.2",
     "gluonts>=0.16.0",
     "tabpfn-client>=0.1.7",
     "tabpfn>=2.0.9",
@@ -28,8 +28,19 @@ dependencies = [
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2"
 ]
 
-[project.optional-dependencies]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+exclude = ["docs", "gift_eval"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["docs", "gift_eval"]
+
+[dependency-groups]
 dev = [
+    "pytest>=8.4.1",
     "jupyter",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
@@ -42,15 +53,6 @@ dev = [
     "pytest",
     "ipykernel>=6.29.5",
 ]
-
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.targets.wheel]
-exclude = ["docs", "gift_eval"]
-
-[tool.hatch.build.targets.sdist]
-exclude = ["docs", "gift_eval"]
 
 [project.urls]
 "Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
