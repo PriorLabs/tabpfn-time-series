@@ -5,6 +5,8 @@ after applying the same normalization used in production code, so this works
 across pandas versions.
 """
 
+from unittest.mock import MagicMock
+
 from pandas.tseries.frequencies import to_offset
 from gluonts.time_feature import norm_freq_str
 from gift_eval.data import (
@@ -40,11 +42,14 @@ def test_legacy_aliases_unchanged_simple():
 
 def test_prediction_length_minimal():
     def make_ds(freq: str, name: str = "regular", term: Term = Term.SHORT) -> Dataset:
-        ds = object.__new__(Dataset)
-        ds.freq = freq
-        ds.name = name
-        ds.term = term
-        return ds
+        mock_ds = MagicMock(spec=Dataset)
+        mock_ds.freq = freq
+        mock_ds.name = name
+        mock_ds.term = term
+
+        # The property under test needs to be attached to the class for `cached_property` to work
+        type(mock_ds).prediction_length = Dataset.prediction_length
+        return mock_ds
 
     def expected_for(freq: str, use_m4: bool = False) -> int:
         normalized = norm_freq_str(to_offset(freq).name)
