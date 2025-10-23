@@ -10,8 +10,7 @@ inference backbone for time series forecasting. This is useful when you want to:
 
 from sklearn.ensemble import RandomForestRegressor
 
-from tabpfn_time_series import FeatureTransformer
-from tabpfn_time_series.predictor import TimeSeriesPredictor
+from tabpfn_time_series import FeatureTransformer, TimeSeriesPredictor
 from tabpfn_time_series.features import (
     RunningIndexFeature,
     CalendarFeature,
