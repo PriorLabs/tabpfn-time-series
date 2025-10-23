@@ -33,6 +33,18 @@ from toolz import compose
 TEST_SPLIT = 0.1
 MAX_WINDOW = 20
 
+# Maps newer pandas frequency aliases (introduced in pandas 2.2.0) to legacy keys for backward compatibility.
+NEW_PANDAS_TS_ALIASES = {
+    "Y": "A",
+    "YE": "A",
+    "QE": "Q",
+    "ME": "M",
+    "h": "H",
+    "min": "T",
+    "s": "S",
+    "us": "U",
+}
+
 M4_PRED_LENGTH_MAP = {
     "A": 6,
     "Q": 8,
@@ -127,6 +139,7 @@ class Dataset:
     @cached_property
     def prediction_length(self) -> int:
         freq = norm_freq_str(to_offset(self.freq).name)
+        freq = NEW_PANDAS_TS_ALIASES.get(freq, freq)
         pred_len = (
             M4_PRED_LENGTH_MAP[freq] if "m4" in self.name else PRED_LENGTH_MAP[freq]
         )
