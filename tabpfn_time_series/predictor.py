@@ -139,7 +139,7 @@ class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):
 
     def __new__(
         cls,
-        tabpfn_mode: TabPFNMode = TabPFNMode.LOCAL,
+        tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_config: dict = TABPFN_TS_DEFAULT_CONFIG,
         tabpfn_output_selection: str = "median",  # mean or median
     ):
