@@ -9,7 +9,10 @@ from tabpfn_client import (
 )
 
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
-from tabpfn_time_series.worker.model_adapter import BaseModelAdapter, PredictionOutput
+from tabpfn_time_series.worker.model_adapters.base import (
+    BaseModelAdapter,
+    PredictionOutput,
+)
 
 
 def parse_tabpfn_client_model_name(model_name: str) -> str:
@@ -82,7 +85,7 @@ class TabPFNModelAdapter(BaseModelAdapter):
 
     @staticmethod
     def _init_local_tabpfn_regressor(tabpfn_config: dict):
-        from tabpfn.model.loading import resolve_model_path, download_model
+        from tabpfn.model_loading import resolve_model_path, download_model
 
         model_path, _, model_name, which = resolve_model_path(
             tabpfn_config["model_path"] if "model_path" in tabpfn_config else None,

@@ -6,18 +6,18 @@ import torch
 from sklearn.base import RegressorMixin
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
-from tabpfn_time_series.defaults import TABPFN_TS_DEFAULT_CONFIG
-from tabpfn_time_series.worker.parallel import (
+from tabpfn_time_series.defaults import (
+    TABPFN_TS_DEFAULT_CONFIG,
+    DEFAULT_QUANTILE_CONFIG,
+)
+from tabpfn_time_series.worker import (
     ParallelWorker,
     CPUParallelWorker,
     GPUParallelWorker,
-)
-from tabpfn_time_series.worker.tabpfn_model_adapter import TabPFNModelAdapter
-from tabpfn_time_series.worker.model_adapter import (
+    TabPFNModelAdapter,
     BaseModelAdapter,
     PointPredictionModelAdapter,
 )
-from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 
 
 logger = logging.getLogger(__name__)
@@ -26,38 +26,6 @@ logger = logging.getLogger(__name__)
 class TabPFNMode(Enum):
     LOCAL = "tabpfn-local"
     CLIENT = "tabpfn-client"
-
-
-# class TimeSeriesPredictor:
-#     """
-#     Given a TimeSeriesDataFrame (multiple time series), perform prediction on each time series individually.
-#     """
-
-#     def __init__(
-#         self,
-#         model_adapter: Type[ModelAdapter],
-#         worker_class: Type[ParallelWorker],
-#         worker_kwargs: dict = {},
-#     ):
-#         self.worker = worker_class(model_adapter.predict, **worker_kwargs)
-
-#     def predict(
-#         self,
-#         train_tsdf: TimeSeriesDataFrame,
-#         test_tsdf: TimeSeriesDataFrame,
-#     ) -> TimeSeriesDataFrame:
-#         """
-#         Predict on each time series individually (local forecasting).
-#         """
-
-#         logger.info(f"Predicting {len(train_tsdf.item_ids)} time series...")
-
-#         start_time = time.time()
-#         predictions = self.worker.predict(train_tsdf, test_tsdf)
-#         end_time = time.time()
-#         logger.info(f"Prediction time: {end_time - start_time} seconds")
-
-#         return predictions
 
 
 class TimeSeriesPredictor:
@@ -95,7 +63,11 @@ class TimeSeriesPredictor:
 
         worker_class = None
         if tabpfn_class == TabPFNClientRegressor:
-            worker_class = CPUParallelWorker
+            from tabpfn_time_series.worker.parallel_workers import (
+                TabPFNClientCPUParallelWorker,
+            )
+
+            worker_class = TabPFNClientCPUParallelWorker
         elif tabpfn_class == TabPFNRegressor:
             worker_class = GPUParallelWorker
         else:
