@@ -18,6 +18,7 @@ from tabpfn_time_series.worker import (
     BaseModelAdapter,
     PointPredictionModelAdapter,
 )
+from tabpfn_common_utils.telemetry import set_extension
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +29,8 @@ class TabPFNMode(Enum):
     CLIENT = "tabpfn-client"
 
 
+@set_extension("time-series")
 class TimeSeriesPredictor:
-    _DEFAULT_QUANTILE_CONFIG = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-
     def __init__(
         self,
         model_adapter: Type[BaseModelAdapter],

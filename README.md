@@ -63,6 +63,8 @@ uv pip install -e ".[dev]"
 
 The demo should explain it all. 😉
 
+Additionally, we have provided example usage in the [examples](examples/) directory.
+
 ## 📊 Anonymous Telemetry
 
 This project collects **anonymous usage telemetry** by default.
