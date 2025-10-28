@@ -11,7 +11,7 @@ from tabpfn_time_series import (
     TabPFNTimeSeriesPredictor,
     FeatureTransformer,
     TabPFNMode,
-    TABPFN_TS_DEFAULT_QUANTILE_CONFIG,
+    DEFAULT_QUANTILE_CONFIG,
     TimeSeriesDataFrame,
 )
 from tabpfn_time_series.features import (
@@ -69,7 +69,7 @@ class TabPFNTSPredictor:
 
         # Pre-allocate forecasts list and get forecast quantile keys
         forecasts = [None] * len(pred.item_ids)
-        forecast_keys = list(map(str, TABPFN_TS_DEFAULT_QUANTILE_CONFIG))
+        forecast_keys = list(map(str, DEFAULT_QUANTILE_CONFIG))
 
         # Generate QuantileForecast objects for each time series
         for i, (_, item_data) in enumerate(pred.groupby(level="item_id")):

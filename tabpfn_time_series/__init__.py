@@ -7,14 +7,15 @@ except metadata.PackageNotFoundError:
     __version__ = "0.0.0"
 
 from .features import FeatureTransformer
-from .predictor import TabPFNTimeSeriesPredictor, TabPFNMode
-from .defaults import TABPFN_TS_DEFAULT_QUANTILE_CONFIG
+from .predictor import TimeSeriesPredictor, TabPFNTimeSeriesPredictor, TabPFNMode
+from .defaults import DEFAULT_QUANTILE_CONFIG
 from .ts_dataframe import TimeSeriesDataFrame
 
 __all__ = [
     "FeatureTransformer",
+    "TimeSeriesPredictor",
     "TabPFNTimeSeriesPredictor",
     "TabPFNMode",
-    "TABPFN_TS_DEFAULT_QUANTILE_CONFIG",
+    "DEFAULT_QUANTILE_CONFIG",
     "TimeSeriesDataFrame",
 ]
