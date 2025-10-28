@@ -100,7 +100,9 @@ class TabPFNClientCPUParallelWorker(CPUParallelWorker):
         on_success=lambda details: TabPFNRetryHandler.reset_attempts(),
     )
     @set_extension("time-series")
-    @track_model_call(model_method="predict", param_names=["single_train_tsdf", "single_test_tsdf"])
+    @track_model_call(
+        model_method="predict", param_names=["single_train_tsdf", "single_test_tsdf"]
+    )
     def _prediction_routine(
         self,
         item_id: str,
