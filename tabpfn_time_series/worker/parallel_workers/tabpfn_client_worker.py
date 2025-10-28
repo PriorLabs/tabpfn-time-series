@@ -7,6 +7,7 @@ from typing import Callable
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.worker.parallel_workers.cpu_worker import CPUParallelWorker
+from tabpfn_common_utils.telemetry import set_extension, track_model_call
 
 
 class TabPFNRetryHandler:
@@ -98,6 +99,8 @@ class TabPFNClientCPUParallelWorker(CPUParallelWorker):
         giveup=lambda exc: TabPFNRetryHandler.should_giveup(exc),
         on_success=lambda details: TabPFNRetryHandler.reset_attempts(),
     )
+    @set_extension("time-series")
+    @track_model_call(model_method="predict", param_names=["single_train_tsdf", "single_test_tsdf"])
     def _prediction_routine(
         self,
         item_id: str,
