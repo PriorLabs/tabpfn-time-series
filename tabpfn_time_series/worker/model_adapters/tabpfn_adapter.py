@@ -85,19 +85,25 @@ class TabPFNModelAdapter(BaseModelAdapter):
 
     @staticmethod
     def _init_local_tabpfn_regressor(tabpfn_config: dict):
-        from tabpfn.model_loading import resolve_model_path, download_model
+        from tabpfn.model_loading import download_model, resolve_model_path, resolve_model_version
 
-        model_path, _, model_name, which = resolve_model_path(
-            tabpfn_config["model_path"] if "model_path" in tabpfn_config else None,
+        model_path = tabpfn_config.get("model_path")
+        model_version = resolve_model_version(model_path)
+        resolved_model_paths, _, model_names, which = resolve_model_path(
+            model_path,
             which="regressor",
         )
+        assert len(resolved_model_paths) == 1
+        resolved_model_path = resolved_model_paths[0]
+        assert len(model_names) == 1
+        model_name = model_names[0]
 
-        if not model_path.exists():
+        if not resolved_model_path.exists():
             download_model(
-                to=model_path,
+                to=resolved_model_path,
                 which=which,
-                version="v2",
+                version=model_version,
                 model_name=model_name,
             )
 
-        tabpfn_config["model_path"] = model_path
+        tabpfn_config["model_path"] = resolved_model_path
