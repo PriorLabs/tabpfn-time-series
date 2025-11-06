@@ -85,7 +85,11 @@ class TabPFNModelAdapter(BaseModelAdapter):
 
     @staticmethod
     def _init_local_tabpfn_regressor(tabpfn_config: dict):
-        from tabpfn.model_loading import download_model, resolve_model_path, resolve_model_version
+        from tabpfn.model_loading import (
+            download_model,
+            resolve_model_path,
+            resolve_model_version,
+        )
 
         model_path = tabpfn_config.get("model_path")
         model_version = resolve_model_version(model_path)
