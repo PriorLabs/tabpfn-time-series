@@ -68,8 +68,10 @@ class TimeSeriesPredictor:
             )
 
             worker_class = TabPFNClientCPUParallelWorker
-        elif tabpfn_class == TabPFNRegressor:
+        elif tabpfn_class == TabPFNRegressor and torch.cuda.is_available():
             worker_class = GPUParallelWorker
+        elif tabpfn_class == TabPFNRegressor and not torch.cuda.is_available():
+            worker_class = CPUParallelWorker
         else:
             raise ValueError(f"Expected TabPFN-family regressor, got {tabpfn_class}")
 

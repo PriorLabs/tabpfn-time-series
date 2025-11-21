@@ -25,7 +25,7 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
-    "tabpfn-common-utils[telemetry-interactive]>=0.2.2"
+    "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
 ]
 
 
@@ -58,3 +58,6 @@ dev = [
 [project.urls]
 "Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
 "Bug Tracker" = "https://github.com/liam-sbhoo/tabpfn-time-series/issues"
+
+[tool.pytest.ini_options]
+markers = ["uses_tabpfn_client: These tests require a TabPFN API key."]
