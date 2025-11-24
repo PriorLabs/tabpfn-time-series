@@ -21,13 +21,13 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           src: "./"
-          version: "0.12.0"
+          version-file: pyproject.toml
       - name: Ruff Formatting
         uses: astral-sh/ruff-action@v3
         with:
           src: "./"
-          version: "0.12.0"
-          args: 'format --check'
+          version-file: pyproject.toml
+          args: "format --check"
 
   test_compatibility:
     name: Test Package Compatibility
@@ -43,12 +43,12 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
@@ -58,4 +58,5 @@ jobs:
       - name: Run Tests
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: uv run pytest tests
