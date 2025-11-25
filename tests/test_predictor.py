@@ -1,22 +1,25 @@
 import os
-import unittest
-import pandas as pd
+
 import numpy as np
-from unittest.mock import patch
+import pandas as pd
+import pytest
+import tabpfn
+import tabpfn_client
+from sklearn.ensemble import RandomForestRegressor
 
 from tabpfn_time_series import (
-    TimeSeriesDataFrame,
-    TabPFNTimeSeriesPredictor,
-    TabPFNMode,
     FeatureTransformer,
-)
-from tabpfn_time_series.predictor import TimeSeriesPredictor
-from tabpfn_time_series.features import (
-    RunningIndexFeature,
-    CalendarFeature,
-    AutoSeasonalFeature,
+    TabPFNMode,
+    TabPFNTimeSeriesPredictor,
+    TimeSeriesDataFrame,
 )
 from tabpfn_time_series.data_preparation import generate_test_X
+from tabpfn_time_series.features import (
+    AutoSeasonalFeature,
+    CalendarFeature,
+    RunningIndexFeature,
+)
+from tabpfn_time_series.predictor import TimeSeriesPredictor
 
 
 def create_test_data():
@@ -60,61 +63,63 @@ def create_test_data():
     return train_tsdf, test_tsdf
 
 
-def setup_github_actions_tabpfn_client():
-    from tabpfn_client import set_access_token
+def maybe_setup_tabpfn_client_on_github_actions() -> None:
+    if not os.getenv("GITHUB_ACTIONS"):
+        return
 
     access_token = os.getenv("TABPFN_CLIENT_API_KEY")
     assert access_token is not None, "TABPFN_CLIENT_API_KEY is not set"
 
-    set_access_token(access_token)
+    tabpfn_client.set_access_token(access_token)
 
 
-class TestTabPFNTimeSeriesPredictor(unittest.TestCase):
-    def setUp(self):
-        self.train_tsdf, self.test_tsdf = create_test_data()
-
-        if os.getenv("GITHUB_ACTIONS"):
-            setup_github_actions_tabpfn_client()
-
+class TestTabPFNTimeSeriesPredictor:
+    @pytest.mark.uses_tabpfn_client
     def test_client_mode(self):
         """Test that predict method calls the worker's predict method"""
-        # Create predictor and call predict
+        maybe_setup_tabpfn_client_on_github_actions()
+        train_tsdf, test_tsdf = create_test_data()
+
         predictor = TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.CLIENT)
-        result = predictor.predict(self.train_tsdf, self.test_tsdf)
+        result = predictor.predict(train_tsdf, test_tsdf)
 
         assert result is not None
 
-    @patch("torch.cuda.is_available", return_value=True)
-    def test_local_mode(self, mock_is_available):
+    def test_local_mode(self):
         """Test that predict method calls the worker's predict method"""
-        # Create predictor and call predict
+        train_tsdf, test_tsdf = create_test_data()
         predictor = TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL)
+        result = predictor.predict(train_tsdf, test_tsdf)
+        assert result is not None
 
-        with self.assertRaises(ValueError):
-            _ = predictor.predict(self.train_tsdf, self.test_tsdf)
 
-
-class TestTimeSeriesPredictor(unittest.TestCase):
-    def setUp(self):
-        self.train_tsdf, self.test_tsdf = create_test_data()
-
-        if os.getenv("GITHUB_ACTIONS"):
-            setup_github_actions_tabpfn_client()
-
-    def test_from_tabpfn_family(self):
-        from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
+class TestTimeSeriesPredictor:
+    @pytest.mark.parametrize(
+        "tabpfn_class",
+        [
+            pytest.param(tabpfn.TabPFNRegressor, marks=pytest.mark.uses_tabpfn_local),
+            pytest.param(
+                tabpfn_client.TabPFNRegressor, marks=pytest.mark.uses_tabpfn_client
+            ),
+        ],
+    )
+    def test_from_tabpfn_family(
+        self, tabpfn_class: tabpfn.TabPFNRegressor | tabpfn_client.TabPFNRegressor
+    ):
+        if tabpfn_class == tabpfn_client.TabPFNRegressor:
+            maybe_setup_tabpfn_client_on_github_actions()
+        train_tsdf, test_tsdf = create_test_data()
 
         predictor = TimeSeriesPredictor.from_tabpfn_family(
-            tabpfn_class=TabPFNClientRegressor,
+            tabpfn_class=tabpfn_class,
             tabpfn_config={"n_estimators": 1},
             tabpfn_output_selection="median",
         )
-        result = predictor.predict(self.train_tsdf, self.test_tsdf)
+        result = predictor.predict(train_tsdf, test_tsdf)
         assert result is not None
 
     def test_from_point_prediction_regressor(self):
-        from sklearn.ensemble import RandomForestRegressor
-
+        train_tsdf, test_tsdf = create_test_data()
         predictor = TimeSeriesPredictor.from_point_prediction_regressor(
             regressor_class=RandomForestRegressor,
             regressor_config={"n_estimators": 1},
@@ -125,9 +130,5 @@ class TestTimeSeriesPredictor(unittest.TestCase):
                 # "...": "...",
             },
         )
-        result = predictor.predict(self.train_tsdf, self.test_tsdf)
+        result = predictor.predict(train_tsdf, test_tsdf)
         assert result is not None
-
-
-if __name__ == "__main__":
-    unittest.main()
