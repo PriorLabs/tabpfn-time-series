@@ -8,7 +8,6 @@ from tabpfn_client import (
     TabPFNRegressor as TabPFNClientRegressor,
 )
 
-from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 from tabpfn_time_series.worker.model_adapters.base import (
     BaseModelAdapter,
     PredictionOutput,

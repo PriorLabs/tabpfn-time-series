@@ -188,7 +188,7 @@ class PointPredictionModelAdapter(BaseModelAdapter):
         # Ignore the quantiles parameter for point prediction models
         predict_kwargs = predict_kwargs.copy()
         predict_kwargs.pop("quantiles", None)
-        
+
         model.fit(train_X, train_y, **fit_kwargs)
         return model.predict(test_X, **predict_kwargs)
 
