@@ -97,7 +97,7 @@ class BaseModelAdapter(ABC):
 
         fit_kwargs = self.inference_config.get("fit", {})
         predict_kwargs = self.inference_config.get("predict", {})
-        predict_kwargs["quantiles"] = quantiles
+        predict_kwargs = {**predict_kwargs, "quantiles": quantiles}
 
         # Convert dataframe to numpy array
         if isinstance(train_X, pd.DataFrame):
