@@ -60,9 +60,6 @@ class TabPFNModelAdapter(BaseModelAdapter):
         quantiles: list[float],
     ) -> PredictionOutput:
         # Translate TabPFN output to the standardized dictionary format
-        assert quantiles == DEFAULT_QUANTILE_CONFIG, (
-            "Quantiles must be the default quantiles for TabPFN"
-        )
         result: PredictionOutput = {
             "target": raw_pred_output[self.tabpfn_output_selection]
         }

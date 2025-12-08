@@ -132,3 +132,52 @@ class TestTimeSeriesPredictor:
         )
         result = predictor.predict(train_tsdf, test_tsdf)
         assert result is not None
+
+    @pytest.mark.parametrize(
+        "predictor_factory,check_ordering",
+        [
+            pytest.param(
+                lambda: TimeSeriesPredictor.from_point_prediction_regressor(
+                    regressor_class=RandomForestRegressor,
+                    regressor_config={"n_estimators": 1},
+                ),
+                False,  # Point prediction mocks all quantiles to same value
+                id="point_prediction",
+            ),
+            pytest.param(
+                lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
+                True,  # TabPFN computes real quantiles
+                id="tabpfn_local",
+                marks=pytest.mark.uses_tabpfn_local,
+            ),
+            pytest.param(
+                lambda: (
+                    maybe_setup_tabpfn_client_on_github_actions(),
+                    TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.CLIENT),
+                )[1],
+                True,  # TabPFN client computes real quantiles
+                id="tabpfn_client",
+                marks=pytest.mark.uses_tabpfn_client,
+            ),
+        ],
+    )
+    def test_custom_quantiles(self, predictor_factory, check_ordering):
+        """Test custom quantiles: column presence and value ordering."""
+        train_tsdf, test_tsdf = create_test_data()
+        predictor = predictor_factory()
+
+        custom_quantiles = [0.1, 0.5, 0.9]
+        result = predictor.predict(train_tsdf, test_tsdf, quantiles=custom_quantiles)
+
+        # Check that custom quantile columns are present
+        for q in custom_quantiles:
+            assert q in result.columns, f"Quantile {q} not in result columns"
+
+        # Check that default quantiles (not requested) are NOT present
+        assert 0.2 not in result.columns
+        assert 0.8 not in result.columns
+
+        # Check quantile ordering for models that compute real quantiles
+        if check_ordering:
+            assert (result[0.1] <= result[0.5]).all(), "q_0.1 should be <= q_0.5"
+            assert (result[0.5] <= result[0.9]).all(), "q_0.5 should be <= q_0.9"

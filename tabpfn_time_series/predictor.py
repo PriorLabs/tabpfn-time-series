@@ -100,6 +100,7 @@ class TimeSeriesPredictor:
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        quantiles: list[float] = DEFAULT_QUANTILE_CONFIG,
     ) -> TimeSeriesDataFrame:
         """
         Predict on each time series individually (local forecasting).
@@ -127,7 +128,7 @@ class TimeSeriesPredictor:
         return self._worker.predict(
             train_tsdf=train_tsdf,
             test_tsdf=test_tsdf,
-            quantiles=DEFAULT_QUANTILE_CONFIG,
+            quantiles=quantiles,
         )
 
 
