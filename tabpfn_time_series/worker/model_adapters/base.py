@@ -189,8 +189,14 @@ class PointPredictionModelAdapter(BaseModelAdapter):
         predict_kwargs = predict_kwargs.copy()
         predict_kwargs.pop("quantiles", None)
 
-        model.fit(train_X, train_y, **fit_kwargs)
-        return model.predict(test_X, **predict_kwargs)
+        return super()._fit_and_predict(
+            model=model,
+            train_X=train_X,
+            train_y=train_y,
+            test_X=test_X,
+            fit_kwargs=fit_kwargs,
+            predict_kwargs=predict_kwargs,
+        )
 
     @staticmethod
     def _mock_probabilistic_output(
