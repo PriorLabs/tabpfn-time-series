@@ -181,3 +181,97 @@ class TestTimeSeriesPredictor:
         if check_ordering:
             assert (result[0.1] <= result[0.5]).all(), "q_0.1 should be <= q_0.5"
             assert (result[0.5] <= result[0.9]).all(), "q_0.5 should be <= q_0.9"
+
+    @pytest.mark.parametrize(
+        "predictor_factory,quantiles,expected_columns,should_raise",
+        [
+            # Empty quantiles - should work, no quantile columns
+            pytest.param(
+                lambda: TimeSeriesPredictor.from_point_prediction_regressor(
+                    regressor_class=RandomForestRegressor,
+                    regressor_config={"n_estimators": 1},
+                ),
+                [],
+                [],
+                False,
+                id="point_prediction-empty",
+            ),
+            pytest.param(
+                lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
+                [],
+                [],
+                False,
+                id="tabpfn_local-empty",
+                marks=pytest.mark.uses_tabpfn_local,
+            ),
+            # Unsorted quantiles - should work
+            pytest.param(
+                lambda: TimeSeriesPredictor.from_point_prediction_regressor(
+                    regressor_class=RandomForestRegressor,
+                    regressor_config={"n_estimators": 1},
+                ),
+                [0.9, 0.1, 0.5],
+                [0.1, 0.5, 0.9],
+                False,
+                id="point_prediction-unsorted",
+            ),
+            pytest.param(
+                lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
+                [0.9, 0.1, 0.5],
+                [0.1, 0.5, 0.9],
+                False,
+                id="tabpfn_local-unsorted",
+                marks=pytest.mark.uses_tabpfn_local,
+            ),
+            # Duplicate quantiles - should work
+            pytest.param(
+                lambda: TimeSeriesPredictor.from_point_prediction_regressor(
+                    regressor_class=RandomForestRegressor,
+                    regressor_config={"n_estimators": 1},
+                ),
+                [0.5, 0.5, 0.9],
+                [0.5, 0.9],
+                False,
+                id="point_prediction-duplicates",
+            ),
+            pytest.param(
+                lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
+                [0.5, 0.5, 0.9],
+                [0.5, 0.9],
+                False,
+                id="tabpfn_local-duplicates",
+                marks=pytest.mark.uses_tabpfn_local,
+            ),
+            # Invalid quantiles - should raise
+            pytest.param(
+                lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
+                [-0.1, 0.5, 1.5],
+                None,
+                True,
+                id="tabpfn_local-invalid",
+                marks=pytest.mark.uses_tabpfn_local,
+            ),
+        ],
+    )
+    def test_custom_quantiles_edge_cases(
+        self, predictor_factory, quantiles, expected_columns, should_raise
+    ):
+        """Test edge cases for custom quantiles."""
+        train_tsdf, test_tsdf = create_test_data()
+        predictor = predictor_factory()
+
+        if should_raise:
+            with pytest.raises(Exception):
+                predictor.predict(train_tsdf, test_tsdf, quantiles=quantiles)
+        else:
+            result = predictor.predict(train_tsdf, test_tsdf, quantiles=quantiles)
+            assert result is not None
+            assert "target" in result.columns
+
+            # Check expected quantile columns are present
+            for q in expected_columns:
+                assert q in result.columns, f"Quantile {q} not in result columns"
+
+            # Check no extra quantile columns
+            quantile_cols = [c for c in result.columns if isinstance(c, float)]
+            assert set(quantile_cols) == set(expected_columns)
