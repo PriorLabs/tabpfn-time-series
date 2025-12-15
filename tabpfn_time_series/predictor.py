@@ -103,26 +103,23 @@ class TimeSeriesPredictor:
         quantiles: list[float] = DEFAULT_QUANTILE_CONFIG,
     ) -> TimeSeriesDataFrame:
         """
-        Predict on each time series individually (local forecasting).
+        Generates predictions for each time series in `test_tsdf`, using `train_tsdf` for training context.
 
         Args:
-            train_tsdf: TimeSeriesDataFrame containing training data
-            test_tsdf: TimeSeriesDataFrame containing test data
-            use_probabilistic_output: Whether to use probabilistic output
-            quantiles: List of quantiles to use for probabilistic output
+            train_tsdf: TimeSeriesDataFrame containing training data for each time series.
+            test_tsdf: TimeSeriesDataFrame containing the forecasting horizon for each time series.
+            quantiles: List of quantiles to compute for probabilistic prediction. The returned predictions
+                will include forecast quantiles for each value in this list.
 
         Returns:
-            TimeSeriesDataFrame containing predictions
+            TimeSeriesDataFrame containing deterministic and/or probabilistic predictions for each item
+            in `test_tsdf`. The specific structure and additional columns depend on the model adapter.
 
-        Note:
-            If use_probabilistic_output, the prediction output from the model/model_adapter
-                should be dictionary with the following keys:
-                    - "mean": mean prediction
-                    - "std": standard deviation of the prediction
-                    - "quantiles": dictionary with quantiles as keys and values as arrays of predictions
-
-            If use_probabilistic_output is False, the prediction output from the model/model_adapter
-                should be a single array of predictions.
+        Notes:
+            - The output format may include columns for point forecasts (such as "mean" or "median")
+              and columns for each quantile requested.
+            - The structure and naming of columns are determined by the model adapter and worker used;
+              consult the implementation for details.
         """
 
         self._validate_quantiles(quantiles)
