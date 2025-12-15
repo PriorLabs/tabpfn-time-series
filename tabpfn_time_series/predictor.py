@@ -100,6 +100,7 @@ class TimeSeriesPredictor:
         self,
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
+        quantiles: list[float] = DEFAULT_QUANTILE_CONFIG,
     ) -> TimeSeriesDataFrame:
         """
         Predict on each time series individually (local forecasting).
@@ -124,11 +125,22 @@ class TimeSeriesPredictor:
                 should be a single array of predictions.
         """
 
+        self._validate_quantiles(quantiles)
+
         return self._worker.predict(
             train_tsdf=train_tsdf,
             test_tsdf=test_tsdf,
-            quantiles=DEFAULT_QUANTILE_CONFIG,
+            quantiles=quantiles,
         )
+
+    def _validate_quantiles(self, quantiles: list[float]):
+        """Validate the quantiles."""
+        if not isinstance(quantiles, list):
+            raise ValueError("Quantiles must be a list")
+        if not all(isinstance(q, float) for q in quantiles):
+            raise ValueError("Quantiles must be a list of floats")
+        if not all(0 <= q <= 1 for q in quantiles):
+            raise ValueError("Quantiles must be between 0 and 1")
 
 
 class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):

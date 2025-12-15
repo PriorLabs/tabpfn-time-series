@@ -8,7 +8,6 @@ from tabpfn_client import (
     TabPFNRegressor as TabPFNClientRegressor,
 )
 
-from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 from tabpfn_time_series.worker.model_adapters.base import (
     BaseModelAdapter,
     PredictionOutput,
@@ -60,9 +59,6 @@ class TabPFNModelAdapter(BaseModelAdapter):
         quantiles: list[float],
     ) -> PredictionOutput:
         # Translate TabPFN output to the standardized dictionary format
-        assert quantiles == DEFAULT_QUANTILE_CONFIG, (
-            "Quantiles must be the default quantiles for TabPFN"
-        )
         result: PredictionOutput = {
             "target": raw_pred_output[self.tabpfn_output_selection]
         }

@@ -97,6 +97,7 @@ class BaseModelAdapter(ABC):
 
         fit_kwargs = self.inference_config.get("fit", {})
         predict_kwargs = self.inference_config.get("predict", {})
+        predict_kwargs = {**predict_kwargs, "quantiles": quantiles}
 
         # Convert dataframe to numpy array
         if isinstance(train_X, pd.DataFrame):
@@ -106,13 +107,32 @@ class BaseModelAdapter(ABC):
         if isinstance(test_X, pd.DataFrame):
             test_X = test_X.values
 
-        model.fit(train_X, train_y, **fit_kwargs)
-        raw_pred_output = model.predict(test_X, **predict_kwargs)
+        raw_pred_output = self._fit_and_predict(
+            model=model,
+            train_X=train_X,
+            train_y=train_y,
+            test_X=test_X,
+            fit_kwargs=fit_kwargs,
+            predict_kwargs=predict_kwargs,
+        )
 
         return self.postprocess_pred_output(
             raw_pred_output=raw_pred_output,
             quantiles=quantiles,
         )
+
+    def _fit_and_predict(
+        self,
+        model: RegressorMixin,
+        train_X: Union[np.ndarray, pd.DataFrame],
+        train_y: Union[np.ndarray, pd.Series],
+        test_X: Union[np.ndarray, pd.DataFrame],
+        fit_kwargs: dict,
+        predict_kwargs: dict,
+    ) -> Any:
+        """Fit and predict the model."""
+        model.fit(train_X, train_y, **fit_kwargs)
+        return model.predict(test_X, **predict_kwargs)
 
     @abstractmethod
     def postprocess_pred_output(
@@ -153,6 +173,29 @@ class PointPredictionModelAdapter(BaseModelAdapter):
         return PointPredictionModelAdapter._mock_probabilistic_output(
             raw_pred_output,
             quantiles,
+        )
+
+    def _fit_and_predict(
+        self,
+        model: RegressorMixin,
+        train_X: Union[np.ndarray, pd.DataFrame],
+        train_y: Union[np.ndarray, pd.Series],
+        test_X: Union[np.ndarray, pd.DataFrame],
+        fit_kwargs: dict,
+        predict_kwargs: dict,
+    ) -> Any:
+        """Fit and predict the model."""
+        # Ignore the quantiles parameter for point prediction models
+        predict_kwargs = predict_kwargs.copy()
+        predict_kwargs.pop("quantiles", None)
+
+        return super()._fit_and_predict(
+            model=model,
+            train_X=train_X,
+            train_y=train_y,
+            test_X=test_X,
+            fit_kwargs=fit_kwargs,
+            predict_kwargs=predict_kwargs,
         )
 
     @staticmethod
