@@ -141,7 +141,7 @@ class TabPFNTSPipeline:
         task: fev.Task,
         use_covariates: bool = True,
     ) -> tuple[list["datasets.DatasetDict"], float]:
-        pass
+        raise NotImplementedError("predict_fev is not implemented")
 
     def _preprocess_context(
         self, context_tsdf: TimeSeriesDataFrame
