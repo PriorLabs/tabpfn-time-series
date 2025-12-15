@@ -114,18 +114,18 @@ class TestGenerateTestX:
         assert result.item_ids.equals(train_tsdf.item_ids)
         assert len(result) == 100 * 5
 
-    def test_preserves_frequency(self):
+    @pytest.mark.parametrize("freq", ["D", "h", "W"])
+    def test_preserves_frequency(self, freq):
         """Test that output maintains the same frequency as input."""
-        for freq in ["D", "h", "W"]:
-            dates = pd.date_range(start="2023-01-01", periods=10, freq=freq)
-            train_tsdf = create_train_tsdf([0], dates)
+        dates = pd.date_range(start="2023-01-01", periods=10, freq=freq)
+        train_tsdf = create_train_tsdf([0], dates)
 
-            result = generate_test_X(train_tsdf, prediction_length=5)
+        result = generate_test_X(train_tsdf, prediction_length=5)
 
-            # Check the timestamps are evenly spaced with correct frequency
-            test_timestamps = result.xs(0, level="item_id").index
-            inferred_freq = pd.infer_freq(test_timestamps)
-            # Normalize both to offset objects for comparison (W == W-SUN, etc.)
-            assert pd.tseries.frequencies.to_offset(
-                inferred_freq
-            ) == pd.tseries.frequencies.to_offset(freq)
+        # Check the timestamps are evenly spaced with correct frequency
+        test_timestamps = result.xs(0, level="item_id").index
+        inferred_freq = pd.infer_freq(test_timestamps)
+        # Normalize both to offset objects for comparison (W == W-SUN, etc.)
+        assert pd.tseries.frequencies.to_offset(
+            inferred_freq
+        ) == pd.tseries.frequencies.to_offset(freq)
