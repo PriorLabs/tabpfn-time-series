@@ -9,27 +9,41 @@ def generate_test_X(
     train_tsdf: TimeSeriesDataFrame,
     prediction_length: int,
 ):
-    test_dfs = []
-    for item_id in train_tsdf.item_ids:
-        last_train_timestamp = train_tsdf.xs(item_id, level="item_id").index.max()
-        first_test_timestamp = pd.date_range(
-            start=last_train_timestamp, periods=2, freq=train_tsdf.freq
-        )[-1]
-        test_dfs.append(
-            pd.DataFrame(
-                {
-                    "target": np.full(prediction_length, np.nan),
-                    "timestamp": pd.date_range(
-                        start=first_test_timestamp,
-                        periods=prediction_length,
-                        freq=train_tsdf.freq,
-                    ),
-                    "item_id": item_id,
-                }
-            )
+    freq = train_tsdf.freq
+    item_ids = train_tsdf.item_ids
+    n_items = len(item_ids)
+
+    # Get last timestamp for each item_id in one groupby operation (instead of xs per item)
+    last_timestamps = (
+        train_tsdf.reset_index()
+        .groupby("item_id", sort=False)["timestamp"]
+        .max()
+        .loc[item_ids]  # Ensure same order as item_ids
+        .values
+    )
+
+    # Compute the frequency offset
+    freq_offset = pd.tseries.frequencies.to_offset(freq)
+
+    # Pre-allocate timestamp array
+    all_timestamps = np.empty(n_items * prediction_length, dtype="datetime64[ns]")
+    for i, last_ts in enumerate(last_timestamps):
+        start_ts = last_ts + freq_offset
+        timestamps = pd.date_range(start=start_ts, periods=prediction_length, freq=freq)
+        all_timestamps[i * prediction_length : (i + 1) * prediction_length] = (
+            timestamps.values
         )
 
-    test_tsdf = TimeSeriesDataFrame.from_data_frame(pd.concat(test_dfs))
+    # Build single DataFrame with vectorized arrays
+    test_df = pd.DataFrame(
+        {
+            "target": np.full(n_items * prediction_length, np.nan),
+            "timestamp": all_timestamps,
+            "item_id": np.repeat(item_ids.values, prediction_length),
+        }
+    )
+
+    test_tsdf = TimeSeriesDataFrame.from_data_frame(test_df)
     assert test_tsdf.item_ids.equals(train_tsdf.item_ids)
 
     return test_tsdf
