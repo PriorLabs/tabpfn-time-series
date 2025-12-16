@@ -302,7 +302,7 @@ def detrend(
         # Use numpy polyfit instead of scipy.signal.detrend for numerical stability
         # (scipy's implementation can cause overflow/divide-by-zero on Apple Silicon)
         indices = np.arange(len(x))
-        coeffs = np.polyfit(indices, x, 1)
+        coeffs = np.polyfit(indices, x, 1, rcond=None)
         trend = np.polyval(coeffs, indices)
         return x - trend
 
