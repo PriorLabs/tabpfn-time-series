@@ -147,6 +147,8 @@ class TabPFNTSPipeline:
     def _preprocess_future(
         self, future_tsdf: TimeSeriesDataFrame
     ) -> TimeSeriesDataFrame:
+        future_tsdf = future_tsdf.copy()
+
         # If "target" column exists, assert all values are NaN; otherwise, add it as all NaN
         # (TimeSeriesPredictor and Featurization assume "target" to be NaN in future_tsdf)
         if "target" in future_tsdf.columns:
@@ -181,7 +183,6 @@ class TabPFNTSPipeline:
             method="constant",
             value=np.nan,
         )
-        assert not context_tsdf[valid_covariates].isnull().any().any()
 
         # Assert no missing covariate values in future
         assert not future_tsdf[valid_covariates].isnull().any().any()
