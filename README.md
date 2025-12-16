@@ -61,8 +61,8 @@ uv pip install -e ".[dev]"
 
 | I want to... | Notebook |
 |--------------|----------|
-| Use it on my project | [![Quickstart](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/quickstart.ipynb) |
-| Understand how it works | [![Step-by-Step](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/examples/how-it-works.ipynb) |
+| Use it on my project | [**quickstart.ipynb**](examples/quickstart.ipynb) |
+| Understand how it works | [**how-it-works.ipynb**](examples/how-it-works.ipynb) |
 
 Additionally, we have provided more example usage in the [examples](examples/) directory.
 
