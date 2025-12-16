@@ -24,8 +24,6 @@ from tabpfn_time_series.features import (
 from tabpfn_time_series.predictor import TimeSeriesPredictor
 
 if TYPE_CHECKING:
-    import datasets
-    import fev
     from tabpfn_time_series.features.feature_generator_base import FeatureGenerator
 
 
@@ -135,13 +133,6 @@ class TabPFNTSPipeline:
         result = pred.to_data_frame()
 
         return result
-
-    def predict_fev(
-        self,
-        task: fev.Task,
-        use_covariates: bool = True,
-    ) -> tuple[list["datasets.DatasetDict"], float]:
-        raise NotImplementedError("predict_fev is not implemented")
 
     def _preprocess_context(
         self, context_tsdf: TimeSeriesDataFrame
