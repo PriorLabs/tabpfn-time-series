@@ -10,6 +10,7 @@ from .features import FeatureTransformer
 from .predictor import TimeSeriesPredictor, TabPFNTimeSeriesPredictor, TabPFNMode
 from .defaults import DEFAULT_QUANTILE_CONFIG
 from .ts_dataframe import TimeSeriesDataFrame
+from .pipeline import TabPFNTSPipeline
 
 __all__ = [
     "FeatureTransformer",
@@ -18,4 +19,5 @@ __all__ = [
     "TabPFNMode",
     "DEFAULT_QUANTILE_CONFIG",
     "TimeSeriesDataFrame",
+    "TabPFNTSPipeline",
 ]
