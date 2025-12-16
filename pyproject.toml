@@ -21,7 +21,7 @@ dependencies = [
     "tabpfn-client>=0.1.7",
     "tabpfn>=6.0.3",
     "statsmodels>=0.14.5",
-    "datasets>=4.0",
+    "datasets>=2.15",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
@@ -53,6 +53,10 @@ dev = [
     "pytest",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.3",
+    
+    # For fevbench
+    "fev>=0.6.1",
+    "autogluon.timeseries",
 ]
 
 [project.urls]

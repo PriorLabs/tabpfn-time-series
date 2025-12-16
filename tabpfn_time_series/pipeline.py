@@ -34,6 +34,8 @@ from tabpfn_time_series.features import (
 from tabpfn_time_series.predictor import TimeSeriesPredictor
 
 if TYPE_CHECKING:
+    import fev
+    import datasets
     from tabpfn_time_series.features.feature_generator_base import FeatureGenerator
 
 
@@ -401,3 +403,64 @@ class TabPFNTSPipeline:
         result = pred.to_data_frame()
 
         return result
+
+    def predict_fev(
+        self,
+        task: fev.Task,
+        use_covariates: bool = True,
+    ) -> tuple[list["datasets.DatasetDict"], float]:
+        """Generate predictions for a fev benchmarking task.
+
+        Args:
+            task: A fev.Task containing the evaluation windows to predict.
+            use_covariates: Whether to use known dynamic covariates. Defaults to True.
+
+        Returns:
+            A tuple of (predictions_per_window, inference_time_s) where:
+            - predictions_per_window: List of DatasetDict predictions for each window
+            - inference_time_s: Total inference time in seconds (excludes data conversion)
+        """
+        import time
+        import datasets
+
+        try:
+            import fev
+        except ImportError:
+            raise ImportError(
+                "fev is not installed. Please install it with `pip install fev`."
+            )
+
+        quantiles = task.quantile_levels or DEFAULT_QUANTILE_CONFIG
+        predictions_per_window = []
+        inference_time_s = 0.0
+
+        for window in task.iter_windows():
+            past_data, future_data = fev.convert_input_data(
+                window, adapter="autogluon", as_univariate=True
+            )
+
+            if not use_covariates and task.known_dynamic_columns:
+                past_data = past_data.drop(columns=task.known_dynamic_columns)
+                future_data = future_data.drop(columns=task.known_dynamic_columns)
+
+            start_time = time.monotonic()
+
+            window_pred = self.predict(past_data, future_data, quantiles=quantiles)
+            window_pred_in_dataset_format = datasets.Dataset.from_pandas(
+                window_pred.rename(columns={"target": "predictions"})
+                .groupby(level=0)
+                .agg(list)
+                .rename(columns=str),
+                preserve_index=False,
+            )
+
+            predictions_per_window.append(
+                fev.utils.combine_univariate_predictions_to_multivariate(
+                    window_pred_in_dataset_format,
+                    target_columns=task.target_columns,
+                )
+            )
+
+            inference_time_s += time.monotonic() - start_time
+
+        return predictions_per_window, inference_time_s
