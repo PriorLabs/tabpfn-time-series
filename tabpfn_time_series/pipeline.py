@@ -61,7 +61,7 @@ class TabPFNTSPipeline:
             tabpfn_config=tabpfn_model_config,
             tabpfn_output_selection=tabpfn_output_selection,
         )
-        self.feature_transformer = FeatureTransformer(TABPFN_TS_DEFAULT_FEATURES)
+        self.feature_transformer = FeatureTransformer(temporal_features)
 
     def predict(
         self,
