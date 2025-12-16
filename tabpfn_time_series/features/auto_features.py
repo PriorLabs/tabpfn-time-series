@@ -285,7 +285,7 @@ class AutoSeasonalFeature(FeatureGenerator):
 
 
 def detrend(
-    x: np.ndarray, detrend_type: Literal["first_diff", "loess", "linear"]
+    x: np.ndarray, detrend_type: Literal["first_diff", "loess", "linear", "constant"]
 ) -> np.ndarray:
     if detrend_type == "first_diff":
         return np.diff(x, prepend=x[0])
@@ -298,10 +298,16 @@ def detrend(
         trend = lowess[:, 1]
         return x - trend
 
-    elif detrend_type in ["linear", "constant"]:
-        from scipy.signal import detrend as scipy_detrend
+    elif detrend_type == "linear":
+        # Use numpy polyfit instead of scipy.signal.detrend for numerical stability
+        # (scipy's implementation can cause overflow/divide-by-zero on Apple Silicon)
+        indices = np.arange(len(x))
+        coeffs = np.polyfit(indices, x, 1, rcond=None)
+        trend = np.polyval(coeffs, indices)
+        return x - trend
 
-        return scipy_detrend(x, type=detrend_type)
+    elif detrend_type == "constant":
+        return x - np.mean(x)
 
     else:
         raise ValueError(f"Invalid detrend method: {detrend_type}")
