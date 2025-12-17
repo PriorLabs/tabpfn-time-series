@@ -24,9 +24,9 @@ from tabpfn_common_utils.telemetry import set_extension
 logger = logging.getLogger(__name__)
 
 
-class TabPFNMode(Enum):
-    LOCAL = "tabpfn-local"
-    CLIENT = "tabpfn-client"
+class TabPFNMode(str, Enum):
+    LOCAL = "local"
+    CLIENT = "client"
 
 
 @set_extension("time-series")
