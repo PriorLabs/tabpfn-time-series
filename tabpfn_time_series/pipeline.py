@@ -14,7 +14,7 @@ from tabpfn_time_series import (
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series.defaults import (
     DEFAULT_QUANTILE_CONFIG,
-    TABPFN_TS_DEFAULT_CONFIG,
+    TABPFN_DEFAULT_CONFIG,
 )
 from tabpfn_time_series.features import (
     AutoSeasonalFeature,
@@ -44,7 +44,7 @@ class TabPFNTSPipeline:
         temporal_features: list[FeatureGenerator] = TABPFN_TS_DEFAULT_FEATURES,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
-        tabpfn_model_config: dict = TABPFN_TS_DEFAULT_CONFIG,
+        tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
     ):
         from tabpfn import TabPFNRegressor
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor

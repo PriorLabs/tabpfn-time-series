@@ -7,7 +7,7 @@ from sklearn.base import RegressorMixin
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.defaults import (
-    TABPFN_TS_DEFAULT_CONFIG,
+    TABPFN_DEFAULT_CONFIG,
     DEFAULT_QUANTILE_CONFIG,
 )
 from tabpfn_time_series.worker import (
@@ -151,7 +151,7 @@ class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):
     def __new__(
         cls,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
-        tabpfn_config: dict = TABPFN_TS_DEFAULT_CONFIG,
+        tabpfn_config: dict = TABPFN_DEFAULT_CONFIG,
         tabpfn_output_selection: str = "median",  # mean or median
     ):
         from tabpfn import TabPFNRegressor
