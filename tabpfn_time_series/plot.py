@@ -1,8 +1,80 @@
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
+
+
+def plot_forecast(
+    context_df: pd.DataFrame,
+    pred_df: pd.DataFrame,
+    test_df: pd.DataFrame | None = None,
+    item_ids: list | None = None,
+    context_length: int = 100,
+    show_quantiles: bool = True,
+    show_points: bool = False,
+    linewidth: float = 1.8,
+) -> None:
+    """
+    Plot forecast with historical context and optional ground truth.
+
+    This function works with pandas DataFrames from the `predict_df` API.
+    Internally converts to TimeSeriesDataFrame and delegates to `plot_pred_and_actual_ts`.
+
+    Args:
+        context_df: Historical data with columns 'timestamp', 'target', and optionally 'item_id'.
+        pred_df: Predictions from `predict_df`, with multi-index (item_id, timestamp).
+        test_df: Optional ground truth for the forecast horizon.
+        item_ids: List of item IDs to plot. If None, plots all unique items.
+        context_length: Number of historical points to show before the forecast.
+        show_quantiles: Whether to show the quantile prediction range.
+        show_points: Whether to show individual data points.
+        linewidth: Line thickness for all plot lines.
+    """
+    # Add dummy item_id if not present
+    if "item_id" not in context_df.columns:
+        context_df = context_df.copy()
+        context_df["item_id"] = 0
+
+    # Limit context length per item
+    context_df = context_df.groupby("item_id").tail(context_length)
+
+    # Build test_df from prediction timestamps if not provided
+    if test_df is None:
+        # Create a synthetic test_df with NaN targets (no ground truth to show)
+        test_records = []
+        for item_id in pred_df.index.get_level_values(0).unique():
+            pred_item = pred_df.loc[item_id]
+            for ts in pred_item.index:
+                test_records.append(
+                    {
+                        "item_id": item_id,
+                        "timestamp": ts,
+                        "target": np.nan,
+                    }
+                )
+        test_df = pd.DataFrame(test_records)
+    else:
+        if "item_id" not in test_df.columns:
+            test_df = test_df.copy()
+            test_df["item_id"] = 0
+
+    # Convert to TimeSeriesDataFrame
+    train_tsdf = TimeSeriesDataFrame.from_data_frame(context_df)
+    test_tsdf = TimeSeriesDataFrame.from_data_frame(test_df)
+    pred_tsdf = TimeSeriesDataFrame(pred_df)
+
+    plot_pred_and_actual_ts(
+        pred=pred_tsdf,
+        train=train_tsdf,
+        test=test_tsdf,
+        item_ids=item_ids,
+        show_quantiles=show_quantiles,
+        show_points=show_points,
+        linewidth=linewidth,
+    )
 
 
 def is_subset(tsdf_A: TimeSeriesDataFrame, tsdf_B: TimeSeriesDataFrame) -> bool:
@@ -120,7 +192,16 @@ def plot_pred_and_actual_ts(
     item_ids: list[int] | None = None,
     show_quantiles: bool = True,
     show_points: bool = False,
+    linewidth: float = 1.8,
 ):
+    """
+    Plot predictions alongside context (train) and actual values (test).
+
+    Shows three distinct elements:
+    - Context: Historical data used as input
+    - Actual: Ground truth values for the forecast period
+    - Prediction: Model forecasts with optional quantile intervals
+    """
     if item_ids is None:
         item_ids = train.index.get_level_values("item_id").unique()
     elif not set(item_ids).issubset(train.index.get_level_values("item_id").unique()):
@@ -140,50 +221,90 @@ def plot_pred_and_actual_ts(
 
     assert pred.shape[0] == test.shape[0]
 
-    _, ax = plt.subplots(len(item_ids), 1, figsize=(10, 3 * len(item_ids)))
-    ax = [ax] if not isinstance(ax, np.ndarray) else ax
+    _, axes = plt.subplots(len(item_ids), 1, figsize=(10, 3 * len(item_ids)))
+    axes = [axes] if not isinstance(axes, np.ndarray) else axes
+
+    # Colors: blue for context, orange for forecast, teal for ground truth
+    color_context = "royalblue"
+    color_forecast = "tomato"
+    color_actual = "darkslateblue"
 
     def plot_single_item(ax, item_id):
         pred_item = pred.xs(item_id, level="item_id")
         train_item = train.xs(item_id, level="item_id")
         test_item = test.xs(item_id, level="item_id")
 
-        if is_subset(train_item, test_item):
-            ground_truth = test_item["target"]
-        else:
-            ground_truth = pd.concat([train_item[["target"]], test_item[["target"]]])
-        ax.plot(ground_truth.index, ground_truth, label="Ground Truth")
-        ax.plot(pred_item.index, pred_item["target"], label="Prediction")
+        # Plot context (historical data)
+        ax.plot(
+            train_item.index,
+            train_item["target"],
+            label="History",
+            color=color_context,
+            linewidth=linewidth,
+        )
         if show_points:
             ax.scatter(
-                ground_truth.index, ground_truth, color="lightblue", s=8, alpha=0.8
+                train_item.index,
+                train_item["target"],
+                color=color_context,
+                s=8,
+                alpha=0.6,
             )
 
-        if show_quantiles:
-            # Plot the lower and upper bound of the quantile predictions
-            quantile_config = sorted(
-                pred_item.columns.drop(["target"]).tolist(), key=lambda x: float(x)
+        # Plot actual test values (ground truth) if available
+        test_has_values = test_item["target"].notna().any()
+        if test_has_values:
+            ax.plot(
+                test_item.index,
+                test_item["target"],
+                label="Future",
+                color=color_actual,
+                linewidth=linewidth,
+                alpha=0.8,
             )
-            lower_quantile = quantile_config[0]
-            upper_quantile = quantile_config[-1]
-            ax.fill_between(
-                pred_item.index,
-                pred_item[lower_quantile],
-                pred_item[upper_quantile],
-                color="gray",
-                alpha=0.2,
-                label=f"{lower_quantile}-{upper_quantile} Quantile Range",
-            )
+            if show_points:
+                ax.scatter(
+                    test_item.index,
+                    test_item["target"],
+                    color=color_actual,
+                    s=8,
+                    alpha=0.6,
+                )
 
-        train_item_length = train.xs(item_id, level="item_id").iloc[-1].name
-        ax.axvline(
-            x=train_item_length, color="r", linestyle="--", label="Train/Test Split"
+        # Plot prediction
+        ax.plot(
+            pred_item.index,
+            pred_item["target"],
+            label="Forecast",
+            color=color_forecast,
+            linewidth=linewidth,
         )
+
+        # Plot quantile range
+        if show_quantiles:
+            quantile_cols = [c for c in pred_item.columns if c != "target"]
+            if len(quantile_cols) >= 2:
+                quantile_config = sorted(quantile_cols, key=lambda x: float(x))
+                lower_quantile = quantile_config[0]
+                upper_quantile = quantile_config[-1]
+                ax.fill_between(
+                    pred_item.index,
+                    pred_item[lower_quantile],
+                    pred_item[upper_quantile],
+                    color=color_forecast,
+                    alpha=0.2,
+                    label=f"{lower_quantile}-{upper_quantile} Quantile",
+                )
+
+        # Add train/test split line
+        split_point = train_item.iloc[-1].name
+        ax.axvline(x=split_point, color="gray", linestyle="--", alpha=0.7)
+
         ax.set_title(f"Item ID: {item_id}")
         ax.legend(loc="upper left", bbox_to_anchor=(0, 1))
 
     for i, item_id in enumerate(item_ids):
-        plot_single_item(ax[i], item_id)
+        plot_single_item(axes[i], item_id)
 
     plt.tight_layout()
     plt.show()

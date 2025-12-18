@@ -3,7 +3,7 @@
 > Zero-Shot Time Series Forecasting with TabPFNv2
 
 [![PyPI version](https://badge.fury.io/py/tabpfn-time-series.svg)](https://badge.fury.io/py/tabpfn-time-series)
-[![colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/demo.ipynb)
+[![colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/quickstart.ipynb)
 [![Discord](https://img.shields.io/discord/1285598202732482621?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
 [![arXiv](https://img.shields.io/badge/arXiv-2501.02945-<COLOR>.svg)](https://arxiv.org/abs/2501.02945v3)
 
@@ -35,7 +35,7 @@ For more details, please refer to our [paper](https://arxiv.org/abs/2501.02945v3
 ## 👉 **Why give us a try?**
 - **Zero-shot forecasting**: this method is extremely fast and requires no training, making it highly accessible for experimenting with your own problems.
 - **Point and probabilistic forecasting**: it provides accurate point forecasts as well as probabilistic forecasts.
-- **Support for exogenous variables**: if you have exogenous variables, this method can seemlessly incorporate them into the forecasting model.
+- **Native covariate support**: it seamlessly incorporates external features (weather, holidays, promotions) with no preprocessing required.
 
 On top of that, thanks to **[tabpfn-client](https://github.com/automl/tabpfn-client)** from **[Prior Labs](https://priorlabs.ai)**, you won't even need your own GPU to run fast inference with TabPFNv2. 😉 We have included `tabpfn-client` as the default engine in our implementation.
 
@@ -57,13 +57,14 @@ pip install -e ".[dev]"
 uv pip install -e ".[dev]"
 ```
 
-## How to use it?
+## 🚀 Getting Started
 
-[![colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PriorLabs/tabpfn-time-series/blob/main/demo.ipynb)
+| I want to... | Notebook |
+|--------------|----------|
+| Use it on my project | [**quickstart.ipynb**](examples/quickstart.ipynb) |
+| Understand how it works | [**how-it-works.ipynb**](examples/how-it-works.ipynb) |
 
-The demo should explain it all. 😉
-
-Additionally, we have provided example usage in the [examples](examples/) directory.
+Additionally, we have provided more example usage in the [examples](examples/) directory.
 
 ## 📊 Anonymous Telemetry
 
