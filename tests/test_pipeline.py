@@ -3,7 +3,10 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+
 import tabpfn_client
+import fev
+import datasets
 
 from tabpfn_time_series import (
     TabPFNMode,
@@ -56,6 +59,24 @@ def maybe_setup_tabpfn_client_on_github_actions() -> None:
     assert access_token is not None, "TABPFN_CLIENT_API_KEY is not set"
 
     tabpfn_client.set_access_token(access_token)
+
+
+def create_toy_fev_task() -> fev.Task:
+    # Create a toy dataset with a single time series
+    ts = {
+        "id": "A",
+        "timestamp": pd.date_range("2025-01-01", freq="D", periods=10),
+        "target": list(range(10)),
+    }
+    ds = datasets.Dataset.from_list([ts])
+    dataset_path = "/tmp/toy_dataset.parquet"
+    ds.to_parquet(dataset_path)
+
+    return fev.Task(
+        dataset_path=dataset_path,
+        horizon=3,
+        num_windows=2,
+    )
 
 
 class TestTabPFNTSPipeline:
@@ -161,3 +182,21 @@ class TestTabPFNTSPipeline:
 
         for q in custom_quantiles:
             assert q in result.columns, f"Quantile {q} not in result columns"
+
+    def test_predict_fev(self):
+        """Test predict_fev method with a real fev task."""
+        task = create_toy_fev_task()
+        pipeline = TabPFNTSPipeline(tabpfn_mode=TabPFNMode.LOCAL)
+
+        predictions_per_window, inference_time_s = pipeline.predict_fev(task)
+
+        # Verify results
+        assert isinstance(predictions_per_window, list)
+        assert len(predictions_per_window) == task.num_windows
+        assert isinstance(inference_time_s, float)
+        assert inference_time_s >= 0
+
+        # Verify each prediction window has the expected structure
+        for pred in predictions_per_window:
+            assert isinstance(pred, datasets.DatasetDict)
+            assert "target" in pred

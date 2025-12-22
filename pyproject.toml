@@ -21,11 +21,13 @@ dependencies = [
     "tabpfn-client>=0.1.7",
     "tabpfn>=6.0.3",
     "statsmodels>=0.14.5",
-    "datasets>=4.0",
+    "datasets>=2.15",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
+    "fev>=0.6.1",
+    "autogluon.timeseries",
 ]
 
 
