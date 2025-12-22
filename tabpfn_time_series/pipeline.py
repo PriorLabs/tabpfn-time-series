@@ -10,11 +10,13 @@ Key Components:
 
 from __future__ import annotations
 
+import time
 import logging
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
+import datasets
 
 from tabpfn_time_series import (
     TabPFNMode,
@@ -35,7 +37,6 @@ from tabpfn_time_series.predictor import TimeSeriesPredictor
 
 if TYPE_CHECKING:
     import fev
-    import datasets
     from tabpfn_time_series.features.feature_generator_base import FeatureGenerator
 
 
@@ -406,7 +407,7 @@ class TabPFNTSPipeline:
 
     def predict_fev(
         self,
-        task: fev.Task,
+        task: "fev.Task",
         use_covariates: bool = True,
     ) -> tuple[list["datasets.DatasetDict"], float]:
         """Generate predictions for a fev benchmarking task.
@@ -420,15 +421,7 @@ class TabPFNTSPipeline:
             - predictions_per_window: List of DatasetDict predictions for each window
             - inference_time_s: Total inference time in seconds (excludes data conversion)
         """
-        import time
-        import datasets
-
-        try:
-            import fev
-        except ImportError:
-            raise ImportError(
-                "fev is not installed. Please install it with `pip install fev`."
-            )
+        import fev
 
         quantiles = task.quantile_levels or DEFAULT_QUANTILE_CONFIG
         predictions_per_window = []

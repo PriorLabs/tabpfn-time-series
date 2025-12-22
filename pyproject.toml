@@ -26,6 +26,8 @@ dependencies = [
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
+    "fev>=0.6.1",
+    "autogluon.timeseries",
 ]
 
 
@@ -53,10 +55,6 @@ dev = [
     "pytest",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.3",
-    
-    # For fevbench
-    "fev>=0.6.1",
-    "autogluon.timeseries",
 ]
 
 [project.urls]
