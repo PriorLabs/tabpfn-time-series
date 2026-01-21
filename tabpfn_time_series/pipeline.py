@@ -440,8 +440,8 @@ class TabPFNTSPipeline:
             cols_to_keep = ["target"]
             if use_covariates and task.known_dynamic_columns:
                 cols_to_keep += task.known_dynamic_columns
-            past_data = past_data[[c for c in cols_to_keep if c in past_data.columns]]
-            future_data = future_data[[c for c in cols_to_keep if c in future_data.columns]]
+            past_data = past_data[past_data.columns.intersection(cols_to_keep)]
+            future_data = future_data[future_data.columns.intersection(cols_to_keep)]
 
             start_time = time.monotonic()
 
