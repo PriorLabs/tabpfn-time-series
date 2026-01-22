@@ -5572,7 +5572,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "statsmodels", specifier = ">=0.14.5" },
-    { name = "tabpfn", specifier = ">=6.3.1" },
+    { name = "tabpfn", specifier = ">=6.0.6" },
     { name = "tabpfn-client", specifier = ">=0.2.8" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm" },
