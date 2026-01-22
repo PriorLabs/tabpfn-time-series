@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import time
 import logging
+import warnings
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -137,10 +138,13 @@ def _preprocess_covariates(
         value=np.nan,
     )
 
-    # Assert no missing covariate values in future
+    # Warn if there are missing covariate values in future
     if future_tsdf[valid_covariates].isnull().any().any():
-        raise ValueError(
-            "All covariate values in future_tsdf must be present (no missing values)."
+        warnings.warn(
+            "Some covariate values in future_tsdf are missing (NaN). "
+            "This may affect prediction quality.",
+            UserWarning,
+            stacklevel=2,
         )
 
     return context_tsdf, future_tsdf
@@ -432,9 +436,12 @@ class TabPFNTSPipeline:
                 window, adapter="autogluon", as_univariate=True
             )
 
-            if not use_covariates and task.known_dynamic_columns:
-                past_data = past_data.drop(columns=task.known_dynamic_columns)
-                future_data = future_data.drop(columns=task.known_dynamic_columns)
+            # Keep only target and known dynamic columns (if use_covariates=True)
+            cols_to_keep = ["target"]
+            if use_covariates and task.known_dynamic_columns:
+                cols_to_keep += task.known_dynamic_columns
+            past_data = past_data[past_data.columns.intersection(cols_to_keep)]
+            future_data = future_data[future_data.columns.intersection(cols_to_keep)]
 
             start_time = time.monotonic()
 
