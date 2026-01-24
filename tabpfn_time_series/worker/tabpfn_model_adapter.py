@@ -45,7 +45,8 @@ class TabPFNModelAdapter(BaseModelAdapter):
         if model_class == TabPFNClientRegressor:
             self._init_tabpfn_client_regressor(self.model_config)
         elif model_class == TabPFNRegressor:
-            self._init_local_tabpfn_regressor(self.model_config)
+            pass
+            # self._init_local_tabpfn_regressor(self.model_config)
         else:
             raise ValueError(
                 f"Expected TabPFN-family regressor, got {self.model_class}"

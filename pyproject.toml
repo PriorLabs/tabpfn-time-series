@@ -20,7 +20,7 @@ dependencies = [
     "pandas>=2.1.2, <2.2.0",
     "gluonts>=0.16.0",
     "tabpfn-client>=0.1.7",
-    "tabpfn>=2.1.0",
+    "tabpfn @ git+ssh://git@github.com/liam-sbhoo/TabPFN.git@afdaca62cfc44ce4986bba3cce201e6f09a44ec7",
     "statsmodels>=0.14.5",
     "datasets>=4.0",
     "python-dotenv>=1.1.0",
