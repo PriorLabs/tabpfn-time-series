@@ -82,10 +82,11 @@ def _handle_missing_values(tsdf: TimeSeriesDataFrame) -> TimeSeriesDataFrame:
 
     # 3. Fill NaNs with 0 ONLY for item_ids that have <= 1 valid targets
     if len(invalid_items) > 0:
-        mask_invalid = result.index.get_level_values("item_id").isin(invalid_items)
-        result.loc[mask_invalid, "target"] = result.loc[mask_invalid, "target"].fillna(
-            0
+        mask_to_fill = (
+            result.index.get_level_values("item_id").isin(invalid_items)
+            & result["target"].isna()
         )
+        result.loc[mask_to_fill, "target"] = 0
 
     # 4. For all other items, drop rows where target is still NaN
     result = result[result["target"].notna()]
