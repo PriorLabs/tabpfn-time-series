@@ -73,17 +73,24 @@ def _handle_missing_values(tsdf: TimeSeriesDataFrame) -> TimeSeriesDataFrame:
     Returns:
         TimeSeriesDataFrame with NaNs handled
     """
+    # 1. Count valid targets per item_id
+    valid_counts = tsdf["target"].notna().groupby(level="item_id").sum()
+    invalid_items = valid_counts[valid_counts <= 1].index
 
-    def process_series(group: pd.DataFrame) -> pd.DataFrame:
-        valid_count = group["target"].notna().sum()
-        if valid_count <= 1:
-            # Using 0 since the time series is not meaningful if it has only one/no valid value
-            # (TabPFN would predict 0 for the prediction horizon)
-            return group.fillna({"target": 0})
-        return group[group["target"].notna()]
+    # 2. Create a copy to avoid mutating the original
+    result = tsdf.copy()
 
-    result = tsdf.groupby(level="item_id", group_keys=False).apply(process_series)
-    return TimeSeriesDataFrame(result)
+    # 3. Fill NaNs with 0 ONLY for item_ids that have <= 1 valid targets
+    if len(invalid_items) > 0:
+        mask_invalid = result.index.get_level_values("item_id").isin(invalid_items)
+        result.loc[mask_invalid, "target"] = result.loc[mask_invalid, "target"].fillna(
+            0
+        )
+
+    # 4. For all other items, drop rows where target is still NaN
+    result = result[result["target"].notna()]
+
+    return result
 
 
 def _preprocess_context(
