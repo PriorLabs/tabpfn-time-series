@@ -21,15 +21,23 @@ class FeatureTransformer:
         """Transform both train and test data with the configured feature generators"""
 
         self._validate_input(train_tsdf, test_tsdf, target_column)
+
+        static_features = train_tsdf.static_features
+
         tsdf = pd.concat([train_tsdf, test_tsdf])
 
         # Apply all feature generators
         for generator in self.feature_generators:
-            tsdf = tsdf.groupby(level="item_id", group_keys=False).apply(generator)
+            tsdf = generator(tsdf)
 
         # Split train and test tsdf
-        train_tsdf = tsdf.iloc[: len(train_tsdf)]
-        test_tsdf = tsdf.iloc[len(train_tsdf) :]
+        train_slice = tsdf.iloc[: len(train_tsdf)]
+        test_slice = tsdf.iloc[len(train_tsdf) :]
+
+        # Convert back to TimeSeriesDataFrame and re-attach static features
+        # This ensures the metadata remains intact even if generators returned a standard DF
+        train_tsdf = TimeSeriesDataFrame(train_slice, static_features=static_features)
+        test_tsdf = TimeSeriesDataFrame(test_slice, static_features=static_features)
 
         assert not train_tsdf[target_column].isna().any(), (
             "All target values in train_tsdf should be non-NaN"
