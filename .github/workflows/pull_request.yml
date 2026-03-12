@@ -1,6 +1,6 @@
 name: In pull request
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
       - beta
@@ -13,10 +13,6 @@ jobs:
     steps:
       - name: Checkout PR code safely
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-
       - name: Ruff Linting
         uses: astral-sh/ruff-action@v3
         with:
@@ -40,10 +36,6 @@ jobs:
     steps:
       - name: Checkout PR code safely
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
