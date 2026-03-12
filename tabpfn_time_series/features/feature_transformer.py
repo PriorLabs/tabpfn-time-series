@@ -3,9 +3,7 @@ from typing import List, Tuple
 import pandas as pd
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
-from tabpfn_time_series.features.feature_generator_base import (
-    FeatureGenerator,
-)
+from tabpfn_time_series.features.feature_generator_base import FeatureGenerator
 
 
 class FeatureTransformer:
@@ -22,15 +20,13 @@ class FeatureTransformer:
 
         self._validate_input(train_tsdf, test_tsdf, target_column)
 
-        static_features = train_tsdf.static_features
-
-        # Tag before concat so we can split correctly after per-series reordering.
-        tsdf = pd.concat(
-            [
-                train_tsdf.assign(_is_train=True),
-                test_tsdf.assign(_is_train=False),
-            ]
+        static_features = self._merge_static_features(
+            train_tsdf.static_features, test_tsdf.static_features
         )
+
+        train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
+        test_plain = pd.DataFrame(test_tsdf).assign(_is_train=False)
+        tsdf = pd.concat([train_plain, test_plain])
 
         item_ids = tsdf.index.get_level_values("item_id").unique()
 
@@ -46,10 +42,12 @@ class FeatureTransformer:
         train_slice = tsdf[tsdf["_is_train"]].drop(columns=["_is_train"])
         test_slice = tsdf[~tsdf["_is_train"]].drop(columns=["_is_train"])
 
-        # Re-cast to TimeSeriesDataFrame and re-attach static_features since
-        # concat/slicing strips the subclass and its metadata.
-        train_tsdf = TimeSeriesDataFrame(train_slice, static_features=static_features)
-        test_tsdf = TimeSeriesDataFrame(test_slice, static_features=static_features)
+        train_tsdf = TimeSeriesDataFrame(
+            pd.DataFrame(train_slice), static_features=static_features
+        )
+        test_tsdf = TimeSeriesDataFrame(
+            pd.DataFrame(test_slice), static_features=static_features
+        )
 
         assert not train_tsdf[target_column].isna().any(), (
             "All target values in train_tsdf should be non-NaN"
@@ -57,6 +55,21 @@ class FeatureTransformer:
         assert test_tsdf[target_column].isna().all()
 
         return train_tsdf, test_tsdf
+
+    @staticmethod
+    def _merge_static_features(
+        train_static: pd.DataFrame | None,
+        test_static: pd.DataFrame | None,
+    ) -> pd.DataFrame | None:
+        """Return static features covering all item_ids from both train and test."""
+        if train_static is None:
+            return None
+        if test_static is None:
+            return train_static
+        new_items = test_static.index.difference(train_static.index)
+        if len(new_items) == 0:
+            return train_static
+        return pd.concat([train_static, test_static.loc[new_items]])
 
     @staticmethod
     def _validate_input(
