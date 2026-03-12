@@ -24,18 +24,28 @@ class FeatureTransformer:
 
         static_features = train_tsdf.static_features
 
-        tsdf = pd.concat([train_tsdf, test_tsdf])
+        item_ids = train_tsdf.index.get_level_values("item_id").unique()
 
-        # Apply all feature generators
+        # Tag before concat so we can split correctly after per-series reordering.
+        tsdf = pd.concat(
+            [
+                train_tsdf.assign(_is_train=True),
+                test_tsdf.assign(_is_train=False),
+            ]
+        )
+
         for generator in self.feature_generators:
-            tsdf = generator(tsdf)
+            per_series = [
+                generator(tsdf.xs(item_id, level="item_id")) for item_id in item_ids
+            ]
+            tsdf = pd.concat(per_series, keys=item_ids, names=["item_id"])
 
-        # Split train and test tsdf
-        train_slice = tsdf.iloc[: len(train_tsdf)]
-        test_slice = tsdf.iloc[len(train_tsdf) :]
+        # Split by tag (not iloc) since per-series concat reorders rows by item_id
+        train_slice = tsdf[tsdf["_is_train"]].drop(columns=["_is_train"])
+        test_slice = tsdf[~tsdf["_is_train"]].drop(columns=["_is_train"])
 
-        # Convert back to TimeSeriesDataFrame and re-attach static features
-        # This ensures the metadata remains intact even if generators returned a standard DF
+        # Re-cast to TimeSeriesDataFrame and re-attach static_features,
+        # since concat/slicing may have stripped the subclass and its metadata.
         train_tsdf = TimeSeriesDataFrame(train_slice, static_features=static_features)
         test_tsdf = TimeSeriesDataFrame(test_slice, static_features=static_features)
 
