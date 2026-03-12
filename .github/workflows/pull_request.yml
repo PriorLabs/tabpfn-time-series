@@ -59,4 +59,4 @@ jobs:
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: uv run pytest tests
+        run: uv run pytest tests -m "not uses_tabpfn_client"
