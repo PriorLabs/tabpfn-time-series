@@ -19,25 +19,36 @@ class GPUParallelWorker(ParallelWorker):
         inference_routine: Callable,
         num_gpus: int = None,
         num_workers_per_gpu: int = 1,
+        devices: list[int] | None = None,
     ):
         """Initialize GPU parallel worker.
 
         Args:
             inference_routine: Callable that performs inference on a single time series
-            num_gpus: Number of GPUs to use (default: all available)
+            num_gpus: Number of GPUs to use (default: all available).
+                Ignored if `devices` is provided.
             num_workers_per_gpu: Number of workers per GPU (default: 1)
+            devices: Explicit list of GPU device indices to use (e.g. [2, 3]).
+                If provided, overrides `num_gpus`. If None, uses devices
+                0 through num_gpus-1.
 
         Raises:
             ValueError: If GPU is not available
         """
         super().__init__(inference_routine)
 
-        self.num_gpus = num_gpus or torch.cuda.device_count()
-        self.num_workers_per_gpu = num_workers_per_gpu
-        self.total_num_workers = self.num_gpus * self.num_workers_per_gpu
-
         if not torch.cuda.is_available():
             raise ValueError("GPU is required for GPU parallel inference")
+
+        if devices is not None:
+            self.devices = list(devices)
+        else:
+            num_gpus = num_gpus or torch.cuda.device_count()
+            self.devices = list(range(num_gpus))
+
+        self.num_gpus = len(self.devices)
+        self.num_workers_per_gpu = num_workers_per_gpu
+        self.total_num_workers = self.num_gpus * self.num_workers_per_gpu
 
     def predict(
         self,
@@ -62,7 +73,7 @@ class GPUParallelWorker(ParallelWorker):
             predictions = self._prediction_routine_per_gpu(
                 train_tsdf,
                 test_tsdf,
-                gpu_id=0,
+                gpu_id=self.devices[0],
                 **kwargs,
             )
             return TimeSeriesDataFrame(predictions)
@@ -85,7 +96,7 @@ class GPUParallelWorker(ParallelWorker):
             delayed(self._prediction_routine_per_gpu)(
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
-                gpu_id=i % self.num_gpus,  # Alternate between available GPUs
+                gpu_id=self.devices[i % self.num_gpus],  # Alternate between available GPUs
             )
             for i, chunk in enumerate(item_ids_chunks)
         )
