@@ -96,7 +96,9 @@ class GPUParallelWorker(ParallelWorker):
             delayed(self._prediction_routine_per_gpu)(
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
-                gpu_id=self.devices[i % self.num_gpus],  # Alternate between available GPUs
+                gpu_id=self.devices[
+                    i % self.num_gpus
+                ],  # Alternate between available GPUs
             )
             for i, chunk in enumerate(item_ids_chunks)
         )
