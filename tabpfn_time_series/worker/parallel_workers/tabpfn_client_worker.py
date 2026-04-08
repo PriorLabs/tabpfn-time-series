@@ -5,9 +5,6 @@ import backoff
 import pandas as pd
 from typing import Callable
 
-import tabpfn_client
-from tabpfn_client.client import ServiceClient
-from tabpfn_client.config import Config
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.worker.parallel_workers.cpu_worker import CPUParallelWorker
 from tabpfn_common_utils.telemetry import set_extension, track_model_call
@@ -91,19 +88,6 @@ class TabPFNClientCPUParallelWorker(CPUParallelWorker):
             num_workers: Number of parallel workers to use (default: 8)
         """
         super().__init__(inference_routine, num_workers)
-        # Capture the access token from the parent process so it can be
-        # re-set in worker processes.
-        self._access_token = ServiceClient._access_token
-
-    def _ensure_client_initialized(self):
-        """Re-initialize tabpfn_client auth in worker processes.
-
-        Joblib loky workers are fresh processes that don't inherit the
-        parent's tabpfn_client state. Re-set the access token so that
-        TabPFNClientRegressor.fit() -> init() sees is_initialized=True.
-        """
-        if not Config.is_initialized and self._access_token is not None:
-            tabpfn_client.set_access_token(self._access_token)
 
     @backoff.on_exception(
         backoff.expo,
@@ -137,7 +121,6 @@ class TabPFNClientCPUParallelWorker(CPUParallelWorker):
         Returns:
             DataFrame with predictions for the single time series
         """
-        self._ensure_client_initialized()
         TabPFNRetryHandler.increment_attempts()
         return super()._prediction_routine(
             item_id,
