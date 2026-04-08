@@ -27,7 +27,11 @@ dependencies = [
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
     "fev>=0.6.1",
-    "autogluon.timeseries",
+]
+
+[project.optional-dependencies]
+benchmarking = [
+    "autogluon.timeseries>=1.5.0, <2.0"
 ]
 
 
@@ -42,6 +46,7 @@ exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
 dev = [
+    "tabpfn-time-series[benchmarking]",
     "pytest>=8.4.1",
     "jupyter",
     "wandb>=0.19.8",
