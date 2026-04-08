@@ -31,7 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 benchmarking = [
-    "autogluon.timeseries>=1.5.0",
+    "autogluon.timeseries>=1.5.0, <2.0"
 ]
 
 
