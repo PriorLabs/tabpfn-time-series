@@ -29,6 +29,11 @@ dependencies = [
     "fev>=0.6.1",
 ]
 
+[project.optional-dependencies]
+benchmarking = [
+    "autogluon.timeseries>=1.5.0",
+]
+
 
 [tool.hatch.version]
 source = "vcs"
@@ -41,6 +46,7 @@ exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
 dev = [
+    "tabpfn-time-series[benchmarking]",
     "pytest>=8.4.1",
     "jupyter",
     "wandb>=0.19.8",
