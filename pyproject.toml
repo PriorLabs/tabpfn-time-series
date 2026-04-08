@@ -27,7 +27,6 @@ dependencies = [
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
     "fev>=0.6.1",
-    "autogluon.timeseries",
 ]
 
 
