@@ -215,6 +215,7 @@ class TabPFNTSPipeline:
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
+        devices: list[int] | None = None,
     ):
         """
         Initialize the TabPFN-TS forecasting pipeline.
@@ -234,6 +235,10 @@ class TabPFNTSPipeline:
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
                 See TABPFN_DEFAULT_CONFIG for default settings.
+            devices: List of GPU device indices to use for local inference
+                (e.g. [2, 3] to run on GPUs 2 and 3). Only used when
+                tabpfn_mode is LOCAL with CUDA available. If None, uses all
+                available GPUs.
 
         Note:
             - When using TabPFNMode.CLIENT, you'll be prompted to login or create an account
@@ -244,6 +249,16 @@ class TabPFNTSPipeline:
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
 
         self.max_context_length = max_context_length
+
+        if devices is not None and tabpfn_mode != TabPFNMode.LOCAL:
+            raise ValueError(
+                "The 'devices' parameter is only supported with tabpfn_mode=TabPFNMode.LOCAL"
+            )
+
+        worker_kwargs = {}
+        if devices is not None:
+            worker_kwargs["devices"] = devices
+
         self.predictor = TimeSeriesPredictor.from_tabpfn_family(
             tabpfn_class=(
                 TabPFNClientRegressor
@@ -252,6 +267,7 @@ class TabPFNTSPipeline:
             ),
             tabpfn_config=tabpfn_model_config,
             tabpfn_output_selection=tabpfn_output_selection,
+            worker_kwargs=worker_kwargs,
         )
         self.feature_transformer = FeatureTransformer(temporal_features)
 

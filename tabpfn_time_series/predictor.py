@@ -51,6 +51,7 @@ class TimeSeriesPredictor:
         tabpfn_class: Type[RegressorMixin],
         tabpfn_config: Dict[str, Any] = {},
         tabpfn_output_selection: str = "median",  # mean or median
+        worker_kwargs: Dict[str, Any] | None = None,
     ):
         from tabpfn import TabPFNRegressor
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
@@ -75,7 +76,11 @@ class TimeSeriesPredictor:
         else:
             raise ValueError(f"Expected TabPFN-family regressor, got {tabpfn_class}")
 
-        return cls(model_adapter=model_adapter, worker_class=worker_class)
+        return cls(
+            model_adapter=model_adapter,
+            worker_class=worker_class,
+            worker_kwargs=worker_kwargs or {},
+        )
 
     @classmethod
     def from_point_prediction_regressor(
