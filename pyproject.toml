@@ -47,7 +47,7 @@ exclude = ["docs", "gift_eval"]
 [dependency-groups]
 dev = [
     "tabpfn-time-series[benchmarking]",
-    "pytest>=8.4.1",
+    "pytest*",
     "jupyter",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
