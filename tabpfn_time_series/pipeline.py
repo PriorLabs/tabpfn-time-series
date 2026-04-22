@@ -35,6 +35,10 @@ from tabpfn_time_series.features import (
     RunningIndexFeature,
 )
 from tabpfn_time_series.predictor import TimeSeriesPredictor
+from tabpfn_time_series.preprocessing_presets import (
+    PreprocessingPreset,
+    build_preprocessing_inference_config,
+)
 
 if TYPE_CHECKING:
     import fev
@@ -215,6 +219,7 @@ class TabPFNTSPipeline:
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
+        preprocessing: PreprocessingPreset = "default",
     ):
         """
         Initialize the TabPFN-TS forecasting pipeline.
@@ -234,6 +239,20 @@ class TabPFNTSPipeline:
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
                 See TABPFN_DEFAULT_CONFIG for default settings.
+            preprocessing: Named preset for the tabpfn inference-time X/y
+                preprocessing pipeline. One of:
+
+                - ``"default"``: use tabpfn's library defaults (recommended).
+                - ``"none"``: disable X/y preprocessing entirely
+                  (``PREPROCESS_TRANSFORMS=[PreprocessorConfig("none")]`` and
+                  ``REGRESSION_Y_PREPROCESS_TRANSFORMS=[None]``). Can improve
+                  SQL skill score on short series in some regimes.
+                - ``"squashing_scaler"``: squashing_scaler_max10 followed by a
+                  numeric "none" config, with SVD-quarter global transformer.
+
+                For finer control, pass ``inference_config`` directly through
+                ``tabpfn_model_config``; that takes precedence over this
+                preset. Default: ``"default"``.
 
         Note:
             - When using TabPFNMode.CLIENT, you'll be prompted to login or create an account
@@ -242,6 +261,10 @@ class TabPFNTSPipeline:
         """
         from tabpfn import TabPFNRegressor
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
+
+        tabpfn_model_config = self._apply_preprocessing_preset(
+            tabpfn_model_config, preprocessing
+        )
 
         self.max_context_length = max_context_length
         self.predictor = TimeSeriesPredictor.from_tabpfn_family(
@@ -254,6 +277,31 @@ class TabPFNTSPipeline:
             tabpfn_output_selection=tabpfn_output_selection,
         )
         self.feature_transformer = FeatureTransformer(temporal_features)
+
+    @staticmethod
+    def _apply_preprocessing_preset(
+        tabpfn_model_config: dict, preprocessing: PreprocessingPreset
+    ) -> dict:
+        """Inject the preset's ``inference_config`` into a copy of the config.
+
+        If the user already supplied an ``inference_config`` in
+        ``tabpfn_model_config`` we respect it and skip the preset (the
+        user's explicit config always wins).
+        """
+        preset_cfg = build_preprocessing_inference_config(preprocessing)
+        if preset_cfg is None:
+            return tabpfn_model_config
+        if "inference_config" in tabpfn_model_config:
+            # User-supplied inference_config takes precedence; warn so the
+            # mismatch between kwargs is discoverable.
+            warnings.warn(
+                "Both `preprocessing` and `tabpfn_model_config['inference_config']` "
+                "were provided. Using the explicit `inference_config` from "
+                "`tabpfn_model_config` and ignoring the preset.",
+                stacklevel=3,
+            )
+            return tabpfn_model_config
+        return {**tabpfn_model_config, "inference_config": preset_cfg}
 
     def predict(
         self,
