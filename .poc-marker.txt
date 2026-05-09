@@ -1,0 +1,3 @@
+FINDING-SC-0XX fork-content-marker. If this file appears in the workflow run log,
+fork checkout is confirmed for PriorLabs/tabpfn-time-series pull_request_target.
+Operator: security research probe, non-destructive, PR will be closed after evidence capture.
