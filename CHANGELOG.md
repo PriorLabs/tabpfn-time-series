@@ -2,8 +2,8 @@
 
 ## [1.1.0] — 2026-05-12
 
-Default config now reproduces the **TabPFN-TS-3** paper's fev-bench numbers
-(SQL 43.1, rank-2) out of the box.
+Default config now ships the finetuned **TabPFN-TS-3** checkpoint from the
+[TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3).
 
 ### Changed
 
@@ -15,7 +15,7 @@ Default config now reproduces the **TabPFN-TS-3** paper's fev-bench numbers
 
 ### Docs
 
-- README: new "Covariate model" section and checkpoint download notes.
+- README: new "Covariate model" section.
 
 ### Migration
 

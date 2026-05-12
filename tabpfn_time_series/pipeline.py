@@ -248,8 +248,8 @@ class TabPFNTSPipeline:
 
         self.max_context_length = max_context_length
 
-        # Auto-resolve the default v3 ckpt to a local path via Hugging Face Hub
-        # when running locally. User-supplied paths pass through unchanged.
+        # Fill in the default v3 ts ckpt filename for LOCAL mode; tabpfn handles
+        # the download. User-supplied paths pass through unchanged.
         if tabpfn_mode == TabPFNMode.LOCAL:
             tabpfn_model_config = resolve_default_ckpt(tabpfn_model_config)
 
