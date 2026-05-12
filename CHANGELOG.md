@@ -7,13 +7,11 @@ Default config now reproduces the **TabPFN-TS-3** paper's fev-bench numbers
 
 ### Changed
 
-- Default checkpoint → **TabPFN-TS-3**, auto-downloaded from
-  [Prior-Labs/tabpfn_3](https://huggingface.co/Prior-Labs/tabpfn_3) on first
-  `LOCAL`-mode init.
+- Default checkpoint → **TabPFN-TS-3** in `LOCAL` mode (auto-downloaded by
+  `tabpfn` on first init).
 - `max_context_length` default: 4096 → **32768**.
 - `AutoSeasonalFeature.max_top_k` default: 5 → **12**.
 - `tabpfn>=8.0.0` (first PyPI release shipping the `tabpfn_v3` architecture).
-- Added `huggingface-hub>=0.20` runtime dependency.
 
 ### Docs
 

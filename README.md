@@ -67,7 +67,7 @@ pip install tabpfn-time-series
 
 ### Checkpoint
 
-`v1.1.0+` ships the **TabPFN-TS-3** finetuned checkpoint by default. In `LOCAL` mode it auto-downloads from [Hugging Face](https://huggingface.co/Prior-Labs/tabpfn_3) on first init and caches under `~/.cache/huggingface/`. Behind a firewall? Grab the [ckpt](https://huggingface.co/Prior-Labs/tabpfn_3/resolve/main/tabpfn-v3-regressor-v3_20260506_timeseries.ckpt) manually and pass it via `tabpfn_model_config={"model_path": "/path/to/ckpt"}`.
+`v1.1.0+` ships the **TabPFN-TS-3** finetuned checkpoint by default. In `LOCAL` mode `tabpfn` downloads it automatically on first init — accept the license at [ux.priorlabs.ai](https://ux.priorlabs.ai) first.
 
 ### For Developers
 
