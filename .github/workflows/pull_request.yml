@@ -58,5 +58,6 @@ jobs:
       - name: Run Tests
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: uv run pytest tests
