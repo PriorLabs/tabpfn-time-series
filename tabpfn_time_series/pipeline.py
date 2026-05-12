@@ -28,6 +28,7 @@ from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series.defaults import (
     DEFAULT_QUANTILE_CONFIG,
     TABPFN_DEFAULT_CONFIG,
+    resolve_default_ckpt,
 )
 from tabpfn_time_series.features import (
     AutoSeasonalFeature,
@@ -210,7 +211,7 @@ class TabPFNTSPipeline:
 
     def __init__(
         self,
-        max_context_length: int = 4096,
+        max_context_length: int = 32768,
         temporal_features: list[FeatureGenerator] = TABPFN_TS_DEFAULT_FEATURES,
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
@@ -222,7 +223,9 @@ class TabPFNTSPipeline:
         Args:
             max_context_length: Maximum number of historical timesteps to use for context.
                 The pipeline will automatically slice to the last `max_context_length` timesteps
-                if the historical data is longer. Default: 4096.
+                if the historical data is longer. Default: 32768 (matches the TabPFN-TS-3 ship
+                config; lower to 4096 for fastest inference at a small accuracy cost). The
+                practical memory ceiling is ~65536 for sub-hourly long-history tasks.
             temporal_features: List of feature generators to apply to the time series.
                 These generate temporal features like calendar features, seasonal patterns, etc.
                 Default: [RunningIndexFeature(), CalendarFeature(), AutoSeasonalFeature()].
@@ -244,6 +247,12 @@ class TabPFNTSPipeline:
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
 
         self.max_context_length = max_context_length
+
+        # Auto-resolve the default v3 ckpt to a local path via Hugging Face Hub
+        # when running locally. User-supplied paths pass through unchanged.
+        if tabpfn_mode == TabPFNMode.LOCAL:
+            tabpfn_model_config = resolve_default_ckpt(tabpfn_model_config)
+
         self.predictor = TimeSeriesPredictor.from_tabpfn_family(
             tabpfn_class=(
                 TabPFNClientRegressor
