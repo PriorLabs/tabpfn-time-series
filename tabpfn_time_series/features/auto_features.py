@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class AutoSeasonalFeature(FeatureGenerator):
     class Config:
-        max_top_k: int = 5
+        max_top_k: int = 12
         do_detrend: bool = True
         detrend_type: Literal["first_diff", "loess", "linear", "constant"] = "linear"
         use_peaks_only: bool = True

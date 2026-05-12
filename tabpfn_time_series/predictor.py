@@ -9,6 +9,7 @@ from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.defaults import (
     TABPFN_DEFAULT_CONFIG,
     DEFAULT_QUANTILE_CONFIG,
+    resolve_default_ckpt,
 )
 from tabpfn_time_series.worker import (
     ParallelWorker,
@@ -161,6 +162,7 @@ class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):
             tabpfn_class = TabPFNClientRegressor
         elif tabpfn_mode == TabPFNMode.LOCAL:
             tabpfn_class = TabPFNRegressor
+            tabpfn_config = resolve_default_ckpt(tabpfn_config)
         else:
             raise ValueError(f"Invalid tabpfn_mode: {tabpfn_mode}")
 
