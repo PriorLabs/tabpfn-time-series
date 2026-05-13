@@ -13,6 +13,7 @@ canonical list).
 |---|---|---|
 | AutoGluon — `TimeSeriesDataFrame` | `tabpfn_time_series/ts_dataframe.py` | Apache-2.0 |
 | Salesforce GIFT-Eval — `data.py` | `gift_eval/data.py` | Apache-2.0 |
+| Amazon Chronos — `to_gluonts_univariate` | `tabpfn_time_series/data_preparation.py` (function) | Apache-2.0 |
 
 ---
 
@@ -41,6 +42,14 @@ verbatim at the top of the file.
 > Note: the rest of `gift_eval/` contains TabPFN integration code that targets
 > the Salesforce-published GIFT-EVAL benchmark but is not directly derived
 > from Salesforce source.
+
+### Amazon Chronos — `to_gluonts_univariate`
+
+**Upstream:** https://github.com/amazon-science/chronos-forecasting (path: `scripts/evaluation/evaluate.py`, line 28 at the pinned commit)
+**Local path:** `tabpfn_time_series/data_preparation.py` (function `to_gluonts_univariate`)
+**License:** Apache-2.0
+**Copyright:** Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+**Modifications:** Adapted as a single-function vendoring from the upstream Chronos evaluation script. Upstream pins to a specific commit (`ad410c9`) referenced in the in-file attribution block.
 
 ---
 

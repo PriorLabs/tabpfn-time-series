@@ -205,7 +205,11 @@ offset_alias_to_period_alias = {
 }
 
 
-# From https://github.com/amazon-science/chronos-forecasting/blob/ad410c9c0ae0d499aeec9a7af09b0636844b6274/scripts/evaluation/evaluate.py#L28
+# Adapted from amazon-science/chronos-forecasting:
+#   https://github.com/amazon-science/chronos-forecasting/blob/ad410c9c0ae0d499aeec9a7af09b0636844b6274/scripts/evaluation/evaluate.py#L28
+#
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 def to_gluonts_univariate(hf_dataset: datasets.Dataset):
     series_fields = [
         col
