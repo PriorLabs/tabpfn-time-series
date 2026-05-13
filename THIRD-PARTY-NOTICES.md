@@ -20,13 +20,16 @@ canonical list).
 
 ### AutoGluon — TimeSeriesDataFrame
 
-**Upstream:** https://github.com/autogluon/autogluon/blob/main/autogluon/timeseries/ts_dataframe.py
+**Upstream:** https://github.com/autogluon/autogluon (path: `timeseries/src/autogluon/timeseries/dataset/ts_dataframe.py`)
 **Local path:** `tabpfn_time_series/ts_dataframe.py`
 **License:** Apache-2.0
-**Modifications:** File copied verbatim; removed AutoGluon dependency and the
-local-file-loading features. Per-file header preserved at the top of the file.
+**Copyright:** Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved. (per the AutoGluon `NOTICE` file)
+**Modifications:** Adapted from upstream; removed the AutoGluon dependency and the
+local-file-loading features. Upstream attribution preserved at the top of the file. Upstream
+does not ship a per-file copyright header, so attribution is carried in this NOTICE plus the
+in-file pointer to the upstream path.
 
-### Salesforce — GIFT-Eval data loading
+### Salesforce GIFT-Eval — `data.py`
 
 **Upstream:** https://github.com/SalesforceAIResearch/gift-eval
 **Local path:** `gift_eval/data.py`
