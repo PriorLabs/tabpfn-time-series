@@ -59,7 +59,7 @@ On top of that, thanks to **[tabpfn-client](https://github.com/automl/tabpfn-cli
 
 ## ⚙️ Installation
 
-You can install the package via pip:
+Install via pip:
 
 ```bash
 pip install tabpfn-time-series
