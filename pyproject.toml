@@ -63,8 +63,8 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
-"Bug Tracker" = "https://github.com/liam-sbhoo/tabpfn-time-series/issues"
+"Homepage" = "https://github.com/PriorLabs/tabpfn-time-series"
+"Bug Tracker" = "https://github.com/PriorLabs/tabpfn-time-series/issues"
 
 [tool.pytest.ini_options]
 markers = ["uses_tabpfn_client: These tests require a TabPFN API key."]
