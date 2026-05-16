@@ -11,24 +11,15 @@ TABPFN_V3_TS_CHECKPOINT = "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"
 TABPFN_DEFAULT_CONFIG: dict = {}
 
 
-def _default_ckpt_path() -> str:
-    """Absolute path to the v3 TS ckpt inside tabpfn's model cache dir.
-
-    `tabpfn`'s `resolve_model_path` treats a non-None `model_path` as a literal
-    path: a bare filename resolves relative to the *cwd*, bypassing the cache
-    dir entirely (re-downloads per working directory). Routing the filename
-    through tabpfn's own cache resolver instead makes the ckpt download into
-    (and load from) the standard cache dir -- honoring `model_cache_dir` /
-    `XDG_CACHE_HOME`, shared with plain `tabpfn`, cwd-independent."""
-    from tabpfn.model_loading import prepend_cache_path
-
-    return prepend_cache_path(TABPFN_V3_TS_CHECKPOINT)
-
-
 def resolve_default_ckpt(tabpfn_config: dict) -> dict:
     """Default `model_path` to the v3 TS ckpt (in tabpfn's cache dir) when
     absent or None; a user-supplied path passes through unchanged."""
     config = {**tabpfn_config}
     if config.get("model_path") is None:
-        config["model_path"] = _default_ckpt_path()
+        # Route the bare filename through tabpfn's cache resolver: otherwise
+        # `resolve_model_path` treats it as a literal path relative to the cwd,
+        # bypassing the model cache dir (re-downloads per working directory).
+        from tabpfn.model_loading import prepend_cache_path
+
+        config["model_path"] = prepend_cache_path(TABPFN_V3_TS_CHECKPOINT)
     return config
