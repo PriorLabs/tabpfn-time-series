@@ -12,6 +12,14 @@ TABPFN_DEFAULT_CONFIG: dict = {}
 
 
 def resolve_default_ckpt(tabpfn_config: dict) -> dict:
-    """Set `model_path` to the v3 ts ckpt when not provided. tabpfn handles the
-    actual download on first call. User-supplied paths pass through unchanged."""
-    return {"model_path": TABPFN_V3_TS_CHECKPOINT, **tabpfn_config}
+    """Default `model_path` to the v3 TS ckpt (in tabpfn's cache dir) when
+    absent or None; a user-supplied path passes through unchanged."""
+    config = {**tabpfn_config}
+    if config.get("model_path") is None:
+        # Route the bare filename through tabpfn's cache resolver: otherwise
+        # `resolve_model_path` treats it as a literal path relative to the cwd,
+        # bypassing the model cache dir (re-downloads per working directory).
+        from tabpfn.model_loading import prepend_cache_path
+
+        config["model_path"] = prepend_cache_path(TABPFN_V3_TS_CHECKPOINT)
+    return config
