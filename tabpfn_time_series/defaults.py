@@ -26,7 +26,9 @@ def _default_ckpt_path() -> str:
 
 
 def resolve_default_ckpt(tabpfn_config: dict) -> dict:
-    """Set `model_path` to the v3 ts ckpt (resolved into tabpfn's cache dir)
-    when not provided. tabpfn handles the actual download on first call.
-    User-supplied paths pass through unchanged."""
-    return {"model_path": _default_ckpt_path(), **tabpfn_config}
+    """Default `model_path` to the v3 TS ckpt (in tabpfn's cache dir) when
+    absent or None; a user-supplied path passes through unchanged."""
+    config = {**tabpfn_config}
+    if config.get("model_path") is None:
+        config["model_path"] = _default_ckpt_path()
+    return config
