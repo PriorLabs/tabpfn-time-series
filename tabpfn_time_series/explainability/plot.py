@@ -20,11 +20,20 @@ def plot_pdp(pdp_df: pd.DataFrame, feature: str | None = None, ax=None):
     x = pdp_df[feature]
     mean, std = pdp_df["mean"], pdp_df["std"]
     ax.plot(
-        x, mean, color="tomato", marker="o", markersize=3, linewidth=1.8,
+        x,
+        mean,
+        color="tomato",
+        marker="o",
+        markersize=3,
+        linewidth=1.8,
         label="mean over windows",
     )
     ax.fill_between(
-        x, mean - std, mean + std, color="tomato", alpha=0.2,
+        x,
+        mean - std,
+        mean + std,
+        color="tomato",
+        alpha=0.2,
         label="±1 std across windows",
     )
     ax.set_xlabel(feature)

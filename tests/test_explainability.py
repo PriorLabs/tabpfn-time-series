@@ -193,7 +193,11 @@ def test_window_shap_efficiency_sums_to_prediction_gap(explainer_factory):
 def test_predict_blocks_chunking_matches_single_call(explainer_factory):
     exp = explainer_factory({"hour_of_day_sin": 1.0, "temp": 0.5})
     w = exp._windows(
-        make_series(), prediction_length=12, context_length=72, n_windows=1, item_id=None
+        make_series(),
+        prediction_length=12,
+        context_length=72,
+        n_windows=1,
+        item_id=None,
     )[0]
     blocks = [w["test_X"], w["test_X"] * 1.1, w["test_X"] * 0.9, w["test_X"] + 1]
 
@@ -268,26 +272,39 @@ def test_integration_local_tabpfn():
     exp = TabPFNTSExplainer(pipeline)
 
     pdp = exp.partial_dependence(
-        df, "hour_of_day", prediction_length=horizon,
-        context_length=context_length, n_contexts=1,
+        df,
+        "hour_of_day",
+        prediction_length=horizon,
+        context_length=context_length,
+        n_contexts=1,
     )
     assert len(pdp) == 24 and np.isfinite(pdp["mean"]).all()
 
     shap_df = exp.window_shap(
-        df, prediction_length=horizon, context_length=context_length,
-        n_windows=2, n_permutations=4,
+        df,
+        prediction_length=horizon,
+        context_length=context_length,
+        n_windows=2,
+        n_permutations=4,
     )
     assert shap_df.shape[1] == 2 and np.isfinite(shap_df.values).all()
 
     decomp = exp.decompose(df, features=["hour_of_day", "day_of_week"], period=24)
     assert list(decomp.columns) == [
-        "observed", "trend", "hour_of_day", "day_of_week", "residual"
+        "observed",
+        "trend",
+        "hour_of_day",
+        "day_of_week",
+        "residual",
     ]
     assert np.isfinite(decomp.to_numpy()).all()
 
     w = exp._windows(
-        df, prediction_length=horizon, context_length=context_length,
-        n_windows=1, item_id=None,
+        df,
+        prediction_length=horizon,
+        context_length=context_length,
+        n_windows=1,
+        item_id=None,
     )[0]
 
     # Load-bearing assumption: batching perturbed horizons into one inference call
