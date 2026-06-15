@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Type, Dict, Any
 
 import torch
+import warnings
 from sklearn.base import RegressorMixin
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
@@ -41,7 +42,6 @@ def _select_local_worker_class() -> Type[ParallelWorker]:
         return GPUParallelWorker
     has_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
     if not has_mps:
-        import warnings
         warnings.warn(
             "Running TabPFN locally on CPU; inference will be slow for long contexts. "
             "Use a CUDA GPU, or TabPFNMode.CLIENT for cloud inference.",
