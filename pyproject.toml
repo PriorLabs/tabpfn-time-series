@@ -67,4 +67,7 @@ dev = [
 "Bug Tracker" = "https://github.com/PriorLabs/tabpfn-time-series/issues"
 
 [tool.pytest.ini_options]
-markers = ["uses_tabpfn_client: These tests require a TabPFN API key."]
+markers = [
+    "uses_tabpfn_client: These tests require a TabPFN API key.",
+    "uses_tabpfn_local: These tests require a local TabPFN model.",
+]

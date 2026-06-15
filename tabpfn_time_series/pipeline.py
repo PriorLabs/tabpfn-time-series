@@ -213,7 +213,7 @@ class TabPFNTSPipeline:
         self,
         max_context_length: int = 32768,
         temporal_features: list[FeatureGenerator] = TABPFN_TS_DEFAULT_FEATURES,
-        tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
+        tabpfn_mode: TabPFNMode = TabPFNMode.LOCAL,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
     ):
@@ -232,7 +232,7 @@ class TabPFNTSPipeline:
             tabpfn_mode: Inference mode for TabPFN.
                 - TabPFNMode.CLIENT: Use the cloud API (recommended, no GPU needed)
                 - TabPFNMode.LOCAL: Run locally on your machine (requires GPU for speed)
-                Default: TabPFNMode.CLIENT.
+                Default: TabPFNMode.LOCAL.
             tabpfn_output_selection: Method to aggregate TabPFN ensemble predictions.
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
