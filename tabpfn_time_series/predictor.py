@@ -30,6 +30,23 @@ class TabPFNMode(str, Enum):
     CLIENT = "client"
 
 
+def _select_local_worker_class() -> Type[ParallelWorker]:
+    """Pick the worker for local TabPFN from the available torch device.
+
+    CUDA uses the multi-GPU worker. MPS and CPU both use the CPU worker for
+    item-level parallelism; tabpfn routes the tensor compute to MPS itself via
+    device="auto". A bare CPU is flagged as slow for long contexts.
+    """
+    if torch.cuda.is_available():
+        return GPUParallelWorker
+    if not torch.backends.mps.is_available():
+        logger.warning(
+            "Running TabPFN locally on CPU; inference will be slow for long contexts. "
+            "Use a CUDA GPU, or TabPFNMode.CLIENT for cloud inference."
+        )
+    return CPUParallelWorker
+
+
 @set_extension("time-series")
 class TimeSeriesPredictor:
     def __init__(
@@ -38,9 +55,7 @@ class TimeSeriesPredictor:
         worker_class: Type[ParallelWorker] = None,
         worker_kwargs: dict = {},
     ):
-        worker_class = worker_class or (
-            GPUParallelWorker if torch.cuda.is_available() else CPUParallelWorker
-        )
+        worker_class = worker_class or _select_local_worker_class()
         self._worker = worker_class(
             inference_routine=model_adapter.predict,
             **worker_kwargs,
@@ -62,17 +77,14 @@ class TimeSeriesPredictor:
             tabpfn_output_selection=tabpfn_output_selection,
         )
 
-        worker_class = None
         if tabpfn_class == TabPFNClientRegressor:
             from tabpfn_time_series.worker.parallel_workers import (
                 TabPFNClientCPUParallelWorker,
             )
 
             worker_class = TabPFNClientCPUParallelWorker
-        elif tabpfn_class == TabPFNRegressor and torch.cuda.is_available():
-            worker_class = GPUParallelWorker
-        elif tabpfn_class == TabPFNRegressor and not torch.cuda.is_available():
-            worker_class = CPUParallelWorker
+        elif tabpfn_class == TabPFNRegressor:
+            worker_class = _select_local_worker_class()
         else:
             raise ValueError(f"Expected TabPFN-family regressor, got {tabpfn_class}")
 
