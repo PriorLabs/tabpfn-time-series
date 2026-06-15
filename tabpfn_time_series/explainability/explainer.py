@@ -90,12 +90,16 @@ class TabPFNTSExplainer:
         ids = df["item_id"].unique()
         if item_id is None:
             item_id = ids[0]
-            if len(ids) > 1:
-                warnings.warn(
-                    f"Multiple item_ids present; explaining '{item_id}'. "
-                    "Pass item_id to choose a different series.",
-                    stacklevel=2,
-                )
+    def _select_item(self, df: pd.DataFrame, item_id) -> pd.DataFrame:
+        if df.empty:
+            raise ValueError("Input DataFrame is empty.")
+        if "item_id" not in df.columns:
+            return df
+        ids = df["item_id"].unique()
+        if item_id is None:
+            item_id = ids[0]
+        elif item_id not in ids:
+            raise ValueError(f"item_id '{item_id}' not found in DataFrame. Available IDs: {list(ids)}")
         return df[df["item_id"] == item_id]
 
     def _featurize(self, ctx_df: pd.DataFrame, fut_df: pd.DataFrame):
