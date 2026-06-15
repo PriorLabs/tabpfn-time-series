@@ -39,10 +39,14 @@ def _select_local_worker_class() -> Type[ParallelWorker]:
     """
     if torch.cuda.is_available():
         return GPUParallelWorker
-    if not torch.backends.mps.is_available():
-        logger.warning(
+    has_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    if not has_mps:
+        import warnings
+        warnings.warn(
             "Running TabPFN locally on CPU; inference will be slow for long contexts. "
-            "Use a CUDA GPU, or TabPFNMode.CLIENT for cloud inference."
+            "Use a CUDA GPU, or TabPFNMode.CLIENT for cloud inference.",
+            UserWarning,
+            stacklevel=2,
         )
     return CPUParallelWorker
 
