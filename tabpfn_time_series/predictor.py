@@ -46,6 +46,11 @@ class TimeSeriesPredictor:
             **worker_kwargs,
         )
 
+    @property
+    def inference_routine(self):
+        """Per-series inference routine: (train_X, train_y, test_X, quantiles=...) -> dict."""
+        return self._worker.inference_routine
+
     @classmethod
     def from_tabpfn_family(
         cls,

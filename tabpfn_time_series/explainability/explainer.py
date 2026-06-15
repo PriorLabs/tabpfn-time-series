@@ -9,32 +9,35 @@ The wrapper exposes three lightweight explanations of a TabPFN-TS forecast:
 - ``window_shap``: grouped Shapley attributions of the forecast to feature
   groups, computed across several rolling windows of the series. Stacked across
   windows this gives a (feature x time) heatmap, a bit like a spectrogram.
-- ``decompose``: a classic model-free additive decomposition of the target signal
-  into trend + per-calendar-feature seasonal components + residual, the simplest
-  view of the autoregressive signal before the model-based explanations above.
+- ``decompose``: a classic model-free additive decomposition of the *target signal
+  itself* (no model involved) into trend + per-calendar-feature seasonal components
+  + residual. It explains the data, not the forecast, and serves as the simplest
+  baseline alongside the two model-based explanations above.
+
+All model-based explanations target the *point* forecast (the pipeline's selected
+mean/median), so no quantiles are computed.
 
 Efficiency comes from one observation about the pipeline: featurization happens
 *before* the model, and the model treats every non-``target`` column as a plain
 feature. A perturbation therefore only changes the *horizon* (test) rows, never
-the context. So we fit the model once per window and reuse that fit across every
-perturbation by batching them into a single prediction call. The number of
-TabPFN fits equals the number of windows, not the number of perturbations.
+the context. TabPFN evaluates each test row independently of the others given the
+context, so we fit the model once per window and reuse that fit across every
+perturbation by batching them into a single prediction call (the number of TabPFN
+fits equals the number of windows, not the number of perturbations). Batches are
+split to keep each call under ``max_batch_rows`` test rows; this matters in CLIENT
+mode, where one window can otherwise produce a very large single request.
 """
 
 from __future__ import annotations
+
+import warnings
 
 import numpy as np
 import pandas as pd
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import split_time_series_to_X_y
-from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG
 from tabpfn_time_series.features.basic_features import CalendarFeature
-from tabpfn_time_series.pipeline import (
-    _preprocess_context,
-    _preprocess_covariates,
-    _preprocess_future,
-)
 
 # Natural seasonality of each calendar concept, as used by CalendarFeature.
 CALENDAR_PERIODS = {
@@ -61,17 +64,25 @@ def _calendar_sin_cos(name: str, value: float) -> tuple[float, float]:
 
 
 class TabPFNTSExplainer:
-    """Post-hoc explanations for a (single-series) TabPFN-TS forecast."""
+    """Post-hoc explanations for a (single-series) TabPFN-TS forecast.
 
-    def __init__(self, pipeline):
+    Args:
+        pipeline: a (fitted) ``TabPFNTSPipeline`` to explain.
+        max_batch_rows: cap on the number of test rows per inference call. Larger
+            batches mean fewer model fits but bigger requests; lower this if you hit
+            payload/memory limits (notably in CLIENT mode).
+    """
+
+    def __init__(self, pipeline, max_batch_rows: int = 10000):
         self.pipeline = pipeline
+        self.max_batch_rows = max_batch_rows
 
     # -- core engine ---------------------------------------------------------
 
     @property
     def _inference_routine(self):
-        # model_adapter.predict(train_X, train_y, test_X, quantiles=...) -> dict
-        return self.pipeline.predictor._worker.inference_routine
+        # (train_X, train_y, test_X, quantiles=...) -> dict, the per-series routine
+        return self.pipeline.predictor.inference_routine
 
     def _select_item(self, df: pd.DataFrame, item_id) -> pd.DataFrame:
         if "item_id" not in df.columns:
@@ -79,6 +90,12 @@ class TabPFNTSExplainer:
         ids = df["item_id"].unique()
         if item_id is None:
             item_id = ids[0]
+            if len(ids) > 1:
+                warnings.warn(
+                    f"Multiple item_ids present; explaining '{item_id}'. "
+                    "Pass item_id to choose a different series.",
+                    stacklevel=2,
+                )
         return df[df["item_id"] == item_id]
 
     def _featurize(self, ctx_df: pd.DataFrame, fut_df: pd.DataFrame):
@@ -90,10 +107,7 @@ class TabPFNTSExplainer:
 
         ctx = TimeSeriesDataFrame.from_data_frame(ctx_df)
         fut = TimeSeriesDataFrame.from_data_frame(fut_df)
-        ctx = _preprocess_context(ctx, self.pipeline.max_context_length)
-        fut = _preprocess_future(fut)
-        ctx, fut = _preprocess_covariates(ctx, fut)
-        return self.pipeline.feature_transformer.transform(ctx, fut)
+        return self.pipeline.featurize(ctx, fut)
 
     def _make_window(self, df, cutoff, context_length, prediction_length):
         ctx_df = df.iloc[cutoff - context_length : cutoff]
@@ -117,7 +131,14 @@ class TabPFNTSExplainer:
                 f"Series too short: need >= context_length + prediction_length "
                 f"({context_length} + {prediction_length}), got {n}."
             )
-        return np.unique(np.linspace(first, last, n_windows).round().astype(int))
+        cutoffs = np.unique(np.linspace(first, last, n_windows).round().astype(int))
+        if len(cutoffs) < n_windows:
+            warnings.warn(
+                f"Series too short for {n_windows} distinct windows; "
+                f"using {len(cutoffs)}.",
+                stacklevel=2,
+            )
+        return cutoffs
 
     def _windows(
         self, context_df, prediction_length, context_length, n_windows, item_id
@@ -129,16 +150,24 @@ class TabPFNTSExplainer:
             self._make_window(df, c, context_length, prediction_length) for c in cutoffs
         ]
 
-    def _predict_blocks(self, train_X, train_y, blocks, quantiles):
-        """Fit once, predict a list of horizon matrices in a single batched call.
+    def _predict_blocks(self, train_X, train_y, blocks):
+        """Fit once per chunk, predict a list of horizon matrices.
 
+        Blocks are concatenated into as few inference calls as possible while
+        keeping each call's test matrix under ``max_batch_rows`` rows (one model fit
+        per call). Only the point forecast is used, so no quantiles are computed.
         Returns an array of shape (n_blocks, horizon) of point forecasts.
         """
         cols = train_X.columns
         horizon = len(blocks[0])
-        big = pd.concat([b[cols] for b in blocks], ignore_index=True)
-        out = self._inference_routine(train_X, train_y, big, quantiles=quantiles)
-        return np.asarray(out["target"]).reshape(len(blocks), horizon)
+        per_chunk = max(1, self.max_batch_rows // horizon)
+        out = []
+        for i in range(0, len(blocks), per_chunk):
+            chunk = blocks[i : i + per_chunk]
+            big = pd.concat([b[cols] for b in chunk], ignore_index=True)
+            pred = self._inference_routine(train_X, train_y, big, quantiles=())
+            out.append(np.asarray(pred["target"]).reshape(len(chunk), horizon))
+        return np.vstack(out)
 
     def feature_groups(self, feature_cols) -> dict[str, list[str]]:
         """Map interpretable group names to the featurized columns they own."""
@@ -173,9 +202,8 @@ class TabPFNTSExplainer:
         context_length: int = 168,
         item_id=None,
         n_grid: int = 12,
-        quantiles=DEFAULT_QUANTILE_CONFIG,
     ) -> pd.DataFrame:
-        """Partial dependence of the forecast on ``feature``.
+        """Partial dependence of the (point) forecast on ``feature``.
 
         ``feature`` is either a calendar concept (e.g. ``"hour_of_day"``,
         ``"day_of_week"``) or a covariate column name. Calendar features are swept
@@ -183,7 +211,9 @@ class TabPFNTSExplainer:
         swept directly over their observed range.
 
         The PDP is averaged over the forecast horizon and over ``n_contexts``
-        rolling windows (only ``n_contexts`` model fits in total).
+        rolling windows (only ``n_contexts`` model fits in total). The returned
+        ``std`` column is the spread *across those windows*, not a predictive
+        interval.
         """
         windows = self._windows(
             context_df, prediction_length, context_length, n_contexts, item_id
@@ -195,7 +225,7 @@ class TabPFNTSExplainer:
         per_window = []
         for w in windows:
             blocks = [override(w["test_X"], v) for v in grid]
-            preds = self._predict_blocks(w["train_X"], w["train_y"], blocks, quantiles)
+            preds = self._predict_blocks(w["train_X"], w["train_y"], blocks)
             per_window.append(preds.mean(axis=1))  # mean over horizon -> (n_grid,)
         arr = np.vstack(per_window)  # (n_contexts, n_grid)
 
@@ -249,15 +279,21 @@ class TabPFNTSExplainer:
         item_id=None,
         n_permutations: int = 16,
         min_std: float = 1e-6,
-        quantiles=DEFAULT_QUANTILE_CONFIG,
         random_state: int = 0,
     ) -> pd.DataFrame:
-        """Grouped Shapley attributions of the forecast across rolling windows.
+        """Grouped Shapley attributions of the (point) forecast across rolling windows.
 
         Returns a DataFrame indexed by feature group, with one column per window
         (named by its forecast-origin timestamp). Values are the group's mean
         Shapley contribution to the horizon forecast. Plot as a heatmap for a
         spectrogram-like view of how feature importance shifts over time.
+
+        Attributions are interventional Shapley values against a baseline where each
+        group's columns are set to their context mean. Be aware this makes the
+        ``trend`` group (running_index/year) swing hard: the horizon's running_index
+        lies well outside the context range, so replacing it with the mean is a large
+        intervention and trend tends to dominate the heatmap. Pass an explicit
+        ``groups`` mapping to drop or regroup it.
         """
         windows = self._windows(
             context_df, prediction_length, context_length, n_windows, item_id
@@ -267,11 +303,11 @@ class TabPFNTSExplainer:
 
         columns = {}
         for w in windows:
-            phi = self._shapley(w, group_map, n_permutations, min_std, quantiles, rng)
+            phi = self._shapley(w, group_map, n_permutations, min_std, rng)
             columns[w["origin"]] = phi
         return pd.DataFrame(columns).fillna(0.0)
 
-    def _shapley(self, window, group_map, n_permutations, min_std, quantiles, rng):
+    def _shapley(self, window, group_map, n_permutations, min_std, rng):
         train_X, train_y, base = window["train_X"], window["train_y"], window["test_X"]
 
         # Keep only groups whose columns actually vary in the context.
@@ -322,7 +358,7 @@ class TabPFNTSExplainer:
                 plan.append((pi, gi, prev, curr))
                 prev = curr
 
-        fvals = self._predict_blocks(train_X, train_y, blocks, quantiles).mean(axis=1)
+        fvals = self._predict_blocks(train_X, train_y, blocks).mean(axis=1)
 
         contrib = np.zeros((len(perms[:n_permutations]), m))
         for pi, gi, prev, curr in plan:
@@ -338,19 +374,21 @@ class TabPFNTSExplainer:
         period: int = 24,
         item_id=None,
     ) -> pd.DataFrame:
-        """Classic additive decomposition of the (autoregressive) target signal.
+        """Classic additive decomposition of the target signal itself.
 
-        This is a plain seasonal-means decomposition of the series itself, with no
-        model involved, the simplest baseline before the model-based explanations
-        above:
+        This explains the *data*, not the forecast: a plain seasonal-means
+        decomposition of the series with no model involved, offered as the simplest
+        baseline alongside the model-based explanations above. The series is split as:
 
             observed = trend + sum(seasonal feature components) + residual
 
         ``trend`` is a centered moving average over ``period`` steps. Each seasonal
         component is the mean of the de-trended signal grouped by that calendar
         value (hour-of-day, day-of-week, ...) and is extracted sequentially, so the
-        columns sum back to ``observed`` exactly. ``period`` defaults to 24, i.e.
-        hourly data; set it to the dominant cycle length (in steps) of your series.
+        columns sum back to ``observed`` exactly. Because extraction is sequential,
+        the split is order-dependent (earlier features absorb shared variance), and
+        edge windows of the centered trend are one-sided. ``period`` defaults to 24,
+        i.e. hourly data; set it to the dominant cycle length (in steps) of your series.
         """
         df = self._select_item(context_df, item_id).sort_values("timestamp")
         ts = pd.DatetimeIndex(df["timestamp"])
