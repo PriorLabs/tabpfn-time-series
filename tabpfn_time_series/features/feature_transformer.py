@@ -26,7 +26,7 @@ class FeatureTransformer:
 
         train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
         test_plain = pd.DataFrame(test_tsdf).assign(_is_train=False)
-        # Convert the train and test to the same data type 
+        # Convert the train and test to the same data type
         # (or float to support NA, not possible with integer type)
         target_dtype = train_plain[target_column].dtype
         if pd.api.types.is_integer_dtype(target_dtype):
