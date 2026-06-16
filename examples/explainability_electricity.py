@@ -13,6 +13,17 @@ The series is subsampled aggressively so the whole demo runs in well under a
 minute on CPU/MPS. Efficiency comes from reusing a single context fit across all
 perturbations of a window (see TabPFNTSExplainer), so only one TabPFN fit is paid
 per window.
+
+Interpreting the results, and the main limitation
+--------------------------------------------------
+The lagged target is *not* exposed to the model as a covariate, so these tools
+cannot directly attribute the forecast to "what the series did recently". PDP and
+window SHAP therefore explain the influence of the calendar/trend features and the
+known covariates, not of past target values. The time-series components (the
+``trend`` and ``auto_seasonal`` groups) act as a partial proxy for that
+autoregressive signal. The model-free ``decompose`` is currently the most direct
+view of the target's own structure; richer (more mechanistic) attributions of the
+autoregressive component are future work.
 """
 
 from pathlib import Path
@@ -81,7 +92,6 @@ def main():
         prediction_length=horizon,
         context_length=context_length,
         n_windows=8,
-        n_permutations=12,
     )
     fig, ax = plt.subplots(figsize=(11, 4.5))
     plot_window_shap_spectrogram(shap_df, ax=ax)

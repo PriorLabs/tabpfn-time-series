@@ -13,11 +13,23 @@ This folder contains usage examples demonstrating core functionalities of the `t
 `TabPFNTSExplainer` wraps a fitted `TabPFNTSPipeline` and offers three lightweight explanations. The two model-based ones (PDP, window SHAP) keep cost down by fitting the model once per window and reusing that fit across every perturbation (only the forecast horizon changes), so the number of TabPFN fits equals the number of windows, not the number of perturbations.
 
 - **Partial dependence** of the point forecast over calendar concepts (in the original feature space, e.g. sweep hour 0..23 and re-encode to sin/cos) and over known covariates.
-- **Window SHAP**: grouped Shapley attributions of the point forecast across rolling windows, a feature × time "spectrogram".
+- **Window SHAP**: grouped Shapley attributions of the point forecast across rolling forecast windows (the "window" framing follows [WindowSHAP](https://arxiv.org/abs/2211.06507)), plotted as a feature × time "spectrogram". Shapley values are estimated with [`shapiq`](https://github.com/mmschlk/shapiq)'s `KernelSHAP`.
 - **Series decomposition**: a classic model-free additive decomposition of the target signal itself (not the forecast) into trend + per-time-feature seasonal components + residual (`observed = trend + hour_of_day + day_of_week + residual`).
 
-Run the example to generate the figures (written to `explainability_outputs/`, which is git-ignored):
+Window SHAP attributes to interpretable **feature groups**, not raw featurizer columns, so each calendar concept reads as a single row rather than an opaque sin/cos pair:
+
+- one group per calendar concept (`hour_of_day`, `day_of_week`, ...), owning its `{concept}_sin` / `{concept}_cos` columns;
+- `trend`: `running_index` and `year` (the non-periodic drift terms);
+- `auto_seasonal`: the auto-detected Fourier columns (`sin_#.../cos_#...`);
+- one group per remaining column, treated as a user covariate.
+
+#### Interpreting the results (and the main limitation)
+
+The lagged target is **not** fed to the model as a covariate, so PDP and window SHAP cannot directly attribute the forecast to recent target values; they explain the calendar/trend features and the known covariates. The time-series components (the `trend` and `auto_seasonal` groups) act as a partial proxy for that autoregressive signal. The model-free decomposition is currently the most direct view of the target's own structure; richer, more mechanistic attributions of the autoregressive component are future work.
+
+Install the optional dependencies (`shapiq`, `matplotlib`), then run the example to generate the figures (written to `explainability_outputs/`, which is git-ignored):
 
 ```bash
+pip install 'tabpfn-time-series[explainability]'
 python examples/explainability_electricity.py
 ```

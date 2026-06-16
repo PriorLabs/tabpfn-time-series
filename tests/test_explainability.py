@@ -152,16 +152,16 @@ def test_window_shap_shape_and_attribution(explainer_factory):
         prediction_length=12,
         context_length=72,
         n_windows=4,
-        n_permutations=8,
     )
 
     assert shap_df.shape[1] == 4  # one column per window
     assert "hour_of_day" in shap_df.index
-    # Only the weighted group should carry attribution; the rest are ~0.
+    # Only the weighted group should carry attribution; the rest are ~0
+    # (KernelSHAP's regression leaves ~1e-8 numerical noise on the zeros).
     mean_abs = shap_df.abs().mean(axis=1)
     assert mean_abs["hour_of_day"] == mean_abs.max()
     others = mean_abs.drop("hour_of_day")
-    assert others.max() < 1e-9
+    assert others.max() < 1e-6
 
 
 def test_window_shap_efficiency_sums_to_prediction_gap(explainer_factory):
@@ -176,8 +176,7 @@ def test_window_shap_efficiency_sums_to_prediction_gap(explainer_factory):
     )
     w = windows[0]
     group_map = exp.feature_groups(w["train_X"].columns)
-    rng = np.random.default_rng(0)
-    phi = exp._shapley(w, group_map, n_permutations=16, min_std=1e-6, rng=rng)
+    phi = exp._shapley(w, group_map, budget=None, min_std=1e-6, random_state=0)
 
     base = w["test_X"]
     train_X, train_y = w["train_X"], w["train_y"]
@@ -285,7 +284,6 @@ def test_integration_local_tabpfn():
         prediction_length=horizon,
         context_length=context_length,
         n_windows=2,
-        n_permutations=4,
     )
     assert shap_df.shape[1] == 2 and np.isfinite(shap_df.values).all()
 

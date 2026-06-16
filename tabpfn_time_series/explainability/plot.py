@@ -2,17 +2,20 @@
 
 Each helper draws onto a provided ``ax`` (or creates one) and returns it, so they
 compose in notebooks and scripts alike. None of them call ``plt.show()``.
+``matplotlib`` is an optional dependency, imported on first use of each helper.
 """
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from tabpfn_time_series.explainability._deps import require
 
 
 def plot_pdp(pdp_df: pd.DataFrame, feature: str | None = None, ax=None):
     """Plot a partial-dependence curve with a +/-1 std band across windows."""
+    plt = require("matplotlib.pyplot")
     feature = feature or pdp_df.columns[0]
     if ax is None:
         _, ax = plt.subplots(figsize=(6, 3.5))
@@ -46,7 +49,10 @@ def plot_pdp(pdp_df: pd.DataFrame, feature: str | None = None, ax=None):
 
 def plot_pdp_grid(pdps: dict[str, pd.DataFrame], ncols: int = 3):
     """Small multiples of several PDP curves."""
+    plt = require("matplotlib.pyplot")
     n = len(pdps)
+    if n == 0:
+        raise ValueError("pdps cannot be empty.")
     ncols = min(ncols, n)
     nrows = int(np.ceil(n / ncols))
     fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3.2 * nrows))
@@ -61,6 +67,9 @@ def plot_pdp_grid(pdps: dict[str, pd.DataFrame], ncols: int = 3):
 
 def plot_window_shap_spectrogram(shap_df: pd.DataFrame, ax=None):
     """Heatmap of grouped Shapley values: feature groups (y) x window time (x)."""
+    plt = require("matplotlib.pyplot")
+    if shap_df.empty:
+        raise ValueError("shap_df cannot be empty.")
     if ax is None:
         _, ax = plt.subplots(figsize=(10, 4))
 
@@ -87,8 +96,10 @@ def plot_window_shap_spectrogram(shap_df: pd.DataFrame, ax=None):
 
 def plot_decomposition(decomp_df: pd.DataFrame):
     """Traditional decomposition: one subplot per component (observed, trend, ...)."""
+    plt = require("matplotlib.pyplot")
     cols = list(decomp_df.columns)
     fig, axes = plt.subplots(len(cols), 1, figsize=(11, 1.7 * len(cols)), sharex=True)
+    axes = np.atleast_1d(axes).ravel()
     x = decomp_df.index
     for ax, col in zip(axes, cols):
         if col == "residual":

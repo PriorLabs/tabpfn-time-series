@@ -993,6 +993,15 @@ wheels = [
 ]
 
 [[package]]
+name = "colour"
+version = "0.1.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/d4/5911a7618acddc3f594ddf144ecd8a03c29074a540f4494670ad8f153efe/colour-0.1.5.tar.gz", hash = "sha256:af20120fefd2afede8b001fbef2ea9da70ad7d49fafdb6489025dae8745c3aee", size = 24776, upload-time = "2017-11-19T23:20:08.015Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/46/e81907704ab203206769dee1385dc77e1407576ff8f50a0681d0a6b541be/colour-0.1.5-py2.py3-none-any.whl", hash = "sha256:33f6db9d564fadc16e59921a56999b79571160ce09916303d35346dddc17978c", size = 23772, upload-time = "2017-11-19T23:20:04.56Z" },
+]
+
+[[package]]
 name = "comm"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1645,6 +1654,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0f/99/24283b424e7aa85825613f45f2b5db91904661aec719bc0108cac05307a6/fugue-0.9.7.tar.gz", hash = "sha256:3e38d43ffc4bcdca78ed80628d4fb8bb707ca1fdf3b2abe9b8793e80ac968970", size = 227302, upload-time = "2026-02-20T13:57:54.657Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/5d/0d3cd8dbd9368fc22b4a11ee1dee93e3ce16842afd15ec2d37e434c6b8d2/fugue-0.9.7-py3-none-any.whl", hash = "sha256:2eaab8aa709044a77b9f83b3fa79f83bd509205893824f27302082913a46f1fe", size = 281042, upload-time = "2026-02-20T13:57:53.182Z" },
+]
+
+[[package]]
+name = "galois"
+version = "0.4.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numba", marker = "python_full_version < '3.12'" },
+    { name = "numpy", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/08/84/996f1c4a7e8fe973a7f8e4d7901e125a91d0abb62615e35076ff47e9383a/galois-0.4.11.tar.gz", hash = "sha256:f5055546c4b39d1e36decae9d4f21f3d66d9c6c7c9aec39189cb5d2284e9022f", size = 7402587, upload-time = "2026-05-02T18:21:28.615Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/89/dc69acbd34bde07b9dee9f9f88d7ce61ff97fd99d6d576d72d2db1461349/galois-0.4.11-py3-none-any.whl", hash = "sha256:d2e12a2b7fd44b108cc15d7de27dabcb8a98a556ea2c69c94fe695139629d9aa", size = 4197346, upload-time = "2026-05-02T18:21:26.868Z" },
 ]
 
 [[package]]
@@ -5453,6 +5476,73 @@ wheels = [
 ]
 
 [[package]]
+name = "shapiq"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.11.*'",
+    "python_full_version < '3.11'",
+]
+dependencies = [
+    { name = "colour", marker = "python_full_version < '3.12'" },
+    { name = "galois", marker = "python_full_version < '3.12'" },
+    { name = "joblib", marker = "python_full_version < '3.12'" },
+    { name = "matplotlib", marker = "python_full_version < '3.12'" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", marker = "python_full_version < '3.12'" },
+    { name = "pandas", marker = "python_full_version < '3.12'" },
+    { name = "pillow", marker = "python_full_version < '3.12'" },
+    { name = "requests", marker = "python_full_version < '3.12'" },
+    { name = "scikit-learn", marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "sparse-transform", marker = "python_full_version < '3.12'" },
+    { name = "tqdm", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/20/8e7bf8e1d2ad5e50c5ddb884760fe67657eee38b0ebe9d9996a0ab227221/shapiq-1.4.1.tar.gz", hash = "sha256:7f612c84fcfe4746ff826db72efa2944f9aa693c5c00c6e17a882613471534f8", size = 5781786, upload-time = "2025-11-10T19:43:31.882Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/cc/13fefd7203ffe71d5107221be939dd64945378b93f7c0a7cb82d7f281071/shapiq-1.4.1-py3-none-any.whl", hash = "sha256:c86667eb28ea0de56005fbe9fd072783242b74aa87fede11e07b6b915b93e7b3", size = 5871550, upload-time = "2025-11-10T19:43:29.858Z" },
+]
+
+[[package]]
+name = "shapiq"
+version = "1.5.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+    "python_full_version >= '3.12' and python_full_version < '3.14'",
+]
+dependencies = [
+    { name = "colour", marker = "python_full_version >= '3.12'" },
+    { name = "joblib", marker = "python_full_version >= '3.12'" },
+    { name = "matplotlib", marker = "python_full_version >= '3.12'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", marker = "python_full_version >= '3.12'" },
+    { name = "pandas", marker = "python_full_version >= '3.12'" },
+    { name = "pillow", marker = "python_full_version >= '3.12'" },
+    { name = "requests", marker = "python_full_version >= '3.12'" },
+    { name = "scikit-learn", marker = "python_full_version >= '3.12'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "tqdm", marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/bb/940b6af2c90238873b4f22011a2f2f924111bde12abeac83294d32111a94/shapiq-1.5.2.tar.gz", hash = "sha256:6336d764ce27836b69a1d3283392d69c8c2f4dcd3f52e19d2ad037d5aac1708c", size = 15210062, upload-time = "2026-06-12T22:37:09.726Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/e9/10d65b75afd596e4a6061a9529276388add3612191aff6bc0c8faa233bbe/shapiq-1.5.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:cbedc5aec6bfde90a4580282ef59847f0929db20ebe239dce77903cd368dc5f0", size = 16025629, upload-time = "2026-06-12T22:36:42.624Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/8b/3f2850f0a5f7b75e8aec6224d872086d6530892afcb73072b617b6f7849f/shapiq-1.5.2-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:7e276d7be3f711282919d4f82c75b41e3da2de92077f484ff0e724ed006d8782", size = 16008659, upload-time = "2026-06-12T22:36:45.083Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/17/88285cdb09af0ba8b134d3820b83681c297e606c97550b9e00a7ba0c6b88/shapiq-1.5.2-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7d33fb803e344fd7308da4f4b5756040b789eceaa75b5ef103ba48931ff530e9", size = 17368899, upload-time = "2026-06-12T22:36:47.311Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/81/747eb3f7b1e2e956b58d6de2b8eee2067f2f1680984ab6fc1c422dd5eca1/shapiq-1.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:81e934435d2f91069b43aff7fe8280a7f0a43a2872c17a906e8bae6be0369c99", size = 15907854, upload-time = "2026-06-12T22:36:49.705Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/7a/1385732bacc2b8a94ef961bfbcd1ec5367e9e7f9fd9a8889ceba70fc0b60/shapiq-1.5.2-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:9afcabf8bca78e85bca51ee35ebed362e8eb64e3f163c793fdb88938735d8cc3", size = 16025644, upload-time = "2026-06-12T22:36:51.945Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/37/5174cc1042f1b53a84c3b5bd40f0d9987014320d0b5b59b2793174202837/shapiq-1.5.2-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:f9b098c3902107aad0967166e191f4efc9acf46683b754c1856dc23b781cf979", size = 16008672, upload-time = "2026-06-12T22:36:54.227Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/e6/f91675239f7bea75d3f2cfe43c9203cd022ca801d2511b435e1520a14e85/shapiq-1.5.2-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:93f7579f33256ff203663a41c89b018ea1306b49c732f407b0f1f1b3764ba89c", size = 17376618, upload-time = "2026-06-12T22:36:56.434Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/f2/68c5d5a178601c5e4bd8b7c0bc57e580020da98c101d1a542e339b7b49a8/shapiq-1.5.2-cp313-cp313-win_amd64.whl", hash = "sha256:c46560a9e63a7e986210dde141cad90f1bcb073702f4130e24eb71158524ea11", size = 15907857, upload-time = "2026-06-12T22:36:58.538Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/da/c27ab8e714d6cffc728362774e2ab8aab14563d0e7a25fb80da2d3c7749a/shapiq-1.5.2-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:63ea88924704202b04691e5f8325d99a3c7a26f1631eb934978b52a9d785eeaa", size = 16025813, upload-time = "2026-06-12T22:37:00.706Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/ac/318d02f07dd27405b76d9d809424de2f1d870a80f5a51b50883c763d5b05/shapiq-1.5.2-cp314-cp314-macosx_12_0_arm64.whl", hash = "sha256:bf3cd35fbd8b30b8fda35588e36a3851b4818e4dbd23e49aed9f4b252b3f51eb", size = 16008791, upload-time = "2026-06-12T22:37:02.885Z" },
+    { url = "https://files.pythonhosted.org/packages/45/83/fdd74ce3d181195d9d3b79fc757ff979e90913417a70679e0f6c94a0069b/shapiq-1.5.2-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0323c0bc8e2ec0fa2340afdbb282644c5545fc939479cf5f399ce7a04ea34e67", size = 17377074, upload-time = "2026-06-12T22:37:05.5Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/48/e3595c9c650875dbe93a298f9f18b87ef4d125f1122ca7ee661f117e7c13/shapiq-1.5.2-cp314-cp314-win_amd64.whl", hash = "sha256:6779bcc55841fe4977384a60051db54fc415fac3ffdb96feff969918937c1144", size = 15791234, upload-time = "2026-06-12T22:37:07.53Z" },
+]
+
+[[package]]
 name = "shellingham"
 version = "1.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -5486,6 +5576,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7b/ae/2d9c981590ed9999a0d91755b47fc74f74de286b0f5cee14c9269041e6c4/soupsieve-2.8.3.tar.gz", hash = "sha256:3267f1eeea4251fb42728b6dfb746edc9acaffc4a45b27e19450b676586e8349", size = 118627, upload-time = "2026-01-20T04:27:02.457Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/2c/1462b1d0a634697ae9e55b3cecdcb64788e8b7d63f54d923fcd0bb140aed/soupsieve-2.8.3-py3-none-any.whl", hash = "sha256:ed64f2ba4eebeab06cc4962affce381647455978ffc1e36bb79a545b91f45a95", size = 37016, upload-time = "2026-01-20T04:27:01.012Z" },
+]
+
+[[package]]
+name = "sparse-transform"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "galois", marker = "python_full_version < '3.12'" },
+    { name = "numpy", marker = "python_full_version < '3.12'" },
+    { name = "scikit-learn", marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "tqdm", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/da/82132137fdc207c4a14abb52fedcd8cc3dd697175f548cfb8689bd2afab8/sparse_transform-0.2.1.tar.gz", hash = "sha256:470d54c884600d97254469a3d85fac775480d18a8aa2c43574350695e1015c66", size = 24803, upload-time = "2025-04-03T08:11:39.47Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/ec/c85f95289e4638faf889ca02b588ad3af0f3ef8f92b99bee3ce936ef3860/sparse_transform-0.2.1-py3-none-any.whl", hash = "sha256:d01b19f8add68e2b4c98a17272830af0e03d163667f03b1dc2b0c9eb8471727b", size = 27034, upload-time = "2025-04-03T08:11:38.551Z" },
 ]
 
 [[package]]
@@ -5771,6 +5878,11 @@ dependencies = [
 benchmarking = [
     { name = "autogluon-timeseries" },
 ]
+explainability = [
+    { name = "matplotlib" },
+    { name = "shapiq", version = "1.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "shapiq", version = "1.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -5779,12 +5891,11 @@ dev = [
     { name = "hatch-vcs" },
     { name = "ipykernel" },
     { name = "jupyter" },
-    { name = "matplotlib" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "submitit" },
-    { name = "tabpfn-time-series", extra = ["benchmarking"] },
+    { name = "tabpfn-time-series", extra = ["benchmarking", "explainability"] },
     { name = "twine" },
     { name = "wandb" },
 ]
@@ -5796,16 +5907,18 @@ requires-dist = [
     { name = "datasets", specifier = ">=2.15" },
     { name = "fev", specifier = ">=0.6.1" },
     { name = "gluonts", specifier = ">=0.16.0" },
+    { name = "matplotlib", marker = "extra == 'explainability'", specifier = ">=3.10.3" },
     { name = "pandas", specifier = ">=2.1.2" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
+    { name = "shapiq", marker = "extra == 'explainability'", specifier = ">=1.4" },
     { name = "statsmodels", specifier = ">=0.14.5" },
     { name = "tabpfn", specifier = ">=8.0.0" },
     { name = "tabpfn-client", specifier = ">=0.2.8" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm" },
 ]
-provides-extras = ["benchmarking"]
+provides-extras = ["benchmarking", "explainability"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -5814,13 +5927,12 @@ dev = [
     { name = "hatch-vcs" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "jupyter" },
-    { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "ruff", specifier = "~=0.12.0" },
     { name = "submitit", specifier = ">=1.5.2" },
-    { name = "tabpfn-time-series", extras = ["benchmarking"] },
+    { name = "tabpfn-time-series", extras = ["benchmarking", "explainability"] },
     { name = "twine" },
     { name = "wandb", specifier = ">=0.19.8" },
 ]

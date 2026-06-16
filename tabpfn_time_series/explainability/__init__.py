@@ -1,24 +1,23 @@
 """Explainability tools for TabPFN-TS forecasts.
 
-``TabPFNTSExplainer`` has no plotting dependency. The ``plot_*`` helpers require
-matplotlib and are imported lazily so the core explainer stays importable without it.
+``TabPFNTSExplainer`` exposes partial dependence, window SHAP, and a model-free
+series decomposition. ``window_shap`` needs ``shapiq`` and the ``plot_*`` helpers
+need ``matplotlib``; both are optional (the ``explainability`` extra) and imported
+only when those code paths run, so ``import tabpfn_time_series`` stays lightweight.
 """
 
 from tabpfn_time_series.explainability.explainer import TabPFNTSExplainer
+from tabpfn_time_series.explainability.plot import (
+    plot_decomposition,
+    plot_pdp,
+    plot_pdp_grid,
+    plot_window_shap_spectrogram,
+)
 
-_PLOTTERS = {
+__all__ = [
+    "TabPFNTSExplainer",
+    "plot_decomposition",
     "plot_pdp",
     "plot_pdp_grid",
     "plot_window_shap_spectrogram",
-    "plot_decomposition",
-}
-
-__all__ = ["TabPFNTSExplainer", *sorted(_PLOTTERS)]
-
-
-def __getattr__(name):
-    if name in _PLOTTERS:
-        from tabpfn_time_series.explainability import plot
-
-        return getattr(plot, name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+]

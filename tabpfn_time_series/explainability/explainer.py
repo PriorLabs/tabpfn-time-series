@@ -7,8 +7,9 @@ The wrapper exposes three lightweight explanations of a TabPFN-TS forecast:
   feature space: we sweep the raw calendar value (e.g. hour 0..23), re-encode it
   into the sin/cos columns the model actually consumes, and propagate it through.
 - ``window_shap``: grouped Shapley attributions of the forecast to feature
-  groups, computed across several rolling windows of the series. Stacked across
-  windows this gives a (feature x time) heatmap, a bit like a spectrogram.
+  groups (via ``shapiq``'s KernelSHAP), computed across several rolling windows of
+  the series. Stacked across windows this gives a (feature x time) heatmap, a bit
+  like a spectrogram (the "window" framing follows arxiv.org/abs/2211.06507).
 - ``decompose``: a classic model-free additive decomposition of the *target signal
   itself* (no model involved) into trend + per-calendar-feature seasonal components
   + residual. It explains the data, not the forecast, and serves as the simplest
@@ -38,6 +39,7 @@ import pandas as pd
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import split_time_series_to_X_y
 from tabpfn_time_series.features.basic_features import CalendarFeature
+from tabpfn_time_series.explainability._deps import require
 
 # Natural seasonality of each calendar concept, as used by CalendarFeature.
 CALENDAR_PERIODS = {
@@ -130,6 +132,8 @@ class TabPFNTSExplainer:
         }
 
     def _cutoffs(self, df, prediction_length, context_length, n_windows):
+        if n_windows < 1:
+            raise ValueError(f"n_windows must be >= 1, got {n_windows}.")
         n = len(df)
         first, last = context_length, n - prediction_length
         if last < first:
@@ -176,7 +180,19 @@ class TabPFNTSExplainer:
         return np.vstack(out)
 
     def feature_groups(self, feature_cols) -> dict[str, list[str]]:
-        """Map interpretable group names to the featurized columns they own."""
+        """Map interpretable group names to the featurized columns they own.
+
+        Window SHAP attributes to these groups, not to raw columns, so a calendar
+        concept reads as one row instead of an opaque sin/cos pair. The groupings:
+
+        - one group per calendar concept (``hour_of_day``, ``day_of_week``, ...),
+          owning its ``{concept}_sin`` and ``{concept}_cos`` columns;
+        - ``trend``: ``running_index`` and ``year`` (the non-periodic drift terms);
+        - ``auto_seasonal``: the auto-detected Fourier columns (``sin_#.../cos_#...``);
+        - one group per remaining column, treated as a user covariate.
+
+        Pass an explicit ``groups`` mapping to ``window_shap`` to override this.
+        """
         feature_cols = list(feature_cols)
         groups: dict[str, list[str]] = {}
         for name in CALENDAR_PERIODS:
@@ -241,6 +257,8 @@ class TabPFNTSExplainer:
 
     def _make_override(self, feature, test_X, grid, n_grid):
         """Return (grid, fn) where fn(test_X, value) -> perturbed test_X."""
+        if grid is not None and len(grid) == 0:
+            raise ValueError("grid cannot be empty.")
         if feature in CALENDAR_PERIODS:
             sin_col, cos_col = f"{feature}_sin", f"{feature}_cos"
             if sin_col not in test_X.columns:
@@ -283,16 +301,24 @@ class TabPFNTSExplainer:
         context_length: int = 168,
         groups=None,
         item_id=None,
-        n_permutations: int = 16,
+        budget=None,
         min_std: float = 1e-6,
         random_state: int = 0,
     ) -> pd.DataFrame:
         """Grouped Shapley attributions of the (point) forecast across rolling windows.
 
-        Returns a DataFrame indexed by feature group, with one column per window
-        (named by its forecast-origin timestamp). Values are the group's mean
-        Shapley contribution to the horizon forecast. Plot as a heatmap for a
-        spectrogram-like view of how feature importance shifts over time.
+        Returns a DataFrame indexed by feature group (see :meth:`feature_groups`),
+        with one column per window named by its forecast-origin timestamp. Values
+        are the group's mean Shapley contribution to the horizon forecast. Plot as a
+        heatmap for a spectrogram-like view of how feature importance shifts over
+        time. The "window" framing follows WindowSHAP (https://arxiv.org/abs/2211.06507):
+        Shapley values are recomputed over successive rolling forecast windows.
+
+        Shapley values are estimated with ``shapiq``'s ``KernelSHAP`` over the feature
+        groups as players. ``budget`` caps the number of coalitions evaluated per
+        window; ``None`` evaluates all ``2**n_groups`` coalitions (exact). Since the
+        groups are few, all coalitions of a window are batched into a single fit, so
+        cost stays at roughly one TabPFN fit per window.
 
         Attributions are interventional Shapley values against a baseline where each
         group's columns are set to their context mean. Be aware this makes the
@@ -304,16 +330,17 @@ class TabPFNTSExplainer:
         windows = self._windows(
             context_df, prediction_length, context_length, n_windows, item_id
         )
-        rng = np.random.default_rng(random_state)
         group_map = groups or self.feature_groups(windows[0]["train_X"].columns)
 
         columns = {}
         for w in windows:
-            phi = self._shapley(w, group_map, n_permutations, min_std, rng)
+            phi = self._shapley(w, group_map, budget, min_std, random_state)
             columns[w["origin"]] = phi
         return pd.DataFrame(columns).fillna(0.0)
 
-    def _shapley(self, window, group_map, n_permutations, min_std, rng):
+    def _shapley(self, window, group_map, budget, min_std, random_state):
+        """Grouped interventional Shapley values for one window, via shapiq KernelSHAP."""
+        KernelSHAP = require("shapiq").KernelSHAP
         train_X, train_y, base = window["train_X"], window["train_y"], window["test_X"]
 
         # Keep only groups whose columns actually vary in the context.
@@ -328,48 +355,27 @@ class TabPFNTSExplainer:
             return {}
 
         baseline_vals = train_X.mean()
-        baseline_X = base.copy()
-        for g in active:
-            for c in group_map[g]:
-                baseline_X[c] = baseline_vals[c]
 
-        blocks: list[pd.DataFrame] = []
-        cache: dict[tuple, int] = {}
-
-        def coalition_block(mask: tuple) -> int:
-            if mask not in cache:
-                x = baseline_X.copy()
-                for gi, included in enumerate(mask):
-                    if included:
-                        cols = group_map[active[gi]]
-                        x[cols] = base[cols].values
-                cache[mask] = len(blocks)
+        def value_function(coalitions):
+            # coalitions: (n_coalitions, m) bool. An excluded group's columns are
+            # set to their context mean; included groups keep their horizon values.
+            blocks = []
+            for coalition in coalitions:
+                x = base.copy()
+                for gi, included in enumerate(coalition):
+                    if not included:
+                        for c in group_map[active[gi]]:
+                            x[c] = baseline_vals[c]
                 blocks.append(x)
-            return cache[mask]
+            return self._predict_blocks(train_X, train_y, blocks).mean(axis=1)
 
-        # Sample permutations (with antithetic pairs for variance reduction) and
-        # record, for each, the marginal block transitions to evaluate.
-        plan = []  # (perm_idx, group_idx, prev_block, curr_block)
-        perms = []
-        for _ in range((n_permutations + 1) // 2):
-            p = rng.permutation(m)
-            perms.append(p)
-            perms.append(p[::-1])
-        for pi, perm in enumerate(perms[:n_permutations]):
-            mask = [False] * m
-            prev = coalition_block(tuple(mask))
-            for gi in perm:
-                mask[gi] = True
-                curr = coalition_block(tuple(mask))
-                plan.append((pi, gi, prev, curr))
-                prev = curr
-
-        fvals = self._predict_blocks(train_X, train_y, blocks).mean(axis=1)
-
-        contrib = np.zeros((len(perms[:n_permutations]), m))
-        for pi, gi, prev, curr in plan:
-            contrib[pi, gi] = fvals[curr] - fvals[prev]
-        return dict(zip(active, contrib.mean(axis=0)))
+        # All coalitions evaluate in a single batched call, so KernelSHAP costs one
+        # fit per window regardless of m. None -> exact (KernelSHAP caps at 2**m).
+        budget = 2**m if budget is None else budget
+        phi = KernelSHAP(n=m, random_state=random_state).approximate(
+            budget=budget, game=value_function
+        )
+        return dict(zip(active, phi.get_n_order_values(1)))
 
     # -- simple autoregressive decomposition --------------------------------
 
@@ -396,6 +402,14 @@ class TabPFNTSExplainer:
         edge windows of the centered trend are one-sided. ``period`` defaults to 24,
         i.e. hourly data; set it to the dominant cycle length (in steps) of your series.
         """
+        if period < 1:
+            raise ValueError(f"period must be >= 1, got {period}.")
+        unknown = [f for f in features if f not in CALENDAR_ACCESSORS]
+        if unknown:
+            raise ValueError(
+                f"Unsupported feature(s) {unknown}. "
+                f"Supported: {sorted(CALENDAR_ACCESSORS)}."
+            )
         df = self._select_item(context_df, item_id).sort_values("timestamp")
         ts = pd.DatetimeIndex(df["timestamp"])
         observed = df["target"].to_numpy(dtype=float)
