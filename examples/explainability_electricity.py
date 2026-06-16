@@ -92,6 +92,7 @@ def main():
         prediction_length=horizon,
         context_length=context_length,
         n_windows=8,
+        budget=64,
     )
     fig, ax = plt.subplots(figsize=(11, 4.5))
     plot_window_shap_spectrogram(shap_df, ax=ax)

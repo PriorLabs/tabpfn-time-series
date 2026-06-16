@@ -26,6 +26,10 @@ class FeatureTransformer:
 
         train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
         test_plain = pd.DataFrame(test_tsdf).assign(_is_train=False)
+        # Match the data types of the target columns
+        test_plain[target_column] = test_plain[target_column].astype(
+            train_plain[target_column].dtype
+        )
         tsdf = pd.concat([train_plain, test_plain])
 
         item_ids = tsdf.index.get_level_values("item_id").unique()
