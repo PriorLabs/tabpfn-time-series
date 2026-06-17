@@ -20,12 +20,12 @@ Window SHAP attributes to interpretable **feature groups**, not raw featurizer c
 
 - one group per calendar concept (`hour_of_day`, `day_of_week`, ...), owning its `{concept}_sin` / `{concept}_cos` columns;
 - `trend`: `running_index` and `year` (the non-periodic drift terms);
-- `auto_seasonal`: the auto-detected Fourier columns (`sin_#.../cos_#...`); by running a Fast Fourier Transform (FFT) over the series and keeping the most important periods
+- `auto_seasonal`: the auto-detected Fourier columns (`sin_#.../cos_#...`), by running a Fast Fourier Transform (FFT) over the series and keeping the most important periods;
 - one group per remaining column, treated as a user covariate.
 
 #### Interpreting the results
 
-TabPFN-Time Series does not use lagged features, so you will not see these in the SHAP plots and PDP. This auto-regressive signal is present in seasonal features (hour of day, day of week, etc...). The model-free decomposition is the most direct view of the target's own structure.
+TabPFN-Time Series does not use lagged features, so you will not see these in the SHAP plots and PDP. This auto-regressive signal is captured through the seasonal features (hour of day, day of week, etc...). The model-free decomposition is the most direct view of the target's own structure.
 
 Install the optional dependencies (`shapiq`, `matplotlib`), then run the example to generate the figures (written to `explainability_outputs/`, which is git-ignored):
 
