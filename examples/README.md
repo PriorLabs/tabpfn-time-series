@@ -20,7 +20,7 @@ Window SHAP attributes to interpretable **feature groups**, not raw featurizer c
 
 - one group per calendar concept (`hour_of_day`, `day_of_week`, ...), owning its `{concept}_sin` / `{concept}_cos` columns;
 - `trend`: `running_index` and `year` (the non-periodic drift terms);
-- `auto_seasonal`: the auto-detected Fourier columns (`sin_#.../cos_#...`); by running a Fast Fourier Transform (FFT) over the series and keep the most important periods
+- `auto_seasonal`: the auto-detected Fourier columns (`sin_#.../cos_#...`); by running a Fast Fourier Transform (FFT) over the series and keeping the most important periods
 - one group per remaining column, treated as a user covariate.
 
 #### Interpreting the results
