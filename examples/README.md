@@ -25,7 +25,7 @@ Window SHAP attributes to interpretable **feature groups**, not raw featurizer c
 
 #### Interpreting the results
 
-TabPFN-Time Series does not use lagged features, so you will not see these in the SHAP plots and PDP. This auto-regressive signal is captured through the seasonal features (hour of day, day of week, etc...). The model-free decomposition is the most direct view of the target's own structure.
+TabPFN-Time Series does not use lagged features, so you will not see these in the SHAP plots and PDP. This auto-regressive signal is captured implicitly through the seasonal features (hour of day, day of week, etc...). The model-free decomposition is the most direct view of the target's own structure.
 
 Install the optional dependencies (`shapiq`, `matplotlib`), then run the example to generate the figures (written to `explainability_outputs/`, which is git-ignored):
 
