@@ -4,3 +4,5 @@ gift_eval/data
 gift_eval/results
 wandb
 results
+# Generated example figures
+examples/explainability_outputs/

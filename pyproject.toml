@@ -33,6 +33,10 @@ dependencies = [
 benchmarking = [
     "autogluon.timeseries>=1.5.0, <2.0"
 ]
+explainability = [
+    "shapiq>=1.4",
+    "matplotlib>=3.10.3",
+]
 
 
 [tool.hatch.version]
@@ -46,7 +50,7 @@ exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
 dev = [
-    "tabpfn-time-series[benchmarking]",
+    "tabpfn-time-series[benchmarking,explainability]",
     "pytest>=8.4.1",
     "jupyter",
     "wandb>=0.19.8",
@@ -59,7 +63,6 @@ dev = [
     "hatch-vcs",
     "pytest",
     "ipykernel>=6.29.5",
-    "matplotlib>=3.10.3",
 ]
 
 [project.urls]

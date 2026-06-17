@@ -159,6 +159,24 @@ def _preprocess_covariates(
     return context_tsdf, future_tsdf
 
 
+def _featurize_context_future(
+    context_tsdf: TimeSeriesDataFrame,
+    future_tsdf: TimeSeriesDataFrame,
+    feature_transformer: FeatureTransformer,
+    max_context_length: int,
+) -> tuple[TimeSeriesDataFrame, TimeSeriesDataFrame]:
+    """Preprocess and featurize a (context, future) pair into model-ready tsdfs.
+
+    Single source of truth for the preprocessing + featurization that precedes
+    every TabPFN-TS prediction. ``TabPFNTSPipeline.predict`` and the explainability
+    tools both route through it so they always see identical features.
+    """
+    context_tsdf = _preprocess_context(context_tsdf, max_context_length)
+    future_tsdf = _preprocess_future(future_tsdf)
+    context_tsdf, future_tsdf = _preprocess_covariates(context_tsdf, future_tsdf)
+    return feature_transformer.transform(context_tsdf, future_tsdf)
+
+
 def _add_dummy_item_id(df: pd.DataFrame, item_id_column: str) -> pd.DataFrame:
     """
     Add a dummy item_id column for single time series.
@@ -264,6 +282,23 @@ class TabPFNTSPipeline:
         )
         self.feature_transformer = FeatureTransformer(temporal_features)
 
+    def featurize(
+        self,
+        context_tsdf: TimeSeriesDataFrame,
+        future_tsdf: TimeSeriesDataFrame,
+    ) -> tuple[TimeSeriesDataFrame, TimeSeriesDataFrame]:
+        """Preprocess and featurize a (context, future) pair into model-ready tsdfs.
+
+        Exposes the exact preprocessing + featurization used by ``predict`` so that
+        downstream tooling (e.g. explainability) reuses it instead of reimplementing.
+        """
+        return _featurize_context_future(
+            context_tsdf,
+            future_tsdf,
+            self.feature_transformer,
+            self.max_context_length,
+        )
+
     def predict(
         self,
         context_tsdf: TimeSeriesDataFrame,
@@ -296,15 +331,8 @@ class TabPFNTSPipeline:
             - Context will be automatically sliced to max_context_length if longer
             - Missing values in context are handled automatically
         """
-        # Preprocess
-        context_tsdf = _preprocess_context(context_tsdf, self.max_context_length)
-        future_tsdf = _preprocess_future(future_tsdf)
-        context_tsdf, future_tsdf = _preprocess_covariates(context_tsdf, future_tsdf)
-
-        # Featurization
-        context_tsdf, future_tsdf = self.feature_transformer.transform(
-            context_tsdf, future_tsdf
-        )
+        # Preprocess + featurize
+        context_tsdf, future_tsdf = self.featurize(context_tsdf, future_tsdf)
 
         # Prediction
         return self.predictor.predict(
