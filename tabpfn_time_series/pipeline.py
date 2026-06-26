@@ -209,6 +209,16 @@ class TabPFNTSPipeline:
         >>> predictions = pipeline.predict_df(context_df, prediction_length=24)
     """
 
+    # Default ceiling on the number of (context) rows whose features are materialized
+    # at once. Featurization builds the full featurized frame for a batch of series in
+    # host RAM before the per-series GPU loop runs, so for datasets with very many
+    # series (e.g. m5_1D from fev-bench: ~30k series, ~48M rows) the full frame can
+    # exceed host RAM and OOM. Series are featurized and predicted independently, so
+    # splitting them into row-bounded batches is numerically identical and caps peak
+    # host memory. Datasets below this threshold are processed in a single batch
+    # (no behavioural change). None disables batching entirely.
+    DEFAULT_MAX_FEATURIZE_ROWS: int = 10_000_000
+
     def __init__(
         self,
         max_context_length: int = 32768,
@@ -216,6 +226,7 @@ class TabPFNTSPipeline:
         tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
+        max_featurize_rows: int | None = DEFAULT_MAX_FEATURIZE_ROWS,
     ):
         """
         Initialize the TabPFN-TS forecasting pipeline.
@@ -237,6 +248,11 @@ class TabPFNTSPipeline:
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
                 See TABPFN_DEFAULT_CONFIG for default settings.
+            max_featurize_rows: Maximum number of context rows whose features are
+                materialized in host memory at once. When a dataset has more rows than
+                this, series are processed in row-bounded batches to cap peak host RAM
+                (results are identical, since series are featurized/predicted
+                independently). Default: 10_000_000. Set to None to disable batching.
 
         Note:
             - When using TabPFNMode.CLIENT, you'll be prompted to login or create an account
@@ -247,6 +263,7 @@ class TabPFNTSPipeline:
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
 
         self.max_context_length = max_context_length
+        self.max_featurize_rows = max_featurize_rows
 
         # Fill in the default v3 ts ckpt filename for LOCAL mode; tabpfn handles
         # the download. User-supplied paths pass through unchanged.
@@ -301,17 +318,71 @@ class TabPFNTSPipeline:
         future_tsdf = _preprocess_future(future_tsdf)
         context_tsdf, future_tsdf = _preprocess_covariates(context_tsdf, future_tsdf)
 
-        # Featurization
-        context_tsdf, future_tsdf = self.feature_transformer.transform(
-            context_tsdf, future_tsdf
+        # Featurize + predict in row-bounded batches of series to cap peak host memory.
+        # Featurization/prediction are per-series independent, so this is equivalent to
+        # processing everything at once (see `max_featurize_rows`).
+        item_batches = self._make_item_batches(context_tsdf)
+
+        if len(item_batches) == 1:
+            train_tsdf, test_tsdf = self.feature_transformer.transform(
+                context_tsdf, future_tsdf
+            )
+            return self.predictor.predict(
+                train_tsdf=train_tsdf,
+                test_tsdf=test_tsdf,
+                quantiles=quantiles,
+            )
+
+        logger.info(
+            f"Featurizing+predicting {len(context_tsdf.item_ids)} series in "
+            f"{len(item_batches)} batches (max_featurize_rows={self.max_featurize_rows})"
+        )
+        predictions = []
+        for batch_ids in item_batches:
+            train_tsdf, test_tsdf = self.feature_transformer.transform(
+                context_tsdf.loc[batch_ids], future_tsdf.loc[batch_ids]
+            )
+            predictions.append(
+                self.predictor.predict(
+                    train_tsdf=train_tsdf,
+                    test_tsdf=test_tsdf,
+                    quantiles=quantiles,
+                )
+            )
+            del train_tsdf, test_tsdf
+
+        # Restore original item order (batches already follow it, but be explicit).
+        return TimeSeriesDataFrame(
+            pd.concat(predictions).loc[context_tsdf.item_ids]
         )
 
-        # Prediction
-        return self.predictor.predict(
-            train_tsdf=context_tsdf,
-            test_tsdf=future_tsdf,
-            quantiles=quantiles,
+    def _make_item_batches(self, context_tsdf: TimeSeriesDataFrame) -> list[list]:
+        """Split item_ids into batches whose total context rows stay under
+        `max_featurize_rows`. Returns a single batch (all items) when batching is
+        disabled or the dataset fits."""
+        item_ids = list(context_tsdf.item_ids)
+        if self.max_featurize_rows is None or len(item_ids) <= 1:
+            return [item_ids]
+
+        rows_per_item = (
+            pd.Series(context_tsdf.index.get_level_values("item_id")).value_counts()
         )
+        if rows_per_item.sum() <= self.max_featurize_rows:
+            return [item_ids]
+
+        batches: list[list] = []
+        current: list = []
+        current_rows = 0
+        for iid in item_ids:
+            n = int(rows_per_item[iid])
+            if current and current_rows + n > self.max_featurize_rows:
+                batches.append(current)
+                current, current_rows = [], 0
+            current.append(iid)
+            current_rows += n
+        if current:
+            batches.append(current)
+        return batches
 
     def predict_df(
         self,
