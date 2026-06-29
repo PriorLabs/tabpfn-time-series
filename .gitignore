@@ -5,3 +5,5 @@ gift_eval/results
 wandb
 results
 *.ckpt
+# Generated example figures
+examples/explainability_outputs/

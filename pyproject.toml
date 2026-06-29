@@ -33,6 +33,10 @@ dependencies = [
 benchmarking = [
     "autogluon.timeseries>=1.5.0, <2.0"
 ]
+explainability = [
+    "shapiq>=1.4",
+    "matplotlib>=3.10.3",
+]
 
 
 [tool.hatch.version]
@@ -46,7 +50,7 @@ exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
 dev = [
-    "tabpfn-time-series[benchmarking]",
+    "tabpfn-time-series[benchmarking,explainability]",
     "pytest>=8.4.1",
     "jupyter",
     "wandb>=0.19.8",
@@ -59,12 +63,14 @@ dev = [
     "hatch-vcs",
     "pytest",
     "ipykernel>=6.29.5",
-    "matplotlib>=3.10.3",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/liam-sbhoo/tabpfn-time-series"
-"Bug Tracker" = "https://github.com/liam-sbhoo/tabpfn-time-series/issues"
+"Homepage" = "https://github.com/PriorLabs/tabpfn-time-series"
+"Bug Tracker" = "https://github.com/PriorLabs/tabpfn-time-series/issues"
 
 [tool.pytest.ini_options]
-markers = ["uses_tabpfn_client: These tests require a TabPFN API key."]
+markers = [
+    "uses_tabpfn_client: These tests require a TabPFN API key.",
+    "uses_tabpfn_local: These tests require a local TabPFN model.",
+]

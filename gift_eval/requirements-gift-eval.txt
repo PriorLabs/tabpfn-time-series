@@ -1,7 +1,8 @@
 gluonts~=0.15.1
 pandas==2.0.0
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 datasets==3.2.0
+wandb
 
 huggingface_hub[cli]
 jupyter

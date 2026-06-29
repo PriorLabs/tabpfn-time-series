@@ -1,6 +1,24 @@
 name: In pull request
+
+# SECURITY NOTE:
+# Use `pull_request`, NOT `pull_request_target`.
+#
+# `pull_request_target` runs in the context of the base branch with full
+# read/write access to repo secrets. Combining it with a checkout of the PR's
+# head ref (i.e. arbitrary contributor code) is the "pwn request" pattern:
+# any external fork PR can read or exfiltrate the secrets bound to job env
+# vars. See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+#
+# With `pull_request`:
+#   - Workflows from external forks run in a sandboxed context.
+#   - Secrets are NOT exposed to fork PRs (GitHub policy).
+#   - Secrets ARE exposed to PRs from branches in this repo, so internal
+#     contributors still get full test coverage.
+# Tests that need TABPFN_CLIENT_API_KEY / TABPFN_TOKEN / HF_TOKEN should
+# detect missing-env-var and skip on fork PRs.
+
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - main
       - beta
@@ -11,11 +29,7 @@ jobs:
     name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR code safely
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/checkout@v4
 
       - name: Ruff Linting
         uses: astral-sh/ruff-action@v3
@@ -38,11 +52,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout PR code safely
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -56,6 +66,9 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run Tests
+        # Secrets are only available to PRs from branches in this repo, not
+        # from forks. Tests that require these should skip gracefully when
+        # the env var is empty (i.e. on fork PRs).
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
           TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}

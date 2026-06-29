@@ -15,6 +15,7 @@ from tabpfn_time_series.predictor import (
 from tabpfn_time_series.defaults import DEFAULT_QUANTILE_CONFIG, TABPFN_DEFAULT_CONFIG
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.pipeline import TabPFNTSPipeline, TABPFN_TS_DEFAULT_FEATURES
+from tabpfn_time_series.explainability import TabPFNTSExplainer
 
 __all__ = [
     "FeatureTransformer",
@@ -23,6 +24,7 @@ __all__ = [
     "TabPFNMode",
     "TimeSeriesDataFrame",
     "TabPFNTSPipeline",
+    "TabPFNTSExplainer",
     # Constants and defaults
     "DEFAULT_QUANTILE_CONFIG",
     "TABPFN_DEFAULT_CONFIG",

@@ -7,6 +7,7 @@ across pandas versions.
 
 from unittest.mock import MagicMock
 
+import pytest
 from pandas.tseries.frequencies import to_offset
 from gluonts.time_feature import norm_freq_str
 from gift_eval.data import (
@@ -40,6 +41,9 @@ def test_legacy_aliases_unchanged_simple():
         assert NEW_PANDAS_TS_ALIASES.get(alias, alias) == alias
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed in a future version.*:FutureWarning"
+)
 def test_prediction_length_minimal():
     def make_ds(freq: str, name: str = "regular", term: Term = Term.SHORT) -> Dataset:
         mock_ds = MagicMock(spec=Dataset)

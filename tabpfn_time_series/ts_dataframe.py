@@ -1,6 +1,11 @@
-# This file is copied from https://github.com/autogluon/autogluon/blob/main/autogluon/timeseries/ts_dataframe.py
-# and modified to remove the autogluon dependency.
-#   - remove the features that allow loading directly from a local file.
+# Adapted from AutoGluon: https://github.com/autogluon/autogluon
+#   path: timeseries/src/autogluon/timeseries/dataset/ts_dataframe.py
+#
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Modifications: removed the AutoGluon dependency and the features that allow
+# loading directly from a local file.
 
 from __future__ import annotations
 

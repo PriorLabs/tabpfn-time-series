@@ -159,6 +159,24 @@ def _preprocess_covariates(
     return context_tsdf, future_tsdf
 
 
+def _featurize_context_future(
+    context_tsdf: TimeSeriesDataFrame,
+    future_tsdf: TimeSeriesDataFrame,
+    feature_transformer: FeatureTransformer,
+    max_context_length: int,
+) -> tuple[TimeSeriesDataFrame, TimeSeriesDataFrame]:
+    """Preprocess and featurize a (context, future) pair into model-ready tsdfs.
+
+    Single source of truth for the preprocessing + featurization that precedes
+    every TabPFN-TS prediction. ``TabPFNTSPipeline.predict`` and the explainability
+    tools both route through it so they always see identical features.
+    """
+    context_tsdf = _preprocess_context(context_tsdf, max_context_length)
+    future_tsdf = _preprocess_future(future_tsdf)
+    context_tsdf, future_tsdf = _preprocess_covariates(context_tsdf, future_tsdf)
+    return feature_transformer.transform(context_tsdf, future_tsdf)
+
+
 def _add_dummy_item_id(df: pd.DataFrame, item_id_column: str) -> pd.DataFrame:
     """
     Add a dummy item_id column for single time series.
@@ -223,7 +241,7 @@ class TabPFNTSPipeline:
         self,
         max_context_length: int = 32768,
         temporal_features: list[FeatureGenerator] = TABPFN_TS_DEFAULT_FEATURES,
-        tabpfn_mode: TabPFNMode = TabPFNMode.CLIENT,
+        tabpfn_mode: TabPFNMode = TabPFNMode.LOCAL,
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
         max_featurize_rows: int | None = DEFAULT_MAX_FEATURIZE_ROWS,
@@ -243,7 +261,7 @@ class TabPFNTSPipeline:
             tabpfn_mode: Inference mode for TabPFN.
                 - TabPFNMode.CLIENT: Use the cloud API (recommended, no GPU needed)
                 - TabPFNMode.LOCAL: Run locally on your machine (requires GPU for speed)
-                Default: TabPFNMode.CLIENT.
+                Default: TabPFNMode.LOCAL.
             tabpfn_output_selection: Method to aggregate TabPFN ensemble predictions.
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
@@ -281,6 +299,23 @@ class TabPFNTSPipeline:
         )
         self.feature_transformer = FeatureTransformer(temporal_features)
 
+    def featurize(
+        self,
+        context_tsdf: TimeSeriesDataFrame,
+        future_tsdf: TimeSeriesDataFrame,
+    ) -> tuple[TimeSeriesDataFrame, TimeSeriesDataFrame]:
+        """Preprocess and featurize a (context, future) pair into model-ready tsdfs.
+
+        Exposes the exact preprocessing + featurization used by ``predict`` so that
+        downstream tooling (e.g. explainability) reuses it instead of reimplementing.
+        """
+        return _featurize_context_future(
+            context_tsdf,
+            future_tsdf,
+            self.feature_transformer,
+            self.max_context_length,
+        )
+
     def predict(
         self,
         context_tsdf: TimeSeriesDataFrame,
@@ -313,20 +348,14 @@ class TabPFNTSPipeline:
             - Context will be automatically sliced to max_context_length if longer
             - Missing values in context are handled automatically
         """
-        # Preprocess
-        context_tsdf = _preprocess_context(context_tsdf, self.max_context_length)
-        future_tsdf = _preprocess_future(future_tsdf)
-        context_tsdf, future_tsdf = _preprocess_covariates(context_tsdf, future_tsdf)
-
-        # Featurize + predict in row-bounded batches of series to cap peak host memory.
-        # Featurization/prediction are per-series independent, so this is equivalent to
-        # processing everything at once (see `max_featurize_rows`).
+        # Featurize + predict in row-bounded batches of series to cap peak host
+        # memory. Preprocessing, featurization and prediction are all per-series
+        # independent, so batching is equivalent to processing everything at once
+        # (see `max_featurize_rows`).
         item_batches = self._make_item_batches(context_tsdf)
 
         if len(item_batches) == 1:
-            train_tsdf, test_tsdf = self.feature_transformer.transform(
-                context_tsdf, future_tsdf
-            )
+            train_tsdf, test_tsdf = self.featurize(context_tsdf, future_tsdf)
             return self.predictor.predict(
                 train_tsdf=train_tsdf,
                 test_tsdf=test_tsdf,
@@ -339,7 +368,7 @@ class TabPFNTSPipeline:
         )
         predictions = []
         for batch_ids in item_batches:
-            train_tsdf, test_tsdf = self.feature_transformer.transform(
+            train_tsdf, test_tsdf = self.featurize(
                 context_tsdf.loc[batch_ids], future_tsdf.loc[batch_ids]
             )
             predictions.append(
@@ -351,10 +380,8 @@ class TabPFNTSPipeline:
             )
             del train_tsdf, test_tsdf
 
-        # Restore original item order (batches already follow it, but be explicit).
-        return TimeSeriesDataFrame(
-            pd.concat(predictions).loc[context_tsdf.item_ids]
-        )
+        # Batches preserve the original item order, so a plain concat is already ordered.
+        return TimeSeriesDataFrame(pd.concat(predictions))
 
     def _make_item_batches(self, context_tsdf: TimeSeriesDataFrame) -> list[list]:
         """Split item_ids into batches whose total context rows stay under
@@ -364,8 +391,12 @@ class TabPFNTSPipeline:
         if self.max_featurize_rows is None or len(item_ids) <= 1:
             return [item_ids]
 
-        rows_per_item = (
-            pd.Series(context_tsdf.index.get_level_values("item_id")).value_counts()
+        # Featurization runs after context is sliced to max_context_length, so cap
+        # each series' row count accordingly for an accurate budget. Uses the
+        # categorical-code fast path of num_timesteps_per_item() rather than a slow
+        # object-dtype value_counts over the full index.
+        rows_per_item = context_tsdf.num_timesteps_per_item().clip(
+            upper=self.max_context_length
         )
         if rows_per_item.sum() <= self.max_featurize_rows:
             return [item_ids]
