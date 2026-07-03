@@ -387,6 +387,7 @@ class TabPFNTSPipeline:
         """Split item_ids into batches whose total context rows stay under
         `max_featurize_rows`. Returns a single batch (all items) when batching is
         disabled or the dataset fits."""
+        # TODO we materialize the full list but we can use yield in the future in case to allocate only elements of the size of the batch
         item_ids = list(context_tsdf.item_ids)
         if self.max_featurize_rows is None or len(item_ids) <= 1:
             return [item_ids]
