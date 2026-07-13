@@ -25,12 +25,9 @@ class FeatureTransformer:
             train_tsdf.static_features, test_tsdf.static_features
         )
 
-        # Columns present before featurization (target + covariates). Their dtype is
-        # left untouched; only newly *generated* float64 feature columns are downcast
-        # to float32 below to roughly halve the peak host-memory footprint of the
-        # featurized frame. This matters a lot for many-series datasets (e.g. m5_1D
-        # from fev-bench has ~30k series): the full featurized frame is materialized
-        # in host RAM before the per-series GPU loop runs.
+        # Input columns (target + covariates) keep their dtype; only generated columns
+        # are downcast to float32 below. The whole featurized frame lives in host RAM
+        # before inference, so halving the generated columns matters for many series.
         input_columns = set(train_tsdf.columns)
 
         train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
@@ -44,15 +41,13 @@ class FeatureTransformer:
         tsdf = pd.concat([train_plain, test_plain])
         del train_plain, test_plain
 
-        # Each generator runs once on the whole multi-series frame and groups on the
-        # item_id index level internally where needed. This is vectorized across
-        # series (no per-series Python loop), unlike the previous O(n_series^2)
-        # `.xs`-per-item approach.
+        # Each generator sees the whole multi-series frame and groups by item_id
+        # internally for any per-series work.
         for generator in self.feature_generators:
             tsdf = generator(tsdf)
 
-        # Downcast generated features (calendar/seasonal/running-index — all bounded
-        # values that are exactly representable in float32) to halve peak host memory.
+        # The generated features (calendar, seasonal, running index) are bounded and
+        # exactly representable in float32, so the downcast is lossless.
         generated_float_cols = [
             c
             for c in tsdf.columns

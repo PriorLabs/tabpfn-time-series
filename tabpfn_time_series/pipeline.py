@@ -348,13 +348,12 @@ class TabPFNTSPipeline:
             - Context will be automatically sliced to max_context_length if longer
             - Missing values in context are handled automatically
         """
-        # Featurize + predict in row-bounded batches of series to cap peak host
-        # memory. Preprocessing, featurization and prediction are all per-series
-        # independent, so batching is equivalent to processing everything at once
-        # (see `max_featurize_rows`).
+        # Preprocessing, featurization and prediction are per-series independent, so
+        # splitting into row-bounded batches to cap peak host memory gives the same
+        # result as processing everything at once.
         if not self._needs_batching(context_tsdf):
-            # Whole-frame fast path: featurize the frame directly (no per-item
-            # `.loc` gather, which would reindex the entire MultiIndex).
+            # Featurize the frame directly: a single-batch loop would gather it back
+            # through a per-item loc, reindexing the whole MultiIndex for nothing.
             train_tsdf, test_tsdf = self.featurize(context_tsdf, future_tsdf)
             return self.predictor.predict(
                 train_tsdf=train_tsdf,
@@ -367,8 +366,8 @@ class TabPFNTSPipeline:
             f"row-bounded batches (max_featurize_rows={self.max_featurize_rows})"
         )
         predictions = []
-        # `_iter_item_batches` yields one batch at a time, so we never materialize
-        # the full list of batches; each batch's features are freed before the next.
+        # Iterate lazily so only one batch of features exists at a time; each is freed
+        # before the next.
         for batch_ids in self._iter_item_batches(context_tsdf):
             train_tsdf, test_tsdf = self.featurize(
                 context_tsdf.loc[batch_ids], future_tsdf.loc[batch_ids]
@@ -382,25 +381,22 @@ class TabPFNTSPipeline:
             )
             del train_tsdf, test_tsdf
 
-        # Batches preserve the original item order, so a plain concat is already ordered.
+        # Batches follow the original item order, so a plain concat is already ordered.
         return TimeSeriesDataFrame(pd.concat(predictions))
 
     def _rows_per_item(self, context_tsdf: TimeSeriesDataFrame) -> pd.Series:
-        # Featurization runs after context is sliced to max_context_length, so cap
-        # each series' row count accordingly for an accurate budget. Uses the
-        # categorical-code fast path of num_timesteps_per_item() rather than a slow
-        # object-dtype value_counts over the full index.
+        # Context is sliced to max_context_length before featurization, so cap each
+        # series' count there to match the rows actually materialized.
         return context_tsdf.num_timesteps_per_item().clip(upper=self.max_context_length)
 
     def _needs_batching(self, context_tsdf: TimeSeriesDataFrame) -> bool:
-        """Whether the dataset exceeds `max_featurize_rows` and must be split."""
+        """Whether the dataset is large enough to need splitting into batches."""
         if self.max_featurize_rows is None or len(context_tsdf.item_ids) <= 1:
             return False
         return int(self._rows_per_item(context_tsdf).sum()) > self.max_featurize_rows
 
     def _iter_item_batches(self, context_tsdf: TimeSeriesDataFrame):
-        """Yield lists of item_ids, each batch's total (capped) context rows staying
-        under `max_featurize_rows`. Lazy: only one batch is held at a time."""
+        """Yield item_id batches whose capped context rows stay under the budget."""
         rows_per_item = self._rows_per_item(context_tsdf)
         current: list = []
         current_rows = 0

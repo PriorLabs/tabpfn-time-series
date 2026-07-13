@@ -6,9 +6,8 @@ import pandas as pd
 class FeatureGenerator(ABC):
     """Abstract base class for feature generators.
 
-    ``generate`` receives the whole ``(item_id, timestamp)``-indexed frame (all
-    series at once) and must produce features per series where relevant by grouping
-    on the ``item_id`` index level (see the built-in generators for examples).
+    generate receives the whole (item_id, timestamp)-indexed frame with every series
+    at once, and must group on the item_id level for any per-series computation.
     """
 
     @abstractmethod

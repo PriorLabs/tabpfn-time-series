@@ -71,24 +71,15 @@ class AutoSeasonalFeature(FeatureGenerator):
             self.config["detrend_type"] = "linear"
 
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Detect seasonal periods per series (an FFT over each series' target) and
-        build the sin_#i / cos_#i columns for every row in a single vectorized pass.
-
-        Only period detection loops over series (the unavoidable FFT); the feature
-        columns are then computed for all rows at once, avoiding per-series DataFrame
-        concat/reassembly.
-        """
+        """Add sin_#i/cos_#i columns for each series' detected seasonal periods."""
         n = len(df)
         max_top_k = self.config["max_top_k"]
 
-        # Within-series row position (0..len-1), matching the per-series
-        # ``np.arange(len)`` used previously.
         pos = df.groupby(level="item_id", sort=False).cumcount().to_numpy()
-        # Integer code per row identifying its series, in first-appearance order
-        # (matches the enumeration order of groupby(sort=False) below).
+        # codes must share the sort=False group order used in the detection loop, so
+        # periods_by_series[codes] maps each row to its own series' periods.
         codes, _ = pd.factorize(df.index.get_level_values("item_id"), sort=False)
         n_series = int(codes.max()) + 1 if n else 0
-        # Per-series detected periods (padded with NaN for empty slots).
         periods_by_series = np.full((n_series, max_top_k), np.nan)
         for code, (_item_id, target) in enumerate(
             df["target"].groupby(level="item_id", sort=False)
@@ -98,8 +89,8 @@ class AutoSeasonalFeature(FeatureGenerator):
                 periods_by_series[code, i] = period
         period_per_row = periods_by_series[codes]
 
-        # Vectorized sin/cos for all rows and slots at once. Empty slots (NaN period)
-        # become zeros, matching the previous zero-padding of missing periods.
+        # Unfilled slots have period NaN; the division warns and yields NaN, which the
+        # mask turns into a zero column.
         with np.errstate(divide="ignore", invalid="ignore"):
             angle = 2 * np.pi * pos[:, None] / period_per_row
         valid = ~np.isnan(period_per_row)

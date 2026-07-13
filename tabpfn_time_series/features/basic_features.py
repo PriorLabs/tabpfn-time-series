@@ -12,7 +12,6 @@ from tabpfn_time_series.features.feature_generator_base import (
 class RunningIndexFeature(FeatureGenerator):
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
-        # Per-series 0..n-1 counter over the whole frame in a single grouped pass.
         df["running_index"] = df.groupby(level="item_id", sort=False).cumcount()
         return df
 
@@ -80,9 +79,8 @@ class PeriodicSinCosineFeature(FeatureGenerator):
         self.name_suffix = name_suffix
 
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Build all sin/cos columns as one block and attach in a single concat,
-        # rather than inserting them one at a time (each single-column insert
-        # reallocates the whole frame).
+        # One concat, not per-column assignment: each single-column insert would
+        # reallocate the whole block manager.
         idx = np.arange(len(df))
         columns = {}
         for i, period in enumerate(self.periods):
