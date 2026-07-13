@@ -11,9 +11,6 @@ from statsmodels.tsa.stattools import acf
 from tabpfn_time_series.features.feature_generator_base import (
     FeatureGenerator,
 )
-from tabpfn_time_series.features.basic_features import (
-    PeriodicSinCosineFeature,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +71,6 @@ class AutoSeasonalFeature(FeatureGenerator):
             self.config["detrend_type"] = "linear"
 
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-
         # Detect seasonal periods from target data
         detected_periods_and_magnitudes = self.find_seasonal_periods(
             df.target, **self.config
@@ -87,25 +82,26 @@ class AutoSeasonalFeature(FeatureGenerator):
         # Extract just the periods (without magnitudes)
         periods = [period for period, _ in detected_periods_and_magnitudes]
 
-        # Generate features for detected periods using PeriodicSinCosineFeature
-        if periods:
-            feature_generator = PeriodicSinCosineFeature(periods=periods)
-            df = feature_generator.generate(df)
+        # Build all sin_#i / cos_#i columns (detected periods fill the first slots,
+        # remaining slots up to max_top_k are zeros) as a single block and attach
+        # them in one concat. This replaces per-column ``df[col] = ...`` inserts +
+        # a rename, which dominated runtime (each single-column insert reallocates
+        # the whole block manager -> O(n_features) per column, O(n_features^2) total).
+        n = len(df)
+        idx = np.arange(n)
+        max_top_k = self.config["max_top_k"]
+        feature_columns = {}
+        for i in range(max_top_k):
+            if i < len(periods):
+                angle = 2 * np.pi * idx / periods[i]
+                feature_columns[f"sin_#{i}"] = np.sin(angle)
+                feature_columns[f"cos_#{i}"] = np.cos(angle)
+            else:
+                feature_columns[f"sin_#{i}"] = np.zeros(n)
+                feature_columns[f"cos_#{i}"] = np.zeros(n)
 
-        # Standardize column names for consistency across time series
-        renamed_columns = {}
-        for i, period in enumerate(periods):
-            renamed_columns[f"sin_{period}"] = f"sin_#{i}"
-            renamed_columns[f"cos_{period}"] = f"cos_#{i}"
-
-        df = df.rename(columns=renamed_columns)
-
-        # Add placeholder zero columns for missing periods up to max_top_k
-        for i in range(len(periods), self.config["max_top_k"]):
-            df[f"sin_#{i}"] = 0.0
-            df[f"cos_#{i}"] = 0.0
-
-        return df
+        feature_df = pd.DataFrame(feature_columns, index=df.index)
+        return pd.concat([df, feature_df], axis=1)
 
     @staticmethod
     def find_seasonal_periods(
