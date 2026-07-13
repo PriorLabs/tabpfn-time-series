@@ -352,9 +352,9 @@ class TabPFNTSPipeline:
         # memory. Preprocessing, featurization and prediction are all per-series
         # independent, so batching is equivalent to processing everything at once
         # (see `max_featurize_rows`).
-        item_batches = self._make_item_batches(context_tsdf)
-
-        if len(item_batches) == 1:
+        if not self._needs_batching(context_tsdf):
+            # Whole-frame fast path: featurize the frame directly (no per-item
+            # `.loc` gather, which would reindex the entire MultiIndex).
             train_tsdf, test_tsdf = self.featurize(context_tsdf, future_tsdf)
             return self.predictor.predict(
                 train_tsdf=train_tsdf,
@@ -364,10 +364,12 @@ class TabPFNTSPipeline:
 
         logger.info(
             f"Featurizing+predicting {len(context_tsdf.item_ids)} series in "
-            f"{len(item_batches)} batches (max_featurize_rows={self.max_featurize_rows})"
+            f"row-bounded batches (max_featurize_rows={self.max_featurize_rows})"
         )
         predictions = []
-        for batch_ids in item_batches:
+        # `_iter_item_batches` yields one batch at a time, so we never materialize
+        # the full list of batches; each batch's features are freed before the next.
+        for batch_ids in self._iter_item_batches(context_tsdf):
             train_tsdf, test_tsdf = self.featurize(
                 context_tsdf.loc[batch_ids], future_tsdf.loc[batch_ids]
             )
@@ -383,38 +385,34 @@ class TabPFNTSPipeline:
         # Batches preserve the original item order, so a plain concat is already ordered.
         return TimeSeriesDataFrame(pd.concat(predictions))
 
-    def _make_item_batches(self, context_tsdf: TimeSeriesDataFrame) -> list[list]:
-        """Split item_ids into batches whose total context rows stay under
-        `max_featurize_rows`. Returns a single batch (all items) when batching is
-        disabled or the dataset fits."""
-        # TODO we materialize the full list but we can use yield in the future in case to allocate only elements of the size of the batch
-        item_ids = list(context_tsdf.item_ids)
-        if self.max_featurize_rows is None or len(item_ids) <= 1:
-            return [item_ids]
-
+    def _rows_per_item(self, context_tsdf: TimeSeriesDataFrame) -> pd.Series:
         # Featurization runs after context is sliced to max_context_length, so cap
         # each series' row count accordingly for an accurate budget. Uses the
         # categorical-code fast path of num_timesteps_per_item() rather than a slow
         # object-dtype value_counts over the full index.
-        rows_per_item = context_tsdf.num_timesteps_per_item().clip(
-            upper=self.max_context_length
-        )
-        if rows_per_item.sum() <= self.max_featurize_rows:
-            return [item_ids]
+        return context_tsdf.num_timesteps_per_item().clip(upper=self.max_context_length)
 
-        batches: list[list] = []
+    def _needs_batching(self, context_tsdf: TimeSeriesDataFrame) -> bool:
+        """Whether the dataset exceeds `max_featurize_rows` and must be split."""
+        if self.max_featurize_rows is None or len(context_tsdf.item_ids) <= 1:
+            return False
+        return int(self._rows_per_item(context_tsdf).sum()) > self.max_featurize_rows
+
+    def _iter_item_batches(self, context_tsdf: TimeSeriesDataFrame):
+        """Yield lists of item_ids, each batch's total (capped) context rows staying
+        under `max_featurize_rows`. Lazy: only one batch is held at a time."""
+        rows_per_item = self._rows_per_item(context_tsdf)
         current: list = []
         current_rows = 0
-        for iid in item_ids:
+        for iid in context_tsdf.item_ids:
             n = int(rows_per_item[iid])
             if current and current_rows + n > self.max_featurize_rows:
-                batches.append(current)
+                yield current
                 current, current_rows = [], 0
             current.append(iid)
             current_rows += n
         if current:
-            batches.append(current)
-        return batches
+            yield current
 
     def predict_df(
         self,
