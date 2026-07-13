@@ -7,21 +7,6 @@ from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.features.feature_generator_base import FeatureGenerator
 
 
-def _segments_by_per_series(
-    generators: List[FeatureGenerator],
-) -> List[Tuple[bool, List[FeatureGenerator]]]:
-    """Group generators into maximal consecutive runs sharing the same PER_SERIES
-    flag, preserving order. Returns a list of (is_per_series, [generators])."""
-    segments: List[Tuple[bool, List[FeatureGenerator]]] = []
-    for gen in generators:
-        flag = bool(getattr(gen, "PER_SERIES", True))
-        if segments and segments[-1][0] == flag:
-            segments[-1][1].append(gen)
-        else:
-            segments.append((flag, [gen]))
-    return segments
-
-
 class FeatureTransformer:
     def __init__(self, feature_generators: List[FeatureGenerator]):
         self.feature_generators = feature_generators
@@ -59,30 +44,12 @@ class FeatureTransformer:
         tsdf = pd.concat([train_plain, test_plain])
         del train_plain, test_plain
 
-        # Apply generators in their configured order. Generators are grouped into
-        # maximal consecutive runs by their PER_SERIES flag:
-        #   - PER_SERIES=False generators run once on the whole multi-series frame
-        #     (vectorized), avoiding a redundant Python-level pass per series.
-        #   - PER_SERIES=True generators run per series via a single grouped pass
-        #     (one groupby instead of an O(n_series^2) `.xs`-per-item loop over a
-        #     non-lexsorted MultiIndex).
-        # Order within the original generator list is preserved, so both column
-        # order and per-row values are identical to applying every generator per
-        # series in sequence.
-        for is_per_series, gens in _segments_by_per_series(self.feature_generators):
-            if not is_per_series:
-                for generator in gens:
-                    tsdf = generator(tsdf)
-            else:
-
-                def _apply_per_series(series_df, _gens=gens):
-                    for generator in _gens:
-                        series_df = generator(series_df)
-                    return series_df
-
-                tsdf = tsdf.groupby(
-                    level="item_id", sort=False, group_keys=False
-                ).apply(_apply_per_series)
+        # Each generator runs once on the whole multi-series frame and groups on the
+        # item_id index level internally where needed. This is vectorized across
+        # series (no per-series Python loop), unlike the previous O(n_series^2)
+        # `.xs`-per-item approach.
+        for generator in self.feature_generators:
+            tsdf = generator(tsdf)
 
         # Downcast generated features (calendar/seasonal/running-index — all bounded
         # values that are exactly representable in float32) to halve peak host memory.
@@ -96,7 +63,7 @@ class FeatureTransformer:
         if generated_float_cols:
             tsdf = tsdf.astype({c: np.float32 for c in generated_float_cols})
 
-        # Split by tag (not iloc) since per-series concat reorders rows by item_id.
+        # Split back into train/test by the tag column added above.
         train_slice = tsdf[tsdf["_is_train"]].drop(columns=["_is_train"])
         test_slice = tsdf[~tsdf["_is_train"]].drop(columns=["_is_train"])
         del tsdf

@@ -17,13 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class AutoSeasonalFeature(FeatureGenerator):
-    # Safe on the whole frame: period detection is per-series (an FFT over each
-    # series' target), but the sin/cos feature columns are built for all rows in a
-    # single vectorized pass. Running on the whole frame avoids per-series DataFrame
-    # concat + groupby reassembly. Depends only on the target and the per-series
-    # row position (computed internally), not on other generators' outputs.
-    PER_SERIES = False
-
     class Config:
         max_top_k: int = 12
         do_detrend: bool = True
@@ -81,43 +74,29 @@ class AutoSeasonalFeature(FeatureGenerator):
         """Detect seasonal periods per series (an FFT over each series' target) and
         build the sin_#i / cos_#i columns for every row in a single vectorized pass.
 
-        Runs on the whole multi-series frame (PER_SERIES=False): only the period
-        detection loops over series (unavoidable FFT); the feature columns are then
-        computed for all rows at once, avoiding per-series DataFrame concat/reassembly.
+        Only period detection loops over series (the unavoidable FFT); the feature
+        columns are then computed for all rows at once, avoiding per-series DataFrame
+        concat/reassembly.
         """
         n = len(df)
         max_top_k = self.config["max_top_k"]
 
-        if "item_id" in (df.index.names or []):
-            # Within-series row position (0..len-1), matching the per-series
-            # ``np.arange(len)`` used previously.
-            pos = df.groupby(level="item_id", sort=False).cumcount().to_numpy()
-            # Integer code per row identifying its series, in first-appearance order
-            # (matches the enumeration order of groupby(sort=False) below).
-            codes, _ = pd.factorize(
-                df.index.get_level_values("item_id"), sort=False
-            )
-            n_series = int(codes.max()) + 1 if n else 0
-            # Per-series detected periods (padded with NaN for empty slots).
-            periods_by_series = np.full((n_series, max_top_k), np.nan)
-            for code, (_item_id, target) in enumerate(
-                df["target"].groupby(level="item_id", sort=False)
-            ):
-                periods = [
-                    p for p, _ in self.find_seasonal_periods(target, **self.config)
-                ]
-                for i, period in enumerate(periods[:max_top_k]):
-                    periods_by_series[code, i] = period
-            period_per_row = periods_by_series[codes]
-        else:
-            # Single-series frame (item_id already dropped).
-            pos = np.arange(n)
-            periods = [
-                p for p, _ in self.find_seasonal_periods(df["target"], **self.config)
-            ]
-            period_per_row = np.full((n, max_top_k), np.nan)
+        # Within-series row position (0..len-1), matching the per-series
+        # ``np.arange(len)`` used previously.
+        pos = df.groupby(level="item_id", sort=False).cumcount().to_numpy()
+        # Integer code per row identifying its series, in first-appearance order
+        # (matches the enumeration order of groupby(sort=False) below).
+        codes, _ = pd.factorize(df.index.get_level_values("item_id"), sort=False)
+        n_series = int(codes.max()) + 1 if n else 0
+        # Per-series detected periods (padded with NaN for empty slots).
+        periods_by_series = np.full((n_series, max_top_k), np.nan)
+        for code, (_item_id, target) in enumerate(
+            df["target"].groupby(level="item_id", sort=False)
+        ):
+            periods = [p for p, _ in self.find_seasonal_periods(target, **self.config)]
             for i, period in enumerate(periods[:max_top_k]):
-                period_per_row[:, i] = period
+                periods_by_series[code, i] = period
+        period_per_row = periods_by_series[codes]
 
         # Vectorized sin/cos for all rows and slots at once. Empty slots (NaN period)
         # become zeros, matching the previous zero-padding of missing periods.

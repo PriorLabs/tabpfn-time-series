@@ -10,26 +10,14 @@ from tabpfn_time_series.features.feature_generator_base import (
 
 
 class RunningIndexFeature(FeatureGenerator):
-    # Safe on the whole frame: a per-series 0..n-1 counter, computed via a single
-    # grouped cumcount instead of a Python loop over series.
-    PER_SERIES = False
-
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
-        if "item_id" in (df.index.names or []):
-            # Per-series counter over the whole multi-series frame in one pass.
-            df["running_index"] = df.groupby(level="item_id", sort=False).cumcount()
-        else:
-            # Single-series frame (item_id already dropped).
-            df["running_index"] = range(len(df))
+        # Per-series 0..n-1 counter over the whole frame in a single grouped pass.
+        df["running_index"] = df.groupby(level="item_id", sort=False).cumcount()
         return df
 
 
 class CalendarFeature(FeatureGenerator):
-    # Safe on the whole frame: every feature is a pure function of the per-row
-    # timestamp, independent of series boundaries.
-    PER_SERIES = False
-
     def __init__(
         self,
         components: Optional[List[str]] = None,
