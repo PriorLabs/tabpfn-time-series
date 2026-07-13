@@ -1,1 +1,19 @@
-* @PriorLabs/opensource-review-team
+# Code ownership for tabpfn-time-series.
+#
+# Only security / supply-chain sensitive paths are owned. General code (the
+# library, tests, docs) intentionally has NO code owner and only needs a normal
+# approving review, mirroring PriorLabs/TabPFN. This lets any maintainer review
+# ordinary changes while keeping publish/CI/governance files gated behind
+# release maintainers.
+
+# Publish & release workflows — direct PyPI / TestPyPI supply-chain surface
+.github/workflows/publish-release.yml    @PriorLabs/release-maintainers
+.github/workflows/publish-test.yml       @PriorLabs/release-maintainers
+
+# CI workflow — runs with TABPFN_TOKEN in the environment; a malicious edit
+# could exfiltrate the secret, so require release-maintainer review.
+.github/workflows/pull_request.yml       @PriorLabs/release-maintainers
+
+# Governance files — prevent silently weakening ownership or security policy.
+.github/CODEOWNERS                       @PriorLabs/release-maintainers
+SECURITY.md                              @PriorLabs/release-maintainers
