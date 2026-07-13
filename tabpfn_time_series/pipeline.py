@@ -391,9 +391,12 @@ class TabPFNTSPipeline:
 
     def _needs_batching(self, context_tsdf: TimeSeriesDataFrame) -> bool:
         """Whether the dataset is large enough to need splitting into batches."""
-        if self.max_featurize_rows is None or len(context_tsdf.item_ids) <= 1:
+        if self.max_featurize_rows is None:
             return False
-        return int(self._rows_per_item(context_tsdf).sum()) > self.max_featurize_rows
+        rows_per_item = self._rows_per_item(context_tsdf)
+        if len(rows_per_item) <= 1:
+            return False
+        return int(rows_per_item.sum()) > self.max_featurize_rows
 
     def _iter_item_batches(self, context_tsdf: TimeSeriesDataFrame):
         """Yield item_id batches whose capped context rows stay under the budget."""
