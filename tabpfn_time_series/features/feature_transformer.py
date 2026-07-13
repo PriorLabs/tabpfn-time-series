@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+import numpy as np
 import pandas as pd
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
@@ -24,6 +25,14 @@ class FeatureTransformer:
             train_tsdf.static_features, test_tsdf.static_features
         )
 
+        # Columns present before featurization (target + covariates). Their dtype is
+        # left untouched; only newly *generated* float64 feature columns are downcast
+        # to float32 below to roughly halve the peak host-memory footprint of the
+        # featurized frame. This matters a lot for many-series datasets (e.g. m5_1D
+        # from fev-bench has ~30k series): the full featurized frame is materialized
+        # in host RAM before the per-series GPU loop runs.
+        input_columns = set(train_tsdf.columns)
+
         train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
         test_plain = pd.DataFrame(test_tsdf).assign(_is_train=False)
         # Convert the train and test to the same data type
@@ -33,6 +42,7 @@ class FeatureTransformer:
             target_dtype = "float64"
         test_plain[target_column] = test_plain[target_column].astype(target_dtype)
         tsdf = pd.concat([train_plain, test_plain])
+        del train_plain, test_plain
 
         item_ids = tsdf.index.get_level_values("item_id").unique()
 
@@ -41,12 +51,28 @@ class FeatureTransformer:
             series_df = tsdf.xs(item_id, level="item_id")
             for generator in self.feature_generators:
                 series_df = generator(series_df)
+            # Downcast generated features (calendar/seasonal/running-index — all
+            # bounded values that are exactly representable in float32) to halve memory.
+            generated_float_cols = [
+                c
+                for c in series_df.columns
+                if c not in input_columns
+                and c != "_is_train"
+                and series_df[c].dtype == np.float64
+            ]
+            if generated_float_cols:
+                series_df = series_df.astype(
+                    {c: np.float32 for c in generated_float_cols}
+                )
             processed_series.append(series_df)
+        del tsdf
         tsdf = pd.concat(processed_series, keys=item_ids, names=["item_id"])
+        del processed_series
 
         # Split by tag (not iloc) since per-series concat reorders rows by item_id.
         train_slice = tsdf[tsdf["_is_train"]].drop(columns=["_is_train"])
         test_slice = tsdf[~tsdf["_is_train"]].drop(columns=["_is_train"])
+        del tsdf
 
         train_tsdf = TimeSeriesDataFrame(
             pd.DataFrame(train_slice), static_features=static_features
