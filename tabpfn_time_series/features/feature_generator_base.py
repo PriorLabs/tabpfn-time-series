@@ -4,7 +4,11 @@ import pandas as pd
 
 
 class FeatureGenerator(ABC):
-    """Abstract base class for feature generators"""
+    """Abstract base class for feature generators.
+
+    generate receives the whole (item_id, timestamp)-indexed frame with every series
+    at once, and must group on the item_id level for any per-series computation.
+    """
 
     @abstractmethod
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:

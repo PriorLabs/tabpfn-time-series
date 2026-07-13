@@ -25,12 +25,9 @@ class FeatureTransformer:
             train_tsdf.static_features, test_tsdf.static_features
         )
 
-        # Columns present before featurization (target + covariates). Their dtype is
-        # left untouched; only newly *generated* float64 feature columns are downcast
-        # to float32 below to roughly halve the peak host-memory footprint of the
-        # featurized frame. This matters a lot for many-series datasets (e.g. m5_1D
-        # from fev-bench has ~30k series): the full featurized frame is materialized
-        # in host RAM before the per-series GPU loop runs.
+        # Input columns (target + covariates) keep their dtype; only generated columns
+        # are downcast to float32 below. The whole featurized frame lives in host RAM
+        # before inference, so halving the generated columns matters for many series.
         input_columns = set(train_tsdf.columns)
 
         train_plain = pd.DataFrame(train_tsdf).assign(_is_train=True)
@@ -44,32 +41,24 @@ class FeatureTransformer:
         tsdf = pd.concat([train_plain, test_plain])
         del train_plain, test_plain
 
-        item_ids = tsdf.index.get_level_values("item_id").unique()
+        # Each generator sees the whole multi-series frame and groups by item_id
+        # internally for any per-series work.
+        for generator in self.feature_generators:
+            tsdf = generator(tsdf)
 
-        processed_series = []
-        for item_id in item_ids:
-            series_df = tsdf.xs(item_id, level="item_id")
-            for generator in self.feature_generators:
-                series_df = generator(series_df)
-            # Downcast generated features (calendar/seasonal/running-index — all
-            # bounded values that are exactly representable in float32) to halve memory.
-            generated_float_cols = [
-                c
-                for c in series_df.columns
-                if c not in input_columns
-                and c != "_is_train"
-                and series_df[c].dtype == np.float64
-            ]
-            if generated_float_cols:
-                series_df = series_df.astype(
-                    {c: np.float32 for c in generated_float_cols}
-                )
-            processed_series.append(series_df)
-        del tsdf
-        tsdf = pd.concat(processed_series, keys=item_ids, names=["item_id"])
-        del processed_series
+        # The generated features (calendar, seasonal, running index) are bounded and
+        # exactly representable in float32, so the downcast is lossless.
+        generated_float_cols = [
+            c
+            for c in tsdf.columns
+            if c not in input_columns
+            and c != "_is_train"
+            and tsdf[c].dtype == np.float64
+        ]
+        if generated_float_cols:
+            tsdf = tsdf.astype({c: np.float32 for c in generated_float_cols})
 
-        # Split by tag (not iloc) since per-series concat reorders rows by item_id.
+        # Split back into train/test by the tag column added above.
         train_slice = tsdf[tsdf["_is_train"]].drop(columns=["_is_train"])
         test_slice = tsdf[~tsdf["_is_train"]].drop(columns=["_is_train"])
         del tsdf

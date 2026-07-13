@@ -11,9 +11,6 @@ from statsmodels.tsa.stattools import acf
 from tabpfn_time_series.features.feature_generator_base import (
     FeatureGenerator,
 )
-from tabpfn_time_series.features.basic_features import (
-    PeriodicSinCosineFeature,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -74,38 +71,38 @@ class AutoSeasonalFeature(FeatureGenerator):
             self.config["detrend_type"] = "linear"
 
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
+        """Add sin_#i/cos_#i columns for each series' detected seasonal periods."""
+        n = len(df)
+        max_top_k = self.config["max_top_k"]
 
-        # Detect seasonal periods from target data
-        detected_periods_and_magnitudes = self.find_seasonal_periods(
-            df.target, **self.config
-        )
-        logger.debug(
-            f"Found {len(detected_periods_and_magnitudes)} seasonal periods: {detected_periods_and_magnitudes}"
-        )
+        pos = df.groupby(level="item_id", sort=False).cumcount().to_numpy()
+        # codes must share the sort=False group order used in the detection loop, so
+        # periods_by_series[codes] maps each row to its own series' periods.
+        codes, _ = pd.factorize(df.index.get_level_values("item_id"), sort=False)
+        n_series = int(codes.max()) + 1 if n else 0
+        periods_by_series = np.full((n_series, max_top_k), np.nan)
+        for code, (_item_id, target) in enumerate(
+            df["target"].groupby(level="item_id", sort=False)
+        ):
+            periods = [p for p, _ in self.find_seasonal_periods(target, **self.config)]
+            for i, period in enumerate(periods[:max_top_k]):
+                periods_by_series[code, i] = period
+        period_per_row = periods_by_series[codes]
 
-        # Extract just the periods (without magnitudes)
-        periods = [period for period, _ in detected_periods_and_magnitudes]
+        # Unfilled slots have period NaN; the division warns and yields NaN, which the
+        # mask turns into a zero column.
+        with np.errstate(divide="ignore", invalid="ignore"):
+            angle = 2 * np.pi * pos[:, None] / period_per_row
+        valid = ~np.isnan(period_per_row)
+        sin = np.where(valid, np.sin(angle), 0.0)
+        cos = np.where(valid, np.cos(angle), 0.0)
 
-        # Generate features for detected periods using PeriodicSinCosineFeature
-        if periods:
-            feature_generator = PeriodicSinCosineFeature(periods=periods)
-            df = feature_generator.generate(df)
-
-        # Standardize column names for consistency across time series
-        renamed_columns = {}
-        for i, period in enumerate(periods):
-            renamed_columns[f"sin_{period}"] = f"sin_#{i}"
-            renamed_columns[f"cos_{period}"] = f"cos_#{i}"
-
-        df = df.rename(columns=renamed_columns)
-
-        # Add placeholder zero columns for missing periods up to max_top_k
-        for i in range(len(periods), self.config["max_top_k"]):
-            df[f"sin_#{i}"] = 0.0
-            df[f"cos_#{i}"] = 0.0
-
-        return df
+        feature_columns = {}
+        for i in range(max_top_k):
+            feature_columns[f"sin_#{i}"] = sin[:, i]
+            feature_columns[f"cos_#{i}"] = cos[:, i]
+        feature_df = pd.DataFrame(feature_columns, index=df.index)
+        return pd.concat([df, feature_df], axis=1)
 
     @staticmethod
     def find_seasonal_periods(
