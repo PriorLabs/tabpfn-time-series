@@ -397,11 +397,12 @@ class TabPFNTSPipeline:
 
     def _iter_item_batches(self, context_tsdf: TimeSeriesDataFrame):
         """Yield item_id batches whose capped context rows stay under the budget."""
-        rows_per_item = self._rows_per_item(context_tsdf)
+        # rows_per_item is indexed by item_id in original order, so iterating it keeps
+        # batches (and the concatenated predictions) in that order.
         current: list = []
         current_rows = 0
-        for iid in context_tsdf.item_ids:
-            n = int(rows_per_item[iid])
+        for iid, n in self._rows_per_item(context_tsdf).items():
+            n = int(n)
             if current and current_rows + n > self.max_featurize_rows:
                 yield current
                 current, current_rows = [], 0
