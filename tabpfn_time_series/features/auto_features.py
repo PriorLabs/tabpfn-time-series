@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class AutoSeasonalFeature(FeatureGenerator):
+    # Safe on the whole frame: period detection is per-series (an FFT over each
+    # series' target), but the sin/cos feature columns are built for all rows in a
+    # single vectorized pass. Running on the whole frame avoids per-series DataFrame
+    # concat + groupby reassembly. Depends only on the target and the per-series
+    # row position (computed internally), not on other generators' outputs.
+    PER_SERIES = False
+
     class Config:
         max_top_k: int = 12
         do_detrend: bool = True
@@ -71,35 +78,59 @@ class AutoSeasonalFeature(FeatureGenerator):
             self.config["detrend_type"] = "linear"
 
     def generate(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Detect seasonal periods from target data
-        detected_periods_and_magnitudes = self.find_seasonal_periods(
-            df.target, **self.config
-        )
-        logger.debug(
-            f"Found {len(detected_periods_and_magnitudes)} seasonal periods: {detected_periods_and_magnitudes}"
-        )
+        """Detect seasonal periods per series (an FFT over each series' target) and
+        build the sin_#i / cos_#i columns for every row in a single vectorized pass.
 
-        # Extract just the periods (without magnitudes)
-        periods = [period for period, _ in detected_periods_and_magnitudes]
-
-        # Build all sin_#i / cos_#i columns (detected periods fill the first slots,
-        # remaining slots up to max_top_k are zeros) as a single block and attach
-        # them in one concat. This replaces per-column ``df[col] = ...`` inserts +
-        # a rename, which dominated runtime (each single-column insert reallocates
-        # the whole block manager -> O(n_features) per column, O(n_features^2) total).
+        Runs on the whole multi-series frame (PER_SERIES=False): only the period
+        detection loops over series (unavoidable FFT); the feature columns are then
+        computed for all rows at once, avoiding per-series DataFrame concat/reassembly.
+        """
         n = len(df)
-        idx = np.arange(n)
         max_top_k = self.config["max_top_k"]
+
+        if "item_id" in (df.index.names or []):
+            # Within-series row position (0..len-1), matching the per-series
+            # ``np.arange(len)`` used previously.
+            pos = df.groupby(level="item_id", sort=False).cumcount().to_numpy()
+            # Integer code per row identifying its series, in first-appearance order
+            # (matches the enumeration order of groupby(sort=False) below).
+            codes, _ = pd.factorize(
+                df.index.get_level_values("item_id"), sort=False
+            )
+            n_series = int(codes.max()) + 1 if n else 0
+            # Per-series detected periods (padded with NaN for empty slots).
+            periods_by_series = np.full((n_series, max_top_k), np.nan)
+            for code, (_item_id, target) in enumerate(
+                df["target"].groupby(level="item_id", sort=False)
+            ):
+                periods = [
+                    p for p, _ in self.find_seasonal_periods(target, **self.config)
+                ]
+                for i, period in enumerate(periods[:max_top_k]):
+                    periods_by_series[code, i] = period
+            period_per_row = periods_by_series[codes]
+        else:
+            # Single-series frame (item_id already dropped).
+            pos = np.arange(n)
+            periods = [
+                p for p, _ in self.find_seasonal_periods(df["target"], **self.config)
+            ]
+            period_per_row = np.full((n, max_top_k), np.nan)
+            for i, period in enumerate(periods[:max_top_k]):
+                period_per_row[:, i] = period
+
+        # Vectorized sin/cos for all rows and slots at once. Empty slots (NaN period)
+        # become zeros, matching the previous zero-padding of missing periods.
+        with np.errstate(divide="ignore", invalid="ignore"):
+            angle = 2 * np.pi * pos[:, None] / period_per_row
+        valid = ~np.isnan(period_per_row)
+        sin = np.where(valid, np.sin(angle), 0.0)
+        cos = np.where(valid, np.cos(angle), 0.0)
+
         feature_columns = {}
         for i in range(max_top_k):
-            if i < len(periods):
-                angle = 2 * np.pi * idx / periods[i]
-                feature_columns[f"sin_#{i}"] = np.sin(angle)
-                feature_columns[f"cos_#{i}"] = np.cos(angle)
-            else:
-                feature_columns[f"sin_#{i}"] = np.zeros(n)
-                feature_columns[f"cos_#{i}"] = np.zeros(n)
-
+            feature_columns[f"sin_#{i}"] = sin[:, i]
+            feature_columns[f"cos_#{i}"] = cos[:, i]
         feature_df = pd.DataFrame(feature_columns, index=df.index)
         return pd.concat([df, feature_df], axis=1)
 
