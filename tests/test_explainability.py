@@ -105,7 +105,7 @@ def test_pdp_hour_recovers_sine_shape(explainer_factory):
     )
 
     assert list(pdp["hour_of_day"]) == list(range(24))
-    expected = np.sin(2 * np.pi * np.arange(24) / 23)  # divisor matches CalendarFeature
+    expected = np.sin(2 * np.pi * np.arange(24) / 24)  # matches CalendarFeature
     # Linear model on the sin column => PDP is exactly that sine (up to mean shift).
     corr = np.corrcoef(pdp["mean"], expected)[0, 1]
     assert corr > 0.999

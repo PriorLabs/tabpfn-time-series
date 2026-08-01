@@ -60,7 +60,7 @@ CALENDAR_ACCESSORS = {
 
 def _calendar_sin_cos(name: str, value: float) -> tuple[float, float]:
     """Encode a raw calendar value the exact same way CalendarFeature does."""
-    divisor = CALENDAR_PERIODS[name] - 1  # 0-based adjustment, matches the featurizer
+    divisor = CALENDAR_PERIODS[name]  # true period; `value` is already 0-based
     angle = 2 * np.pi * value / divisor
     return np.sin(angle), np.cos(angle)
 

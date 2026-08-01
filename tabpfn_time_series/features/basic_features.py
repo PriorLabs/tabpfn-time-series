@@ -50,7 +50,6 @@ class CalendarFeature(FeatureGenerator):
 
             if periods is not None:
                 for period in periods:
-                    period = period - 1  # Adjust for 0-based indexing
                     df[f"{feature_name}_sin"] = np.sin(2 * np.pi * feature / period)
                     df[f"{feature_name}_cos"] = np.cos(2 * np.pi * feature / period)
             else:
