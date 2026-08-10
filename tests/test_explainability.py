@@ -259,6 +259,7 @@ def test_window_collapse_warns(explainer_factory):
         )
 
 
+@pytest.mark.uses_tabpfn_local
 def test_integration_local_tabpfn():
     """End-to-end against a local TabPFN model on a tiny series."""
     df = make_series(n=180)

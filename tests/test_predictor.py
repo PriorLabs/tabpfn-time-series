@@ -85,6 +85,7 @@ class TestTabPFNTimeSeriesPredictor:
 
         assert result is not None
 
+    @pytest.mark.uses_tabpfn_local
     def test_local_mode(self):
         """Test that predict method calls the worker's predict method"""
         train_tsdf, test_tsdf = create_test_data()
@@ -261,7 +262,7 @@ class TestTimeSeriesPredictor:
         predictor = predictor_factory()
 
         if should_raise:
-            with pytest.raises(Exception):
+            with pytest.raises(ValueError, match="between 0 and 1"):
                 predictor.predict(train_tsdf, test_tsdf, quantiles=quantiles)
         else:
             result = predictor.predict(train_tsdf, test_tsdf, quantiles=quantiles)
