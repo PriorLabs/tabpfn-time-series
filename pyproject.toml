@@ -18,7 +18,9 @@ dependencies = [
     "tqdm",
     "pandas>=2.1.2",
     "gluonts>=0.16.0",
-    "tabpfn-client>=0.2.8",
+    # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
+    # 426 Upgrade Required from `try_connection` before any prediction runs.
+    "tabpfn-client>=0.3.0",
     "tabpfn>=8.0.0",
     "statsmodels>=0.14.5",
     "datasets>=2.15",
