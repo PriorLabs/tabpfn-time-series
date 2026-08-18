@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased]
+
 ## [1.1.0] — 2026-05-12
 
 Default config now ships the finetuned **TabPFN-TS-3** checkpoint from the

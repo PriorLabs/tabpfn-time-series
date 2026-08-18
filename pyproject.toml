@@ -1,10 +1,12 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "tabpfn_time_series"
-dynamic = ["version"]
+# Bumped by .github/workflows/release-create-pr.yml; the release tag is
+# verified against this value before anything is published.
+version = "1.2.0"
 authors = [{ name = "Liam Shi Bin Hoo", email = "hoos@tf.uni-freiburg.de" }]
 description = "Zero-shot time series forecasting with TabPFNv2"
 readme = "README.md"
@@ -51,9 +53,6 @@ explainability = [
 ]
 
 
-[tool.hatch.version]
-source = "vcs"
-
 [tool.hatch.build.targets.wheel]
 exclude = ["docs", "gift_eval"]
 
@@ -81,7 +80,7 @@ dev = [
     "twine",
     "build",
     "hatch",
-    "hatch-vcs",
+    "towncrier>=24.8.0",
     "ipykernel>=6.29.5",
 ]
 
@@ -94,3 +93,43 @@ markers = [
     "uses_tabpfn_client: These tests require a TabPFN API key.",
     "uses_tabpfn_local: These tests require a local TabPFN model.",
 ]
+
+[tool.changelog-bot.towncrier_changelog]
+enabled = true
+changelog_skip_label = "no changelog needed"
+
+[tool.towncrier]
+directory = "changelog"
+filename = "CHANGELOG.md"
+start_string = "## [Unreleased]\n"
+title_format = "## [{version}] - {project_date}"
+issue_format = "[#{issue}](https://github.com/PriorLabs/tabpfn-time-series/pull/{issue})"
+
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking Changes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.section]]
+path = ""
+name = ""
