@@ -15,7 +15,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "tqdm",
+    # Floored so `--resolution lowest-direct` in CI has something to pin to;
+    # 4.66 is what the tree already resolves to transitively.
+    "tqdm>=4.66",
     "pandas>=2.1.2",
     "gluonts>=0.16.0",
     # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
@@ -51,9 +53,16 @@ exclude = ["docs", "gift_eval"]
 exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
-dev = [
-    "tabpfn-time-series[benchmarking,explainability]",
+# The minimum subset of the dev dependencies required to run the tests in CI.
+# The idea is to stay as close to a user's deployment environment as possible,
+# so a passing test run means the published package works — not that our local
+# tooling happens to paper over a gap.
+ci = [
     "pytest>=8.4.1",
+]
+dev = [
+    {include-group = "ci"},
+    "tabpfn-time-series[benchmarking,explainability]",
     "jupyter",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
@@ -63,7 +72,6 @@ dev = [
     "build",
     "hatch",
     "hatch-vcs",
-    "pytest",
     "ipykernel>=6.29.5",
 ]
 
