@@ -24,11 +24,12 @@ name: In pull request
 # skip when that cache is cold.
 
 on:
+  # No `branches:` filter: that filter matches the *base* branch, so a PR
+  # stacked on another PR's branch would get no CI at all — exactly when you
+  # most want it, since the stack lands on main one merge at a time. Running on
+  # every PR regardless of base keeps stacked work verifiable before it merges
+  # down.
   pull_request:
-    branches:
-      - main
-      - beta
-      - dev
 
 jobs:
   check_python_linting_formatting:
