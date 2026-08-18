@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    # Don't propose versions released in the last 8 days, matching the main
+    # TabPFN repo (see PriorLabs/TabPFN#1114).
+    cooldown:
+      default-days: 8
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
