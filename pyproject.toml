@@ -23,9 +23,16 @@ dependencies = [
     # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
     # 426 Upgrade Required from `try_connection` before any prediction runs.
     "tabpfn-client>=0.3.0",
-    "tabpfn>=8.0.0",
+    # 8.0.0 does not ship the TS checkpoint that `defaults.py` selects in LOCAL
+    # mode: it resolves only `tabpfn-v3-regressor-v3_default.ckpt`, so every
+    # LOCAL-mode call raises ValueError. 8.0.1 is the first release with it.
+    "tabpfn>=8.0.1",
     "statsmodels>=0.14.5",
-    "datasets>=2.15",
+    # 2.21 is the first release that works under numpy 2 (earlier versions call
+    # `np.array(..., copy=False)`, which numpy 2 rejects outright). numpy is not
+    # a direct dependency here, so it always resolves to 2.x and the old floor
+    # produced an unusable combination.
+    "datasets>=2.21",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",

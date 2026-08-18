@@ -5911,7 +5911,7 @@ dev = [
 requires-dist = [
     { name = "autogluon-timeseries", marker = "extra == 'benchmarking'", specifier = ">=1.5.0,<2.0" },
     { name = "backoff", specifier = ">=2.2.1" },
-    { name = "datasets", specifier = ">=2.15" },
+    { name = "datasets", specifier = ">=2.21" },
     { name = "fev", specifier = ">=0.6.1" },
     { name = "gluonts", specifier = ">=0.16.0" },
     { name = "matplotlib", marker = "extra == 'explainability'", specifier = ">=3.10.3" },
@@ -5920,7 +5920,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "shapiq", marker = "extra == 'explainability'", specifier = ">=1.4" },
     { name = "statsmodels", specifier = ">=0.14.5" },
-    { name = "tabpfn", specifier = ">=8.0.0" },
+    { name = "tabpfn", specifier = ">=8.0.1" },
     { name = "tabpfn-client", specifier = ">=0.3.0" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm", specifier = ">=4.66" },
