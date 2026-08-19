@@ -85,6 +85,7 @@ class TestTabPFNTimeSeriesPredictor:
 
         assert result is not None
 
+    @pytest.mark.uses_tabpfn_local
     def test_local_mode(self):
         """Test that predict method calls the worker's predict method"""
         train_tsdf, test_tsdf = create_test_data()

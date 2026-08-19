@@ -15,7 +15,13 @@ name: In pull request
 #   - Secrets ARE exposed to PRs from branches in this repo, so internal
 #     contributors still get full test coverage.
 # Tests that need TABPFN_CLIENT_API_KEY / TABPFN_TOKEN / HF_TOKEN should
-# detect missing-env-var and skip on fork PRs.
+# detect missing-env-var and skip on fork PRs (`tests/conftest.py` does this
+# for the `uses_tabpfn_client` / `uses_tabpfn_local` markers).
+#
+# LOCAL-mode tests don't have to skip on forks: `cache-models.yml` downloads the
+# checkpoints on `main` into a cache that PRs from forks can read, so the model
+# is already on disk and `tabpfn` never needs a token to fetch it. They only
+# skip when that cache is cold.
 
 on:
   pull_request:
@@ -51,6 +57,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
+    env:
+      TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
     steps:
       - uses: actions/checkout@v4
 
@@ -65,12 +73,25 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
+      # Read-only: the cache is written on `main` by `cache-models.yml`. A miss
+      # is not fatal — internal PRs re-download with TABPFN_TOKEN, fork PRs skip
+      # the LOCAL-mode tests.
+      - name: Restore TabPFN model cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
+          restore-keys: |
+            tabpfn-models-v1-
+          enableCrossOsArchive: true
+
       - name: Run Tests
         # Secrets are only available to PRs from branches in this repo, not
-        # from forks. Tests that require these should skip gracefully when
-        # the env var is empty (i.e. on fork PRs).
+        # from forks; they resolve to the empty string there. `tests/conftest.py`
+        # turns that into skips instead of failures. `-ra` so the skip reasons
+        # are visible in the job log.
         env:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
           TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: uv run pytest tests
+        run: uv run pytest tests -ra
