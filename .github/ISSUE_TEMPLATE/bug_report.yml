@@ -1,0 +1,112 @@
+name: Bug Report
+description: Create a report to help us reproduce and correct the bug
+labels: [bug]
+
+body:
+- type: markdown
+  attributes:
+    value: >
+      #### Before submitting a bug, please make sure the issue hasn't been already
+      addressed by searching through [the past issues](https://github.com/PriorLabs/tabpfn-time-series/issues)
+      and updating to the latest release by running
+      `pip install tabpfn-time-series --upgrade`.
+- type: textarea
+  attributes:
+    label: Describe the bug
+    description: >
+      A clear and concise description of what the bug is.
+  validations:
+    required: true
+- type: dropdown
+  attributes:
+    label: TabPFN mode
+    description: >
+      Which backend were you running? LOCAL runs the checkpoint on your own
+      machine; CLIENT calls the Prior Labs cloud API.
+    options:
+      - LOCAL
+      - CLIENT
+      - Not sure / not applicable
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Steps/Code to Reproduce
+    description: |
+      Please add a minimal code example that reproduces the error. Be as succinct as
+      possible and **do not depend on external data files**: generate a synthetic
+      series with `numpy`/`pandas`, or use the helper in `examples/common.py`. Example:
+
+      ```python
+      import numpy as np
+      import pandas as pd
+      from tabpfn_time_series import TabPFNMode, TabPFNTSPipeline, TimeSeriesDataFrame
+      from tabpfn_time_series.data_preparation import generate_test_X
+
+      # Synthetic daily series
+      index = pd.MultiIndex.from_product(
+          [["A"], pd.date_range("2024-01-01", periods=100, freq="D")],
+          names=["item_id", "timestamp"],
+      )
+      train = TimeSeriesDataFrame(pd.DataFrame({"target": np.arange(100.0)}, index=index))
+
+      pipeline = TabPFNTSPipeline(tabpfn_mode=TabPFNMode.LOCAL)
+      pred = pipeline.predict(train, generate_test_X(train, prediction_length=7))
+      ```
+
+      If the code is too long, feel free to put it in a public gist and link it here:
+      https://gist.github.com.
+
+      In short, **we are going to copy-paste your code** to run it and we expect to get
+      the same result as you. Crafting a minimal reproducer takes effort on your side,
+      but it lets maintainers pin down the cause without ambiguity — ambiguous reports
+      are much slower to fix.
+    placeholder: |
+      ```
+      Sample code to reproduce the problem
+      ```
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Expected Results
+    description: >
+      Please paste or describe the expected results.
+    placeholder: >
+      Example: No error is thrown.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Actual Results
+    description: |
+      Please paste or describe the results you observe instead of the expected results.
+      If you observe an error, paste the error message including the **full traceback**.
+
+      ```python-traceback
+      ---------------------------------------------------------------------------
+      Traceback (most recent call last):
+        File "repro.py", line 14, in <module>
+          pred = pipeline.predict(train, test_X)
+      ValueError: ...
+      ```
+    placeholder: >
+      Please paste or specifically describe the actual output or traceback.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Versions
+    render: shell
+    description: |
+      Please run the following and paste the output below.
+      ```python
+      import tabpfn_time_series; print(tabpfn_time_series.__version__)
+      import tabpfn; tabpfn.display_debug_info()
+      ```
+  validations:
+    required: false
+- type: markdown
+  attributes:
+    value: >
+      Thanks for contributing 🎉!
