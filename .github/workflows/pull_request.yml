@@ -78,7 +78,7 @@ jobs:
       # is not fatal — internal PRs re-download with TABPFN_TOKEN, fork PRs skip
       # the LOCAL-mode tests.
       - name: Restore TabPFN model cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}/model_cache
           key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
