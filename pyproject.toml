@@ -67,6 +67,8 @@ exclude = ["docs", "gift_eval"]
 # tooling happens to paper over a gap.
 ci = [
     "pytest>=8.4.1",
+    # -n auto for the example smoke run.
+    "pytest-xdist>=3.6.0",
 ]
 dev = [
     {include-group = "ci"},

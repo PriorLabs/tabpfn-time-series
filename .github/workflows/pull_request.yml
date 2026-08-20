@@ -140,6 +140,56 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: uv run --no-sync pytest tests -ra
 
+  example_smoke:
+    name: Example smoke (CPU)
+    # A separate job (rather than part of test_compatibility) so the examples --
+    # which are comparatively slow -- run in parallel and don't block the normal
+    # test suite. Fast smoke gate: each example runs as a subprocess and fails
+    # only if it *errors*; one that doesn't finish within the timeout still passes,
+    # since we only assert it starts and runs without crashing. Running every
+    # example to completion (timeout = failure) is the job of the scheduled full
+    # run, test_examples_full.yml.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      # Highest resolution on purpose: examples are user-facing tutorials, so we
+      # test them against the deps a fresh install gets.
+      - name: Install the project
+        run: uv sync --all-extras --no-default-groups --group ci
+
+      - name: Restore TabPFN model cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
+          restore-keys: |
+            tabpfn-models-v1-
+          enableCrossOsArchive: true
+
+      # -n auto runs the examples in parallel to keep wall-clock down. The
+      # per-example timeout is fixed in tests/test_examples.py. As in the unit
+      # suite, missing secrets on a fork PR become skips, not failures.
+      - name: Run example smoke tests
+        env:
+          TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync pytest tests/test_examples.py --run-examples -n auto -ra
+
   build_verify:
     name: Build wheel + sdist
     runs-on: ubuntu-latest
