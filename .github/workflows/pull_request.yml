@@ -194,11 +194,7 @@ jobs:
     name: Build wheel + sdist
     runs-on: ubuntu-latest
     steps:
-      # hatch-vcs derives the version from the git tag, so the full history and
-      # tags have to be present or the build stamps a 0.1.dev… placeholder.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
