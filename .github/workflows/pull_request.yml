@@ -1,4 +1,5 @@
 name: In pull request
+run-name: "CI on ${{ github.head_ref || github.ref_name }}"
 
 # SECURITY NOTE:
 # Use `pull_request`, NOT `pull_request_target`.
@@ -30,21 +31,31 @@ on:
   # every PR regardless of base keeps stacked work verifiable before it merges
   # down.
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check_python_linting_formatting:
     name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Ruff Linting
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           src: "./"
           version-file: pyproject.toml
       - name: Ruff Formatting
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           src: "./"
           version-file: pyproject.toml
@@ -55,30 +66,62 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        # Two axes in one: the oldest supported interpreter against the oldest
+        # dependency versions our floors allow (`lowest-direct`), and the newest
+        # against whatever a fresh install resolves to (`highest`). A green
+        # `lowest-direct` cell is what makes the floors in pyproject.toml an
+        # honest claim rather than a guess.
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+            dependency-set: lowest-direct
+          - os: macos-latest
+            # Use 3.11 as the minimum Python version for Macs. Python 3.10 doesn't
+            # install reliably on macOS ARM runners, and Apple Silicon is required by
+            # TabPFN's minimum PyTorch.
+            python-version: "3.11"
+            dependency-set: lowest-direct
+          - os: windows-latest
+            python-version: "3.10"
+            dependency-set: lowest-direct
+          - os: ubuntu-latest
+            python-version: "3.12"
+            dependency-set: highest
+          - os: macos-latest
+            python-version: "3.12"
+            dependency-set: highest
+          - os: windows-latest
+            python-version: "3.12"
+            dependency-set: highest
     runs-on: ${{ matrix.os }}
     env:
       TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
 
+      # `--no-default-groups --group ci` installs the test dependencies without
+      # the `dev` group's local tooling (jupyter, wandb, submitit, pre-commit,
+      # hatch), which CI never runs and which drags the install out. Extras stay
+      # in: `explainability` and `benchmarking` are import paths the tests and
+      # gift_eval actually exercise.
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --no-default-groups --group ci --resolution ${{ matrix.dependency-set }}
 
       # Read-only: the cache is written on `main` by `cache-models.yml`. A miss
       # is not fatal — internal PRs re-download with TABPFN_TOKEN, fork PRs skip
       # the LOCAL-mode tests.
       - name: Restore TabPFN model cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
           key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
@@ -95,4 +138,28 @@ jobs:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
           TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: uv run pytest tests -ra
+        run: uv run --no-sync pytest tests -ra
+
+  build_verify:
+    name: Build wheel + sdist
+    runs-on: ubuntu-latest
+    steps:
+      # hatch-vcs derives the version from the git tag, so the full history and
+      # tags have to be present or the build stamps a 0.1.dev… placeholder.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Check artifacts
+        run: uvx twine check dist/*

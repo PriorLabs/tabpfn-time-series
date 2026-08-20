@@ -35,22 +35,22 @@ jobs:
     env:
       TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --no-default-groups --group ci
 
       - name: Restore model cache
         id: restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
           key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
@@ -65,7 +65,7 @@ jobs:
 
       - name: Save model cache
         if: steps.restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
           key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}

@@ -15,15 +15,25 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "tqdm",
+    # Floored so `--resolution lowest-direct` in CI has something to pin to;
+    # 4.66 is what the tree already resolves to transitively.
+    "tqdm>=4.66",
     "pandas>=2.1.2",
     "gluonts>=0.16.0",
     # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
     # 426 Upgrade Required from `try_connection` before any prediction runs.
     "tabpfn-client>=0.3.0",
-    "tabpfn>=8.0.0",
+    # 8.0.0 cannot resolve the TS checkpoint that `defaults.py` selects in LOCAL
+    # mode: its list of downloadable regressor checkpoints holds only
+    # `tabpfn-v3-regressor-v3_default.ckpt`, so every LOCAL-mode call raises
+    # ValueError. 8.0.1 is the first release that lists it.
+    "tabpfn>=8.0.1",
     "statsmodels>=0.14.5",
-    "datasets>=2.15",
+    # 2.21 is the first release that works under numpy 2 (earlier versions call
+    # `np.array(..., copy=False)`, which numpy 2 rejects outright). numpy is not
+    # a direct dependency here, so it always resolves to 2.x and the old floor
+    # produced an unusable combination.
+    "datasets>=2.21",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
@@ -51,9 +61,16 @@ exclude = ["docs", "gift_eval"]
 exclude = ["docs", "gift_eval"]
 
 [dependency-groups]
-dev = [
-    "tabpfn-time-series[benchmarking,explainability]",
+# The minimum subset of the dev dependencies required to run the tests in CI.
+# The idea is to stay as close to a user's deployment environment as possible,
+# so a passing test run means the published package works — not that our local
+# tooling happens to paper over a gap.
+ci = [
     "pytest>=8.4.1",
+]
+dev = [
+    {include-group = "ci"},
+    "tabpfn-time-series[benchmarking,explainability]",
     "jupyter",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
@@ -63,7 +80,6 @@ dev = [
     "build",
     "hatch",
     "hatch-vcs",
-    "pytest",
     "ipykernel>=6.29.5",
 ]
 
