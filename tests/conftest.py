@@ -25,14 +25,30 @@ from pathlib import Path
 import pytest
 
 
-def _skip_reason_for_client() -> str | None:
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the opt-in flag for the example runner.
+
+    The scripts in `examples/` are user-facing demos, not unit tests: they
+    download data and fit real models, so they must not run as part of a plain
+    `pytest tests`. Without this flag `tests/test_examples.py` is still
+    collected but every case skips itself.
+    """
+    parser.addoption(
+        "--run-examples",
+        action="store_true",
+        default=False,
+        help="Run the example scripts in examples/ (see tests/test_examples.py).",
+    )
+
+
+def skip_reason_for_client() -> str | None:
     if os.getenv("TABPFN_CLIENT_API_KEY"):
         return None
     return "TABPFN_CLIENT_API_KEY is not set (expected on fork PRs)"
 
 
 @functools.lru_cache(maxsize=1)
-def _skip_reason_for_local() -> str | None:
+def skip_reason_for_local() -> str | None:
     from tabpfn.model_loading import prepend_cache_path
 
     from tabpfn_time_series.defaults import TABPFN_V3_TS_CHECKPOINT
@@ -49,8 +65,8 @@ def _skip_reason_for_local() -> str | None:
 
 
 _SKIP_REASON_BY_MARKER = {
-    "uses_tabpfn_client": _skip_reason_for_client,
-    "uses_tabpfn_local": _skip_reason_for_local,
+    "uses_tabpfn_client": skip_reason_for_client,
+    "uses_tabpfn_local": skip_reason_for_local,
 }
 
 
