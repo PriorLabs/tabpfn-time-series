@@ -47,15 +47,13 @@ uv run ruff format .
 uv run pytest tests -ra
 ```
 
-Two markers gate tests on credentials/model weights (see `tests/conftest.py`):
-
-- `uses_tabpfn_client` — needs the TabPFN cloud API (`TABPFN_CLIENT_API_KEY`).
-- `uses_tabpfn_local` — needs a local TabPFN checkpoint (cached weights or
-  `TABPFN_TOKEN` to download them).
-
-Without credentials these tests **skip with a readable reason** rather than fail —
-so a plain `pytest` run works on a fresh clone and on fork PRs. Please keep new
-tests working that way: mark them, and don't assume secrets exist.
+Mark tests that rely on `tabpfn-client` with
+```python
+@pytest.mark.uses_tabpfn_client
+def test__my_test() -> None:
+    ...
+```
+This allows these tests to skip when access an API key or Internet access is not available.
 
 ## Pull requests
 
