@@ -1,4 +1,5 @@
 name: In pull request
+run-name: "CI on ${{ github.head_ref || github.ref_name }}"
 
 # SECURITY NOTE:
 # Use `pull_request`, NOT `pull_request_target`.
@@ -14,37 +15,41 @@ name: In pull request
 #   - Secrets are NOT exposed to fork PRs (GitHub policy).
 #   - Secrets ARE exposed to PRs from branches in this repo, so internal
 #     contributors still get full test coverage.
-# Tests that need TABPFN_CLIENT_API_KEY / TABPFN_TOKEN / HF_TOKEN should
-# detect missing-env-var and skip on fork PRs (`tests/conftest.py` does this
-# for the `uses_tabpfn_client` / `uses_tabpfn_local` markers).
 #
-# LOCAL-mode tests don't have to skip on forks: `cache-models.yml` downloads the
-# checkpoints on `main` into a cache that PRs from forks can read, so the model
-# is already on disk and `tabpfn` never needs a token to fetch it. They only
-# skip when that cache is cold.
+# For PRs from forks, that don't have access to the secrets:
+# - Tests that require model files should be able to load these from the cache, see
+#   `restore-model-cache`.
+# - Tests that require TABPFN_CLIENT_API_KEY will be skipped, but will still run on
+#   merge to main.
 
 on:
-  # No `branches:` filter: that filter matches the *base* branch, so a PR
-  # stacked on another PR's branch would get no CI at all — exactly when you
-  # most want it, since the stack lands on main one merge at a time. Running on
-  # every PR regardless of base keeps stacked work verifiable before it merges
-  # down.
+  # No `branches:` filter so that stacked PRs are all tested.
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check_python_linting_formatting:
     name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Ruff Linting
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           src: "./"
           version-file: pyproject.toml
       - name: Ruff Formatting
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           src: "./"
           version-file: pyproject.toml
@@ -55,35 +60,87 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        # Two axes in one: the oldest supported interpreter against the oldest
+        # dependency versions our floors allow (`lowest-direct`), and the newest
+        # against whatever a fresh install resolves to (`highest`). A green
+        # `lowest-direct` cell is what makes the floors in pyproject.toml an
+        # honest claim rather than a guess.
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+            dependency-set: lowest-direct
+          - os: macos-latest
+            # Use 3.11 as the minimum Python version for Macs. Python 3.10 doesn't
+            # install reliably on macOS ARM runners, and Apple Silicon is required by
+            # TabPFN's minimum PyTorch.
+            python-version: "3.11"
+            dependency-set: lowest-direct
+          - os: windows-latest
+            python-version: "3.10"
+            dependency-set: lowest-direct
+          - os: ubuntu-latest
+            python-version: "3.12"
+            dependency-set: highest
+          - os: macos-latest
+            python-version: "3.12"
+            dependency-set: highest
+          - os: windows-latest
+            python-version: "3.12"
+            dependency-set: highest
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     env:
       TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      - &setup-uv
+        name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          # As this repo is pretty low traffic, we don't bother with the cache to save
+          # space. Ignoring the cache can often be faster anyway:
+          # https://github.com/astral-sh/setup-uv/blob/main/docs/caching.md#enable-cache-pruning
+          enable-cache: false
 
+      # `--no-default-groups --group ci` installs the test dependencies without
+      # the `dev` group's local tooling (jupyter, wandb, submitit, pre-commit,
+      # hatch), which CI never runs and which drags the install out. Extras stay
+      # in: `explainability` and `benchmarking` are import paths the tests and
+      # gift_eval actually exercise.
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --no-default-groups --group ci --resolution ${{ matrix.dependency-set }}
 
-      # Read-only: the cache is written on `main` by `cache-models.yml`. A miss
-      # is not fatal — internal PRs re-download with TABPFN_TOKEN, fork PRs skip
-      # the LOCAL-mode tests.
-      - name: Restore TabPFN model cache
-        uses: actions/cache/restore@v4
+      # This cache allows PRs from forks to run the tests, as they don't have access to
+      # the TABPFN_TOKEN and so can't download the models themselves.
+      # The cache is populated by merges to main, and the regularly-run
+      # test_examples_full.yml workflow.
+      - &restore-model-cache
+        name: Restore TabPFN model cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
-          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
-          restore-keys: |
-            tabpfn-models-v1-
+          key: model-cache-
+          enableCrossOsArchive: true
+
+      - &download-models
+        name: Download models from Hugging Face
+        env:
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync python scripts/download_all_models.py
+
+      - &save-model-cache
+        name: Save TabPFN model cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: model-cache-${{ hashFiles('model_cache/**') }}
           enableCrossOsArchive: true
 
       - name: Run Tests
@@ -95,4 +152,65 @@ jobs:
           TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
           TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: uv run pytest tests -ra
+        run: uv run --no-sync pytest tests -ra
+
+  example_smoke:
+    name: Example smoke (CPU)
+    # A separate job (rather than part of test_compatibility) so the examples --
+    # which are comparatively slow -- run in parallel and don't block the normal
+    # test suite. Fast smoke gate: each example runs as a subprocess and fails
+    # only if it *errors*; one that doesn't finish within the timeout still passes,
+    # since we only assert it starts and runs without crashing. Running every
+    # example to completion (timeout = failure) is the job of the scheduled full
+    # run, test_examples_full.yml.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - *setup-uv
+
+      # Highest resolution on purpose: examples are user-facing tutorials, so we
+      # test them against the deps a fresh install gets.
+      - name: Install the project
+        run: uv sync --all-extras --no-default-groups --group ci
+
+      - *restore-model-cache
+      - *download-models
+      - *save-model-cache
+
+      # -n auto runs the examples in parallel to keep wall-clock down. The
+      # per-example timeout is fixed in tests/test_examples.py. As in the unit
+      # suite, missing secrets on a fork PR become skips, not failures.
+      - name: Run example smoke tests
+        env:
+          TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync pytest tests/test_examples.py --run-examples -n auto -ra
+
+  build_verify:
+    name: Build wheel + sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - *setup-uv
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Check artifacts
+        run: uvx twine check dist/*

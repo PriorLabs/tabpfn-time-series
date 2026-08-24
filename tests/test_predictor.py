@@ -85,7 +85,6 @@ class TestTabPFNTimeSeriesPredictor:
 
         assert result is not None
 
-    @pytest.mark.uses_tabpfn_local
     def test_local_mode(self):
         """Test that predict method calls the worker's predict method"""
         train_tsdf, test_tsdf = create_test_data()
@@ -98,7 +97,7 @@ class TestTimeSeriesPredictor:
     @pytest.mark.parametrize(
         "tabpfn_class",
         [
-            pytest.param(tabpfn.TabPFNRegressor, marks=pytest.mark.uses_tabpfn_local),
+            pytest.param(tabpfn.TabPFNRegressor),
             pytest.param(
                 tabpfn_client.TabPFNRegressor, marks=pytest.mark.uses_tabpfn_client
             ),
@@ -149,7 +148,6 @@ class TestTimeSeriesPredictor:
                 lambda: TabPFNTimeSeriesPredictor(tabpfn_mode=TabPFNMode.LOCAL),
                 True,  # TabPFN computes real quantiles
                 id="tabpfn_local",
-                marks=pytest.mark.uses_tabpfn_local,
             ),
             pytest.param(
                 lambda: (
@@ -203,7 +201,6 @@ class TestTimeSeriesPredictor:
                 [],
                 False,
                 id="tabpfn_local-empty",
-                marks=pytest.mark.uses_tabpfn_local,
             ),
             # Unsorted quantiles - should work
             pytest.param(
@@ -222,7 +219,6 @@ class TestTimeSeriesPredictor:
                 [0.1, 0.5, 0.9],
                 False,
                 id="tabpfn_local-unsorted",
-                marks=pytest.mark.uses_tabpfn_local,
             ),
             # Duplicate quantiles - should work
             pytest.param(
@@ -241,7 +237,6 @@ class TestTimeSeriesPredictor:
                 [0.5, 0.9],
                 False,
                 id="tabpfn_local-duplicates",
-                marks=pytest.mark.uses_tabpfn_local,
             ),
             # Invalid quantiles - should raise
             pytest.param(
@@ -250,7 +245,6 @@ class TestTimeSeriesPredictor:
                 None,
                 True,
                 id="tabpfn_local-invalid",
-                marks=pytest.mark.uses_tabpfn_local,
             ),
         ],
     )

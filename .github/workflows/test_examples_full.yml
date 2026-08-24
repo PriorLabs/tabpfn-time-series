@@ -1,0 +1,140 @@
+name: Example full run
+run-name: "Example full run on ${{ github.ref_name }}"
+
+# Test the examples. This can be quite slow, so we only run periodically.
+#
+# Also ensures the GitHub Actions model cache is up-to-date, which is required so PRs
+# from forks can run the tests, as they don't have access to the TABPFN_TOKEN required
+# to download the model files. This workflow runs on `main`, where the tokens are
+# available.
+#
+# Complements the per-PR smoke gate in pull_request.yml, which only asserts that each
+# example starts and runs without crashing.
+#
+# Runs on CPU, unlike the tabpfn-extensions equivalent: the examples here are
+# written to finish on CPU/MPS (see the docstring in
+# examples/explainability_electricity.py).
+
+on:
+  schedule:
+    # Every other day.
+    - cron: "0 3 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  example_full:
+    name: Example full run (CPU)
+    runs-on: ubuntu-latest
+    # Generous headroom below the 900s-per-example cap in tests/test_examples.py.
+    timeout-minutes: 60
+
+    env:
+      TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          # As this repo is pretty low traffic, we don't bother with the cache to save
+          # space. Ignoring the cache can often be faster anyway:
+          # https://github.com/astral-sh/setup-uv/blob/main/docs/caching.md#enable-cache-pruning
+          enable-cache: false
+
+      # Highest resolution on purpose: examples are user-facing tutorials, so we
+      # test them against the deps a fresh install gets.
+      - name: Install the project
+        run: uv sync --all-extras --no-default-groups --group ci
+
+      - name: Restore TabPFN model cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: model-cache-
+          enableCrossOsArchive: true
+
+      - name: Download models from Hugging Face
+        env:
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync python scripts/download_all_models.py
+
+      - name: Save TabPFN model cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: model-cache-${{ hashFiles('model_cache/**') }}
+          enableCrossOsArchive: true
+
+      # Sequential on purpose: parallel workers would distort per-example
+      # runtimes against the per-example timeout. `tee` captures output for the
+      # failure-issue body while still streaming to the log; pipefail preserves
+      # pytest's exit code through the pipe.
+      - name: Run examples to completion (full)
+        env:
+          EXAMPLE_FULL: "1"
+          TABPFN_CLIENT_API_KEY: ${{ secrets.TABPFN_CLIENT_API_KEY }}
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest tests/test_examples.py --run-examples -v -ra 2>&1 \
+            | tee pytest_output.txt
+
+      # cancelled() covers the job-timeout case: exceeding timeout-minutes
+      # cancels the steps rather than failing them, so failure() alone would
+      # stay silent exactly when the run hangs.
+      - name: Open or update tracking issue on failure
+        if: failure() || cancelled()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            let failedLines = "(no FAILED lines parsed; see logs)";
+            try {
+              const text = fs.readFileSync("pytest_output.txt", "utf-8");
+              const lines = text.split("\n").filter(l => l.startsWith("FAILED "));
+              if (lines.length > 0) failedLines = lines.join("\n");
+            } catch (e) { /* output file missing -- fall through to default */ }
+
+            const title = "Scheduled example full run failed";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: ["nightly-failure"],
+            });
+            const runUrl =
+              `${context.serverUrl}/${context.repo.owner}/` +
+              `${context.repo.repo}/actions/runs/${context.runId}`;
+            const body =
+              `Run: ${runUrl}\n\n` +
+              `\`\`\`\n${failedLines}\n\`\`\`\n\n` +
+              `See logs for full output.`;
+            const existing = issues.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["nightly-failure"],
+              });
+            }
