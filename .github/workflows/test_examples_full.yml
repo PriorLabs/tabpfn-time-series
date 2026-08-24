@@ -1,21 +1,23 @@
 name: Example full run
 run-name: "Example full run on ${{ github.ref_name }}"
 
-# Runs every example to completion at full size (EXAMPLE_FULL=1: a timeout is a
-# failure). Complements the per-PR smoke gate in pull_request.yml, which only
-# asserts that each example starts and runs without crashing.
+# Test the examples. This can be quite slow, so we only run periodically.
+#
+# Also ensures the GitHub Actions model cache is up-to-date, which is required so PRs
+# from forks can run the tests, as they don't have access to the TABPFN_TOKEN required
+# to download the model files. This workflow runs on `main`, where the tokens are
+# available.
+#
+# Complements the per-PR smoke gate in pull_request.yml, which only asserts that each
+# example starts and runs without crashing.
 #
 # Runs on CPU, unlike the tabpfn-extensions equivalent: the examples here are
 # written to finish on CPU/MPS (see the docstring in
-# examples/explainability_electricity.py), so the scarce GPU runner tier would
-# buy nothing.
-#
-# Scheduled runs happen on `main`, where repository secrets are available, so
-# both the cloud-API and LOCAL-mode examples actually execute rather than skip.
+# examples/explainability_electricity.py).
 
 on:
   schedule:
-    # Every other day, shortly after the weekly model cache refresh window.
+    # Every other day.
     - cron: "0 3 */2 * *"
   workflow_dispatch:
 
@@ -44,7 +46,10 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          enable-cache: true
+          # As this repo is pretty low traffic, we don't bother with the cache to save
+          # space. Ignoring the cache can often be faster anyway:
+          # https://github.com/astral-sh/setup-uv/blob/main/docs/caching.md#enable-cache-pruning
+          enable-cache: false
 
       # Highest resolution on purpose: examples are user-facing tutorials, so we
       # test them against the deps a fresh install gets.
@@ -55,9 +60,20 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
-          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
-          restore-keys: |
-            tabpfn-models-v1-
+          key: model-cache-
+          enableCrossOsArchive: true
+
+      - name: Download models from Hugging Face
+        env:
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync python scripts/download_all_models.py
+
+      - name: Save TabPFN model cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: model-cache-${{ hashFiles('model_cache/**') }}
           enableCrossOsArchive: true
 
       # Sequential on purpose: parallel workers would distort per-example
