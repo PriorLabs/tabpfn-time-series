@@ -80,7 +80,6 @@ def create_toy_fev_task() -> fev.Task:
 
 
 class TestTabPFNTSPipeline:
-    @pytest.mark.uses_tabpfn_local
     def test_predict_local_mode(self):
         """Test predict method with local TabPFN mode."""
         context_tsdf = create_context_tsdf()
@@ -108,7 +107,6 @@ class TestTabPFNTSPipeline:
         assert len(result) == 6
         assert "target" in result.columns
 
-    @pytest.mark.uses_tabpfn_local
     def test_predict_df_with_prediction_length(self):
         """Test predict_df using prediction_length parameter."""
         context_df = create_context_df()
@@ -119,7 +117,6 @@ class TestTabPFNTSPipeline:
         assert result is not None
         assert len(result) == 6  # 2 items * 3 prediction steps
 
-    @pytest.mark.uses_tabpfn_local
     def test_predict_df_with_future_df(self):
         """Test predict_df using explicit future_df."""
         context_df = create_context_df()
@@ -137,7 +134,6 @@ class TestTabPFNTSPipeline:
         assert result is not None
         assert len(result) == 6
 
-    @pytest.mark.uses_tabpfn_local
     def test_predict_df_single_series(self):
         """Test predict_df with a single time series (no item_id column)."""
         dates = pd.date_range(start="2023-01-01", periods=10, freq="D")
@@ -175,7 +171,6 @@ class TestTabPFNTSPipeline:
         with pytest.raises(ValueError, match="exactly one"):
             pipeline.predict_df(context_df)
 
-    @pytest.mark.uses_tabpfn_local
     def test_custom_quantiles(self):
         """Test that custom quantiles are returned in the result."""
         context_tsdf = create_context_tsdf()
@@ -188,7 +183,6 @@ class TestTabPFNTSPipeline:
         for q in custom_quantiles:
             assert q in result.columns, f"Quantile {q} not in result columns"
 
-    @pytest.mark.uses_tabpfn_local
     def test_predict_fev(self):
         """Test predict_fev method with a real fev task."""
         task = create_toy_fev_task()
