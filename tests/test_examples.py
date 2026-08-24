@@ -13,10 +13,10 @@ There are two run modes:
   pytest CLI option so that command-line arguments cannot flip the pass/fail
   semantics of a run.
 
-An example is **skipped** (not failed) when the credentials or weights it needs
-aren't available -- the same rule the unit suite applies via the
-``uses_tabpfn_client`` / ``uses_tabpfn_local`` markers, so fork PRs (which get
-no secrets) report honest skips instead of red builds.
+An example is **skipped** (not failed) when the credentials it needs aren't
+available -- the same rule the unit suite applies via the ``uses_tabpfn_client``
+marker, so fork PRs (which get no secrets) report honest skips instead of red
+builds.
 
 Usage:
     uv run --no-sync pytest tests/test_examples.py --run-examples
@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import skip_reason_for_client, skip_reason_for_local
+from conftest import should_skip_client_tests
 
 # Full run: every example runs to completion; a timeout is a failure. Used by
 # the scheduled GPU full run. In the default smoke mode a timeout still passes
@@ -52,10 +52,6 @@ NOT_EXAMPLES = {"common.py"}
 # Examples that call the TabPFN cloud API and so need TABPFN_CLIENT_API_KEY.
 REQUIRES_CLIENT = {"tabpfn_family_model_as_backbone.py"}
 
-# Examples that run a checkpoint locally, so they need the weights on disk (or
-# a TABPFN_TOKEN to fetch them).
-REQUIRES_LOCAL = {"explainability_electricity.py"}
-
 
 def get_example_files() -> list[dict]:
     """Discover example files and attach the metadata the runner needs."""
@@ -72,7 +68,6 @@ def get_example_files() -> list[dict]:
                 "path": file_path,
                 "name": name,
                 "requires_client": name in REQUIRES_CLIENT,
-                "requires_local": name in REQUIRES_LOCAL,
             },
         )
     return files
@@ -91,14 +86,9 @@ def test_example(request, example_file):
         pytest.skip(f"Skipping {name} since --run-examples not set")
 
     if example_file["requires_client"]:
-        reason = skip_reason_for_client()
+        reason = should_skip_client_tests()
         if reason is not None:
             pytest.skip(f"Example {name} needs the TabPFN cloud API: {reason}")
-
-    if example_file["requires_local"]:
-        reason = skip_reason_for_local()
-        if reason is not None:
-            pytest.skip(f"Example {name} runs a local checkpoint: {reason}")
 
     # Examples are top-to-bottom scripts; run each in its own process so a hang
     # can be killed cleanly and state never leaks between examples. They import
