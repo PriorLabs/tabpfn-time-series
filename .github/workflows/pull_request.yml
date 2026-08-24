@@ -15,21 +15,15 @@ run-name: "CI on ${{ github.head_ref || github.ref_name }}"
 #   - Secrets are NOT exposed to fork PRs (GitHub policy).
 #   - Secrets ARE exposed to PRs from branches in this repo, so internal
 #     contributors still get full test coverage.
-# Tests that need TABPFN_CLIENT_API_KEY / TABPFN_TOKEN / HF_TOKEN should
-# detect missing-env-var and skip on fork PRs (`tests/conftest.py` does this
-# for the `uses_tabpfn_client` / `uses_tabpfn_local` markers).
 #
-# LOCAL-mode tests don't have to skip on forks: `cache-models.yml` downloads the
-# checkpoints on `main` into a cache that PRs from forks can read, so the model
-# is already on disk and `tabpfn` never needs a token to fetch it. They only
-# skip when that cache is cold.
+# For PRs from forks, that don't have access to the secrets:
+# - Tests that require model files should be able to load these from the cache, see
+#   `restore-model-cache`.
+# - Tests that require TABPFN_CLIENT_API_KEY will be skipped, but will still run on
+#   merge to main.
 
 on:
-  # No `branches:` filter: that filter matches the *base* branch, so a PR
-  # stacked on another PR's branch would get no CI at all — exactly when you
-  # most want it, since the stack lands on main one merge at a time. Running on
-  # every PR regardless of base keeps stacked work verifiable before it merges
-  # down.
+  # No `branches:` filter so that stacked PRs are all tested.
   pull_request:
   push:
     branches: [main]
@@ -94,6 +88,7 @@ jobs:
             python-version: "3.12"
             dependency-set: highest
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     env:
       TABPFN_MODEL_CACHE_DIR: ${{ github.workspace }}/model_cache
     steps:
@@ -104,10 +99,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up uv
+      - &setup-uv
+        name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          enable-cache: true
+          # As this repo is pretty low traffic, we don't bother with the cache to save
+          # space. Ignoring the cache can often be faster anyway:
+          # https://github.com/astral-sh/setup-uv/blob/main/docs/caching.md#enable-cache-pruning
+          enable-cache: false
 
       # `--no-default-groups --group ci` installs the test dependencies without
       # the `dev` group's local tooling (jupyter, wandb, submitit, pre-commit,
@@ -117,16 +116,31 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --no-default-groups --group ci --resolution ${{ matrix.dependency-set }}
 
-      # Read-only: the cache is written on `main` by `cache-models.yml`. A miss
-      # is not fatal — internal PRs re-download with TABPFN_TOKEN, fork PRs skip
-      # the LOCAL-mode tests.
-      - name: Restore TabPFN model cache
+      # This cache allows PRs from forks to run the tests, as they don't have access to
+      # the TABPFN_TOKEN and so can't download the models themselves.
+      # The cache is populated by merges to main, and the regularly-run
+      # test_examples_full.yml workflow.
+      - &restore-model-cache
+        name: Restore TabPFN model cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ github.workspace }}/model_cache
-          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
-          restore-keys: |
-            tabpfn-models-v1-
+          key: model-cache-
+          enableCrossOsArchive: true
+
+      - &download-models
+        name: Download models from Hugging Face
+        env:
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: uv run --no-sync python scripts/download_all_models.py
+
+      - &save-model-cache
+        name: Save TabPFN model cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/model_cache
+          key: model-cache-${{ hashFiles('model_cache/**') }}
           enableCrossOsArchive: true
 
       - name: Run Tests
@@ -161,24 +175,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
+      - *setup-uv
 
       # Highest resolution on purpose: examples are user-facing tutorials, so we
       # test them against the deps a fresh install gets.
       - name: Install the project
         run: uv sync --all-extras --no-default-groups --group ci
 
-      - name: Restore TabPFN model cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ github.workspace }}/model_cache
-          key: tabpfn-models-v1-${{ hashFiles('scripts/download_test_models.py', 'tabpfn_time_series/defaults.py') }}
-          restore-keys: |
-            tabpfn-models-v1-
-          enableCrossOsArchive: true
+      - *restore-model-cache
+      - *download-models
+      - *save-model-cache
 
       # -n auto runs the examples in parallel to keep wall-clock down. The
       # per-example timeout is fixed in tests/test_examples.py. As in the unit
@@ -201,8 +207,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - *setup-uv
 
       - name: Build sdist + wheel
         run: uv build
