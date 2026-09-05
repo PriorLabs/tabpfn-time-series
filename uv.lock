@@ -5902,7 +5902,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn-client"
-version = "0.3.3"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -5913,6 +5913,7 @@ dependencies = [
     { name = "password-strength" },
     { name = "pyarrow" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "sseclient-py" },
@@ -5921,9 +5922,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/df/85af86742ebebfe45f756647ee6effc4ce4decf5f02929b3cf94c67d0c2c/tabpfn_client-0.3.3.tar.gz", hash = "sha256:0d221d8fd0f85b17dc44ee26f4837565ebc7932e5c0a27dec3fd163813491ba7", size = 187508, upload-time = "2026-07-08T13:12:56.224Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/7d/e84216c92b95b8763d0379b30dd6c17d695f244d6e20328dfb95b170b565/tabpfn_client-0.5.1.tar.gz", hash = "sha256:8147a9193890327bc155f64f5d068b3eb81f319599892dcfb7eabe757c7b750d", size = 220596, upload-time = "2026-09-01T14:13:37.217Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/08/4dc6331be5aa1e9a1e2088265c37cbd195ecfb6ee81c14d4b632676413f3/tabpfn_client-0.3.3-py3-none-any.whl", hash = "sha256:c57c56ef7484078add2cbd3ffe0c240bc04f6515144e8fcbe223a72d03fa8ff9", size = 56275, upload-time = "2026-07-08T13:12:54.775Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/bd/ec2a7c71837293d6ed4fdbafbb8fc546f70f6c2e8e2be52d19bd46400bc5/tabpfn_client-0.5.1-py3-none-any.whl", hash = "sha256:222353fe8936faf7aba251f3335f52322027456ba68ce548593d818282cf293d", size = 72053, upload-time = "2026-09-01T14:13:35.54Z" },
 ]
 
 [[package]]
@@ -6335,14 +6336,14 @@ wheels = [
 
 [[package]]
 name = "tqdm"
-version = "4.67.1"
+version = "4.70.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/3b/6c24bec5be5e743ffd99576daa5cc077722fc7d5bbc00bd133fa0c698dc6/tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220", size = 795438, upload-time = "2026-07-27T11:33:15.271Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/1c/01bfd571a64e7f270e6bab5e33777debe0edc56759233ce84f27dec92d14/tqdm-4.70.0-py3-none-any.whl", hash = "sha256:7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953", size = 80184, upload-time = "2026-07-27T11:33:13.167Z" },
 ]
 
 [[package]]
