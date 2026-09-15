@@ -25,8 +25,8 @@ dependencies = [
     # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
     # 426 Upgrade Required from `try_connection` before any prediction runs.
     "tabpfn-client>=0.3.0",
-    # 9.0.0 is the first release that ships the `tabpfn_v3_5` architecture and
-    # lists the TabPFN-3.5 checkpoint that `defaults.py` selects in LOCAL mode.
+    # LOCAL mode loads tabpfn's default model. 9.0.0 is the first release whose
+    # default is TabPFN-3.5.
     "tabpfn>=9.0.0",
     "statsmodels>=0.14.5",
     # 2.21 is the first release that works under numpy 2 (earlier versions call

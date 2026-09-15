@@ -1,23 +1,6 @@
 DEFAULT_QUANTILE_CONFIG = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-# TabPFN-3.5 default checkpoint. `tabpfn` downloads it automatically on first
-# init (after license acceptance at https://ux.priorlabs.ai).
-TABPFN_V3_5_CHECKPOINT = "tabpfn-v3.5-20260909.safetensors"
-
-# Empty by default: LOCAL mode's `resolve_default_ckpt` fills in the v3.5 ckpt;
-# CLIENT mode lets the cloud server pick whichever ts model it currently hosts.
+# Empty by default: LOCAL mode loads tabpfn's own default model (TabPFN-3.5 in
+# tabpfn 9, see `tabpfn.settings.model_version`); CLIENT mode lets the cloud
+# server pick whichever ts model it currently hosts.
 TABPFN_DEFAULT_CONFIG: dict = {}
-
-
-def resolve_default_ckpt(tabpfn_config: dict) -> dict:
-    """Default `model_path` to the v3.5 ckpt (in tabpfn's cache dir) when
-    absent or None; a user-supplied path passes through unchanged."""
-    config = {**tabpfn_config}
-    if config.get("model_path") is None:
-        # Route the bare filename through tabpfn's cache resolver: otherwise
-        # `resolve_model_path` treats it as a literal path relative to the cwd,
-        # bypassing the model cache dir (re-downloads per working directory).
-        from tabpfn.model_loading import prepend_cache_path
-
-        config["model_path"] = prepend_cache_path(TABPFN_V3_5_CHECKPOINT)
-    return config
