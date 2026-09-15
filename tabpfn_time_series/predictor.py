@@ -10,6 +10,7 @@ from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.defaults import (
     TABPFN_DEFAULT_CONFIG,
     DEFAULT_QUANTILE_CONFIG,
+    resolve_default_model_path,
 )
 from tabpfn_time_series.worker import (
     ParallelWorker,
@@ -187,6 +188,8 @@ class TabPFNTimeSeriesPredictor(TimeSeriesPredictor):
 
         return TimeSeriesPredictor.from_tabpfn_family(
             tabpfn_class=tabpfn_class,
-            tabpfn_config=tabpfn_config,
+            tabpfn_config=resolve_default_model_path(
+                tabpfn_config, client=tabpfn_mode == TabPFNMode.CLIENT
+            ),
             tabpfn_output_selection=tabpfn_output_selection,
         )
