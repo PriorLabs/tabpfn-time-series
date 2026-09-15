@@ -8,6 +8,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2501.02945-<COLOR>.svg)](https://arxiv.org/abs/2501.02945v3)
 
 ## 📌 News
+- **15-09-2026**: 🚀 defaults now ship the **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** checkpoint. Requires `tabpfn>=9.0.0`.
 - **12-05-2026**: 🚀 **v1.1.0** — defaults now ship the **TabPFN-TS-3** finetuned checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) for SOTA forecasting out of the box. Requires `tabpfn>=8.0.0`.
 - **27-05-2025**: 📝 New **[paper](https://arxiv.org/abs/2501.02945v3)** version and **v1.0.0** release! Strong [GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval) results, new AutoSeasonalFeatures, improved CalendarFeatures.
 - **27-01-2025**: 🚀 Ranked _**1st**_ on [GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval) benchmark<sup>[1]</sup>!
@@ -18,7 +19,7 @@ _[1] Last checked on: 10/03/2025_
 ## ✨ Introduction
 We demonstrate that the tabular foundation model **[TabPFN](https://github.com/PriorLabs/TabPFN)**, combined with lightweight feature engineering, enables zero-shot time series forecasting for both point and probabilistic tasks. On the **[GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval)** benchmark, our method achieves performance on par with top-tier models across both evaluation metrics.
 
-As of **v1.1.0** the package ships with the finetuned **TabPFN-TS-3** checkpoint by default — a tabular foundation model that, despite being pretrained purely on synthetic data, achieves SOTA results on [fev-bench](https://github.com/autogluon/fev). See the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) for benchmarks.
+The package ships with the **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** checkpoint by default — a tabular foundation model pretrained purely on synthetic data. The finetuned **TabPFN-TS-3** checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3), which achieves SOTA results on [fev-bench](https://github.com/autogluon/fev), stays available (see [Checkpoint](#checkpoint)).
 
 ## 📖 How does it work?
 
@@ -67,7 +68,15 @@ pip install tabpfn-time-series
 
 ### Checkpoint
 
-`v1.1.0+` ships the **TabPFN-TS-3** finetuned checkpoint by default. In `LOCAL` mode `tabpfn` downloads it automatically on first init — accept the license at [ux.priorlabs.ai](https://ux.priorlabs.ai) first.
+The package ships the **TabPFN-3.5** checkpoint by default. In `LOCAL` mode `tabpfn` downloads it automatically on first init — accept the license at [ux.priorlabs.ai](https://ux.priorlabs.ai) first.
+
+To use the finetuned **TabPFN-TS-3** checkpoint instead, pass:
+
+```python
+TabPFNTSPipeline(
+    tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"},
+)
+```
 
 ### For Developers
 
@@ -99,7 +108,7 @@ More examples live in the [examples/](examples/) directory.
 
 ## 📚 Citation
 
-If TabPFN-TS is useful in your research, please cite the [paper](https://arxiv.org/abs/2501.02945v3) (`arXiv:2501.02945`) and the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) for the v3 checkpoint.
+If TabPFN-TS is useful in your research, please cite the [paper](https://arxiv.org/abs/2501.02945v3) (`arXiv:2501.02945`) and the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) for the TabPFN-TS-3 checkpoint.
 
 ## 📊 Anonymous Telemetry
 

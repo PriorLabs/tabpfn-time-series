@@ -283,7 +283,7 @@ class TabPFNTSPipeline:
         self.max_context_length = max_context_length
         self.max_featurize_rows = max_featurize_rows
 
-        # Fill in the default v3 ts ckpt filename for LOCAL mode; tabpfn handles
+        # Fill in the default v3.5 ckpt filename for LOCAL mode; tabpfn handles
         # the download. User-supplied paths pass through unchanged.
         if tabpfn_mode == TabPFNMode.LOCAL:
             tabpfn_model_config = resolve_default_ckpt(tabpfn_model_config)

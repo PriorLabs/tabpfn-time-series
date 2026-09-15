@@ -202,22 +202,22 @@ class TestTabPFNTSPipeline:
             assert "target" in pred
 
 
-def test_default_pipeline_config_uses_v3_defaults():
-    """Guard against accidental regressions of the TabPFN-TS-3 ship defaults.
+def test_default_pipeline_config_uses_v3_5_defaults():
+    """Guard against accidental regressions of the ship defaults.
 
     Catches future maintainers who might lower `max_context_length` or
-    `max_top_k`, or rename the v3 checkpoint constant out from under
+    `max_top_k`, or rename the v3.5 checkpoint constant out from under
     `resolve_default_ckpt`.
     """
     import inspect
 
     from tabpfn_time_series import TabPFNTSPipeline
-    from tabpfn_time_series.defaults import TABPFN_V3_TS_CHECKPOINT
+    from tabpfn_time_series.defaults import TABPFN_V3_5_CHECKPOINT
     from tabpfn_time_series.pipeline import TABPFN_TS_DEFAULT_FEATURES
 
     sig = inspect.signature(TabPFNTSPipeline.__init__)
     assert sig.parameters["max_context_length"].default == 32768
-    assert TABPFN_V3_TS_CHECKPOINT == "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"
+    assert TABPFN_V3_5_CHECKPOINT == "tabpfn-v3.5-20260909.safetensors"
 
     # AutoSeasonalFeature is the third default temporal feature
     autoseason = TABPFN_TS_DEFAULT_FEATURES[2]

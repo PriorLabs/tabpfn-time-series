@@ -1,0 +1,1 @@
+Default checkpoint in `LOCAL` mode is now **TabPFN-3.5** (`tabpfn-v3.5-20260909.safetensors`); requires `tabpfn>=9.0.0`. Pass `tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"}` to keep the finetuned TabPFN-TS-3 checkpoint.
