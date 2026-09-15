@@ -19,7 +19,7 @@ _[1] Last checked on: 10/03/2025_
 ## ✨ Introduction
 We demonstrate that the tabular foundation model **[TabPFN](https://github.com/PriorLabs/TabPFN)**, combined with lightweight feature engineering, enables zero-shot time series forecasting for both point and probabilistic tasks. On the **[GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval)** benchmark, our method achieves performance on par with top-tier models across both evaluation metrics.
 
-As of **v1.2.0** the package uses **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** by default — a tabular foundation model pretrained purely on synthetic data. The finetuned **TabPFN-TS-3** checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) stays available (see [Checkpoint](#checkpoint)).
+As of **v1.2.0** the package uses **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** by default — a tabular foundation model pretrained purely on synthetic data. The finetuned **TabPFN-TS-3** checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) stays available.
 
 ## 📖 How does it work?
 
@@ -69,15 +69,6 @@ pip install tabpfn-time-series
 ### Checkpoint
 
 Both modes pin **TabPFN-3.5**. In `LOCAL` mode `tabpfn` downloads its default checkpoint automatically on first init — accept the license at [ux.priorlabs.ai](https://ux.priorlabs.ai) first. In `CLIENT` mode the cloud API serves its `v3.5_default` model.
-
-To use the finetuned **TabPFN-TS-3** checkpoint instead in `LOCAL` mode, pass:
-
-```python
-TabPFNTSPipeline(
-    tabpfn_mode=TabPFNMode.LOCAL,
-    tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"},
-)
-```
 
 ### For Developers
 
