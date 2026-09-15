@@ -70,13 +70,16 @@ pip install tabpfn-time-series
 
 Both modes pin **TabPFN-3.5**. In `LOCAL` mode `tabpfn` downloads its default checkpoint automatically on first init — accept the license at [ux.priorlabs.ai](https://ux.priorlabs.ai) first. In `CLIENT` mode the cloud API serves its `v3.5_default` model.
 
-To use the finetuned **TabPFN-TS-3** checkpoint instead, pass:
+To use the finetuned **TabPFN-TS-3** checkpoint instead in `LOCAL` mode, pass:
 
 ```python
 TabPFNTSPipeline(
+    tabpfn_mode=TabPFNMode.LOCAL,
     tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"},
 )
 ```
+
+In `CLIENT` mode, `tabpfn_model_config={"model_path": "auto"}` lets the cloud API pick its default model instead. The cloud API does not expose TabPFN-TS-3 by name.
 
 ### For Developers
 
