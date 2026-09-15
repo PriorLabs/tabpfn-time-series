@@ -79,8 +79,6 @@ TabPFNTSPipeline(
 )
 ```
 
-In `CLIENT` mode, `tabpfn_model_config={"model_path": "auto"}` lets the cloud API pick its default model instead. The cloud API does not expose TabPFN-TS-3 by name.
-
 ### For Developers
 
 To install the package in editable mode with all development dependencies, run the following command in your terminal:
