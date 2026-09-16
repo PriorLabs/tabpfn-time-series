@@ -17,10 +17,6 @@
     )
     ```
 
-### Changed
-
-- Releases are now assembled from changelog fragments: add a `changelog/<PR>.<category>.md` file describing your change, instead of editing `CHANGELOG.md` directly. See `changelog/README.md`. ([#151](https://github.com/PriorLabs/tabpfn-time-series/pull/151))
-
 ### Fixed
 
 - Require `datasets>=4`, `fev>=0.8.0` and `pandas>=2.2`. The `how-it-works` notebook failed to load the Chronos datasets from the Hub with older `datasets` releases (`Feature type 'List' not found`); `fev` 0.8.0 is the first release that allows `datasets>=4`; and the package maps the `ME` month-end alias that pandas only accepts from 2.2 on. ([#177](https://github.com/PriorLabs/tabpfn-time-series/pull/177))
