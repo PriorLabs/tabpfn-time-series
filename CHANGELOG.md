@@ -17,9 +17,9 @@
     )
     ```
 
-### Fixed
+### Changed
 
-- Require `datasets>=4`, `fev>=0.8.0` and `pandas>=2.2`. The `how-it-works` notebook failed to load the Chronos datasets from the Hub with older `datasets` releases (`Feature type 'List' not found`); `fev` 0.8.0 is the first release that allows `datasets>=4`; and the package maps the `ME` month-end alias that pandas only accepts from 2.2 on. ([#177](https://github.com/PriorLabs/tabpfn-time-series/pull/177))
+- Require `datasets>=4`, `fev>=0.8.0` and `pandas>=2.2`. ([#177](https://github.com/PriorLabs/tabpfn-time-series/pull/177))
 
 
 ## [1.1.0] — 2026-05-12
