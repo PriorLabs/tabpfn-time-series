@@ -20,7 +20,9 @@ dependencies = [
     # Floored so `--resolution lowest-direct` in CI has something to pin to;
     # 4.66 is what the tree already resolves to transitively.
     "tqdm>=4.66",
-    "pandas>=2.1.2",
+    # 2.2 introduced the `ME` month-end alias that `data_preparation.py` maps
+    # and the tests generate.
+    "pandas>=2.2",
     "gluonts>=0.16.0",
     # 0.5.3 is the first client that lists the `v3.5_default` alias that
     # `defaults.py` pins in CLIENT mode.
@@ -29,16 +31,16 @@ dependencies = [
     # `defaults.py` pins in LOCAL mode.
     "tabpfn>=9.0.0",
     "statsmodels>=0.14.5",
-    # 2.21 is the first release that works under numpy 2 (earlier versions call
-    # `np.array(..., copy=False)`, which numpy 2 rejects outright). numpy is not
-    # a direct dependency here, so it always resolves to 2.x and the old floor
-    # produced an unusable combination.
-    "datasets>=2.21",
+    # 4.0 is the first release that reads the `List` feature type, which the
+    # Chronos datasets on the Hub (used by the how-it-works notebook) now carry.
+    "datasets>=4",
     "python-dotenv>=1.1.0",
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
-    "fev>=0.6.1",
+    # 0.8.0 is the first release that allows `datasets>=4`; 0.6.1 and 0.7.0
+    # require `datasets<4.0`.
+    "fev>=0.8.0",
 ]
 
 [project.optional-dependencies]
