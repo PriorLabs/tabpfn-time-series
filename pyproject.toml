@@ -40,7 +40,9 @@ dependencies = [
     "pyyaml>=6.0.1",
     "backoff>=2.2.1",
     "tabpfn-common-utils[telemetry-interactive]>=0.2.2",
-    "fev>=0.6.1",
+    # 0.8.0 is the first release that allows `datasets>=4`; 0.6.1 and 0.7.0
+    # require `datasets<4.0`.
+    "fev>=0.8.0",
 ]
 
 [project.optional-dependencies]
