@@ -28,7 +28,7 @@ from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series.defaults import (
     DEFAULT_QUANTILE_CONFIG,
     TABPFN_DEFAULT_CONFIG,
-    resolve_default_ckpt,
+    resolve_default_model_path,
 )
 from tabpfn_time_series.features import (
     AutoSeasonalFeature,
@@ -283,18 +283,12 @@ class TabPFNTSPipeline:
         self.max_context_length = max_context_length
         self.max_featurize_rows = max_featurize_rows
 
-        # Fill in the default v3 ts ckpt filename for LOCAL mode; tabpfn handles
-        # the download. User-supplied paths pass through unchanged.
-        if tabpfn_mode == TabPFNMode.LOCAL:
-            tabpfn_model_config = resolve_default_ckpt(tabpfn_model_config)
-
+        is_client = tabpfn_mode == TabPFNMode.CLIENT
         self.predictor = TimeSeriesPredictor.from_tabpfn_family(
-            tabpfn_class=(
-                TabPFNClientRegressor
-                if tabpfn_mode == TabPFNMode.CLIENT
-                else TabPFNRegressor
+            tabpfn_class=TabPFNClientRegressor if is_client else TabPFNRegressor,
+            tabpfn_config=resolve_default_model_path(
+                tabpfn_model_config, client=is_client
             ),
-            tabpfn_config=tabpfn_model_config,
             tabpfn_output_selection=tabpfn_output_selection,
         )
         self.feature_transformer = FeatureTransformer(temporal_features)

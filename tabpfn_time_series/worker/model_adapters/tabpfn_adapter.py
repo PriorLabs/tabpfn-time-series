@@ -92,6 +92,7 @@ class TabPFNModelAdapter(BaseModelAdapter):
         resolved_model_paths, _, model_names, which = resolve_model_path(
             model_path,
             which="regressor",
+            version=model_version.value,
         )
         assert len(resolved_model_paths) == 1
         resolved_model_path = resolved_model_paths[0]

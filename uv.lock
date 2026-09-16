@@ -4559,6 +4559,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pydot"
+version = "4.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyparsing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/35/b17cb89ff865484c6a20ef46bf9d95a5f07328292578de0b295f4a6beec2/pydot-4.0.1.tar.gz", hash = "sha256:c2148f681c4a33e08bf0e26a9e5f8e4099a82e0e2a068098f32ce86577364ad5", size = 162594, upload-time = "2025-06-17T20:09:56.454Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/32/a7125fb28c4261a627f999d5fb4afff25b523800faed2c30979949d6facd/pydot-4.0.1-py3-none-any.whl", hash = "sha256:869c0efadd2708c0be1f916eb669f3d664ca684bc57ffb7ecc08e70d5e93fee6", size = 37087, upload-time = "2025-06-17T20:09:55.25Z" },
+]
+
+[[package]]
 name = "pygments"
 version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5656,6 +5668,28 @@ wheels = [
 ]
 
 [[package]]
+name = "skrub"
+version = "0.10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cloudpickle" },
+    { name = "jinja2" },
+    { name = "joblib" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pydot" },
+    { name = "requests" },
+    { name = "scikit-learn" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/a6/f4d0b7240ebf546d3a77f212958b930282cccb0a53d66b9b0e1639ce8230/skrub-0.10.1.tar.gz", hash = "sha256:39f58492f6889c5563a654478cd523771aaa8dab5a42ad2ce9f430efb3881f53", size = 4205317, upload-time = "2026-09-01T09:33:37.146Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0e/2d/492a8b0d0d8b344918312a6416c537e54081ca5d0aaf19d085a188905e41/skrub-0.10.1-py3-none-any.whl", hash = "sha256:553c6f9b19a2cb97bba776a28255e7e024e77d4f50d7c6c70b4805f4e668a3cc", size = 595919, upload-time = "2026-09-01T09:33:35.208Z" },
+]
+
+[[package]]
 name = "soupsieve"
 version = "2.8.4"
 source = { registry = "https://pypi.org/simple" }
@@ -5874,7 +5908,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn"
-version = "8.4.0"
+version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
@@ -5882,6 +5916,7 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "joblib" },
     { name = "lightgbm" },
+    { name = "matplotlib" },
     { name = "mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "numpy" },
     { name = "pandas" },
@@ -5891,13 +5926,14 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "skrub" },
     { name = "torch" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/40/4b5034d4694aedac5a999d1d89b877acb8f60c48e0884271bc4678ed72d7/tabpfn-8.4.0.tar.gz", hash = "sha256:a21d2e7b183829277e1a718eed5a894d075c43530648a9519cb1cf6728b76bda", size = 815317, upload-time = "2026-08-19T10:21:21.339Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/8f/3952bf3b99048f5a1a61e7406e9454f70a80080765491c28fd0cb999420c/tabpfn-9.0.0.tar.gz", hash = "sha256:a4a845309b682eb3d58065eb5cec72e585dde3f639489a36e18948a8ace4245c", size = 893866, upload-time = "2026-09-15T12:29:24.151Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/d1/6ac2bb454e59447c23924c2c49f0419d4a3015b26f2475446979c424d7e0/tabpfn-8.4.0-py3-none-any.whl", hash = "sha256:f292cc3c57ef02da0add323474c8ae85272c857a311efbc405eb7dd4aeb065b0", size = 762051, upload-time = "2026-08-19T10:21:19.667Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/38/e68d06cf83a30c19a044ee1a9b6260b7f2d9cc37c8575efa86fd8ae6a0b6/tabpfn-9.0.0-py3-none-any.whl", hash = "sha256:0adb0e69be839051c7f9e92caadec93324cccc0256321bf967fda91e5c493f98", size = 827545, upload-time = "2026-09-15T12:29:22.201Z" },
 ]
 
 [[package]]
@@ -6011,8 +6047,8 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "shapiq", marker = "extra == 'explainability'", specifier = ">=1.4" },
     { name = "statsmodels", specifier = ">=0.14.5" },
-    { name = "tabpfn", specifier = ">=8.0.1" },
-    { name = "tabpfn-client", specifier = ">=0.3.0" },
+    { name = "tabpfn", specifier = ">=9.0.0" },
+    { name = "tabpfn-client", specifier = ">=0.5.3" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm", specifier = ">=4.66" },
 ]
