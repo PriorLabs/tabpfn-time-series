@@ -6007,7 +6007,7 @@ requires-dist = [
     { name = "fev", specifier = ">=0.6.1" },
     { name = "gluonts", specifier = ">=0.16.0" },
     { name = "matplotlib", marker = "extra == 'explainability'", specifier = ">=3.10.3" },
-    { name = "pandas", specifier = ">=2.1.2" },
+    { name = "pandas", specifier = ">=2.2" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "shapiq", marker = "extra == 'explainability'", specifier = ">=1.4" },

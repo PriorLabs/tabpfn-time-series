@@ -20,7 +20,9 @@ dependencies = [
     # Floored so `--resolution lowest-direct` in CI has something to pin to;
     # 4.66 is what the tree already resolves to transitively.
     "tqdm>=4.66",
-    "pandas>=2.1.2",
+    # 2.2 introduced the `ME` month-end alias that `data_preparation.py` maps
+    # and the tests generate.
+    "pandas>=2.2",
     "gluonts>=0.16.0",
     # 0.3.0 is the oldest client the cloud API still accepts: older ones get a
     # 426 Upgrade Required from `try_connection` before any prediction runs.
