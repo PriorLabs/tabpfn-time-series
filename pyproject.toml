@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "tabpfn_time_series"
 # Bumped by .github/workflows/release-create-pr.yml; the release tag is
 # verified against this value before anything is published.
-version = "1.2.0"
+version = "1.3.0"
 authors = [{ name = "Liam Shi Bin Hoo", email = "hoos@tf.uni-freiburg.de" }]
 description = "Zero-shot time series forecasting with TabPFNv2"
 readme = "README.md"
