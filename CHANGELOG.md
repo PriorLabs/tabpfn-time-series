@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-16
+
+### Breaking Changes
+
+- Default model is now **TabPFN-3.5** in both `LOCAL` and `CLIENT` mode. `LOCAL` mode previously pinned the finetuned **TabPFN-TS-3** checkpoint; `CLIENT` mode previously let the cloud API pick its own default. Requires `tabpfn>=9.0.0` and `tabpfn-client>=0.5.3`. ([#176](https://github.com/PriorLabs/tabpfn-time-series/pull/176))
+
+    To keep TabPFN-TS-3 in `LOCAL` mode (`tabpfn` still ships the checkpoint):
+
+    ```python
+    TabPFNTSPipeline(
+        tabpfn_mode=TabPFNMode.LOCAL,
+        tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"},
+    )
+    ```
+
+### Changed
+
+- Require `datasets>=4`, `fev>=0.8.0` and `pandas>=2.2`. ([#177](https://github.com/PriorLabs/tabpfn-time-series/pull/177))
+
+
 ## [1.1.0] — 2026-05-12
 
 Default config now ships the finetuned **TabPFN-TS-3** checkpoint from the
