@@ -1,10 +1,17 @@
 name: Release to PyPI
-run-name: "publish ${{ github.ref_name }}"
+run-name: "publish ${{ inputs.tag || github.ref_name }}"
 
 on:
   push:
     tags:
       - "v*"
+  # Re-run the publish for a tag that already exists, e.g. after a failed
+  # upload, without moving the tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (e.g. v1.3.0)"
+        required: true
 
 permissions:
   contents: write
@@ -19,11 +26,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Extract version from tag
         id: ver
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -102,7 +113,7 @@ jobs:
   publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'v')
+    if: startsWith(inputs.tag || github.ref_name, 'v')
     environment:
       name: testpypi
     permissions:
@@ -123,6 +134,7 @@ jobs:
         # with "manifest unknown". v1.14.0 maps to the immutable :v1.14.0 image.
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
           print-hash: true
           skip-existing: true
@@ -182,7 +194,7 @@ jobs:
   publish-pypi:
     needs: [build, publish-testpypi]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'v')
+    if: startsWith(inputs.tag || github.ref_name, 'v')
     environment:
       name: pypi
     permissions:
@@ -200,11 +212,14 @@ jobs:
         # version tag v1.14.0 because this Docker action cannot be SHA-pinned.
         uses: pypa/gh-action-pypi-publish@v1.14.2
         with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
           print-hash: true
           skip-existing: true
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Download release notes
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
