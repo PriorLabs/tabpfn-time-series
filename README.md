@@ -8,7 +8,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2501.02945-<COLOR>.svg)](https://arxiv.org/abs/2501.02945v3)
 
 ## 📌 News
-- **15-09-2026**: 🚀 **v1.2.0** — defaults now use **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** in both `LOCAL` and `CLIENT` mode. Requires `tabpfn>=9.0.0` and `tabpfn-client>=0.5.3`.
+- **15-09-2026**: 🚀 **v1.3.0** — defaults now use **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** in both `LOCAL` and `CLIENT` mode. Requires `tabpfn>=9.0.0` and `tabpfn-client>=0.5.3`.
 - **12-05-2026**: 🚀 **v1.1.0** — defaults now ship the **TabPFN-TS-3** finetuned checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) for SOTA forecasting out of the box. Requires `tabpfn>=8.0.0`.
 - **27-05-2025**: 📝 New **[paper](https://arxiv.org/abs/2501.02945v3)** version and **v1.0.0** release! Strong [GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval) results, new AutoSeasonalFeatures, improved CalendarFeatures.
 - **27-01-2025**: 🚀 Ranked _**1st**_ on [GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval) benchmark<sup>[1]</sup>!
@@ -19,7 +19,7 @@ _[1] Last checked on: 10/03/2025_
 ## ✨ Introduction
 We demonstrate that the tabular foundation model **[TabPFN](https://github.com/PriorLabs/TabPFN)**, combined with lightweight feature engineering, enables zero-shot time series forecasting for both point and probabilistic tasks. On the **[GIFT-EVAL](https://huggingface.co/spaces/Salesforce/GIFT-Eval)** benchmark, our method achieves performance on par with top-tier models across both evaluation metrics.
 
-As of **v1.2.0** the package uses **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** by default — a tabular foundation model pretrained purely on synthetic data. The finetuned **TabPFN-TS-3** checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) stays available.
+As of **v1.3.0** the package uses **[TabPFN-3.5](https://huggingface.co/Prior-Labs/tabpfn_3_5)** by default — a tabular foundation model pretrained purely on synthetic data. The finetuned **TabPFN-TS-3** checkpoint from the [TabPFN-3 report](https://priorlabs.ai/reports/tabpfn-3) stays available.
 
 ## 📖 How does it work?
 
