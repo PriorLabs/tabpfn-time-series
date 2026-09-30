@@ -78,6 +78,7 @@ class TimeSeriesPredictor:
         tabpfn_output_selection: str = "median",  # mean or median
     ):
         from tabpfn import TabPFNRegressor
+        from tabpfn.base import ModelSpecs
         from tabpfn_client import TabPFNRegressor as TabPFNClientRegressor
 
         model_adapter = TabPFNModelAdapter(
@@ -93,6 +94,13 @@ class TimeSeriesPredictor:
 
             worker_class = TabPFNClientCPUParallelWorker
         elif tabpfn_class == TabPFNRegressor:
+            if isinstance(tabpfn_config.get("model_path"), ModelSpecs):
+                # Keep live weights in this process and let TabPFN select the device.
+                return cls(
+                    model_adapter=model_adapter,
+                    worker_class=CPUParallelWorker,
+                    worker_kwargs={"num_workers": 1},
+                )
             worker_class = _select_local_worker_class()
         else:
             raise ValueError(f"Expected TabPFN-family regressor, got {tabpfn_class}")

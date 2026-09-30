@@ -265,7 +265,9 @@ class TabPFNTSPipeline:
             tabpfn_output_selection: Method to aggregate TabPFN ensemble predictions.
                 Options: "mean", "median", "mode". Default: "median".
             tabpfn_model_config: Configuration dictionary for the TabPFN model.
-                See TABPFN_DEFAULT_CONFIG for default settings.
+                Local model_path accepts a checkpoint path or tabpfn.base.ModelSpecs.
+                ModelSpecs shares the supplied weights and processes series sequentially
+                on the configured device. See TABPFN_DEFAULT_CONFIG for defaults.
             max_featurize_rows: Maximum number of context rows whose features are
                 materialized in host memory at once. When a dataset has more rows than
                 this, series are processed in row-bounded batches to cap peak host RAM
