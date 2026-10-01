@@ -9,10 +9,10 @@ import pytest
 import torch
 from tabpfn.architectures import tabpfn_v3_5
 from tabpfn.base import ModelSpecs
-from tabpfn.constants import ModelVersion
 from tabpfn.inference_config import InferenceConfig
+from tabpfn.preprocessing import PreprocessorConfig
 
-from tabpfn_time_series import TabPFNTSPipeline, TimeSeriesDataFrame
+from tabpfn_time_series import TabPFNMode, TabPFNTSPipeline, TimeSeriesDataFrame
 from tabpfn_time_series.data_preparation import generate_test_X
 from tabpfn_time_series.features import RunningIndexFeature
 
@@ -36,7 +36,9 @@ def model_specs() -> ModelSpecs:
     return ModelSpecs(
         model=tabpfn_v3_5.get_architecture(config).eval(),
         architecture_config=config,
-        inference_config=InferenceConfig.get_default("regression", ModelVersion.V2_5),
+        inference_config=InferenceConfig(
+            PREPROCESS_TRANSFORMS=[PreprocessorConfig(name="none")],
+        ),
     )
 
 
@@ -120,3 +122,17 @@ def test_pipeline_model_specs_matches_checkpoint(
     assert len(result) == 6
     assert np.isfinite(result.to_numpy()).all()
     pd.testing.assert_frame_equal(result, expected, rtol=1e-6, atol=1e-6)
+
+
+def test_pipeline_rejects_model_specs_in_client_mode(model_specs: ModelSpecs) -> None:
+    with (
+        patch(
+            "tabpfn_time_series.worker.model_adapters.tabpfn_adapter.tabpfn_client_init",
+            side_effect=AssertionError("Invalid config must not start authentication"),
+        ),
+        pytest.raises(ValueError, match="ModelSpecs requires local inference"),
+    ):
+        TabPFNTSPipeline(
+            tabpfn_mode=TabPFNMode.CLIENT,
+            tabpfn_model_config={"model_path": model_specs},
+        )

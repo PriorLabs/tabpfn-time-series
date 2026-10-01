@@ -35,6 +35,11 @@ class TabPFNModelAdapter(BaseModelAdapter):
     ) -> None:
         model_path = model_config.get("model_path")
         if isinstance(model_path, ModelSpecs):
+            if model_class == TabPFNClientRegressor:
+                raise ValueError(
+                    "ModelSpecs requires local inference. Use TabPFNMode.LOCAL "
+                    "or pass a server model name for client inference."
+                )
             # The base adapter copies configuration; live weights must stay shared.
             model_config = {**model_config, "model_path": None}
         super().__init__(
