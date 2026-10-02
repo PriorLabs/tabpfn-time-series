@@ -1453,7 +1453,7 @@ wheels = [
 
 [[package]]
 name = "fev"
-version = "0.9.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -1462,9 +1462,9 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/50/87676b6a50cf2d097cd2907cea81058e4bf65959dbb3f359c2b48e9bf512/fev-0.9.0.tar.gz", hash = "sha256:ce4563b7389778ce0509fab13b45b8edd2880269ae937b3590a71804b624868b", size = 99769, upload-time = "2026-07-01T07:21:27.066Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/9e/af21153b05aff027f5d861f80f28740221c79c42e02c0c7c071c0c1a51e5/fev-0.10.0.tar.gz", hash = "sha256:509ab1f0ed82355c0b707825b96ff032aaaf817f9e26324b0b9ffe61d0fc36c9", size = 111181, upload-time = "2026-08-31T12:04:33.704Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/dd/d043a0c01125529a591179ddeb3f106579b2d8fb1581a85eabda0d06c9fe/fev-0.9.0-py3-none-any.whl", hash = "sha256:b21947fc58617d35ae629e98a80b1a8eb09fb0142e2676d8e05b14ab4e44bba8", size = 47184, upload-time = "2026-07-01T07:21:25.55Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/35/ea4bf38e4f5bcfce13513cc708400522637844f56afcbe4b363259bea8ed/fev-0.10.0-py3-none-any.whl", hash = "sha256:de83fcd73920fc8823e3b2c388ffb4e612e6bc2ab61b27ec991c91e70aea128f", size = 47649, upload-time = "2026-08-31T12:04:32.331Z" },
 ]
 
 [[package]]
