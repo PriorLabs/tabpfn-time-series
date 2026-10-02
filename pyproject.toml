@@ -27,8 +27,7 @@ dependencies = [
     # 0.5.3 is the first client that lists the `v3.5_default` alias that
     # `defaults.py` pins in CLIENT mode.
     "tabpfn-client>=0.5.3",
-    # Unified ModelSpecs is not yet available in a PyPI release.
-    "tabpfn @ git+https://github.com/PriorLabs/TabPFN.git@09b4188e2e04cc4cb2eb6c88c87d2f58e5338b84",
+    "tabpfn>=9.1.0",
     "statsmodels>=0.14.5",
     # 4.0 is the first release that reads the `List` feature type, which the
     # Chronos datasets on the Hub (used by the how-it-works notebook) now carry.
