@@ -92,3 +92,106 @@ class PeriodicSinCosineFeature(FeatureGenerator):
         if not columns:
             return df.copy()
         return pd.concat([df, pd.DataFrame(columns, index=df.index)], axis=1)
+
+
+def _offset_parts(freq) -> tuple[pd.DateOffset, str, int]:
+    off = pd.tseries.frequencies.to_offset(freq)
+    return off, off.name.split("-")[0].upper(), max(1, getattr(off, "n", 1))
+
+
+def _infer_freq(timestamps: pd.DatetimeIndex, item_ids: pd.Index) -> Optional[str]:
+    """Sampling frequency of the frame, from the first series pandas can infer it on.
+
+    Context rows with NaN targets are dropped upstream, so single series can have gaps;
+    fall back to the most common step of the first series when no series is regular.
+    """
+    by_item = pd.Series(timestamps, index=item_ids).groupby(level=0, sort=False)
+    first_steps = None
+    for _, ts in by_item:
+        ts = pd.DatetimeIndex(ts.unique()).sort_values()
+        if len(ts) < 3:
+            continue
+        freq = pd.infer_freq(ts)
+        if freq is not None:
+            return freq
+        if first_steps is None:
+            first_steps = ts[1:] - ts[:-1]
+    if first_steps is None:
+        return None
+    step = pd.Series(first_steps).mode().iloc[0]
+    if pd.Timedelta(days=28) <= step <= pd.Timedelta(days=31):
+        return "MS"
+    if pd.Timedelta(days=89) <= step <= pd.Timedelta(days=92):
+        return "QS"
+    return pd.tseries.frequencies.to_offset(step).freqstr
+
+
+class FrequencyFourierFeature(FeatureGenerator):
+    """Sin/cos of the natural periods implied by the sampling frequency.
+
+    Periods are in steps (e.g. hourly -> 24 and 168, daily -> 7 and 365.25), each with
+    harmonics k = 1..harmonics up to the Nyquist limit. The phase is computed on absolute
+    time, so it is the same across series and continuous from context into horizon,
+    unlike PeriodicSinCosineFeature which runs on the row position.
+    """
+
+    def __init__(self, freq: Optional[str] = None, harmonics: int = 3):
+        self.freq = freq
+        self.harmonics = harmonics
+
+    @staticmethod
+    def freq_periods(freq) -> List[float]:
+        """Natural periods, in steps, implied by the sampling frequency."""
+        _, name, n = _offset_parts(freq)
+        if name in {"T", "MIN"}:
+            return [1440 / n, 10080 / n]
+        if name == "H":
+            return [24 / n, 168 / n]
+        if name in {"D", "B"}:
+            return [7 / n, 365.25 / n]
+        if name == "W":
+            return [52.1775 / n]
+        if name in {"M", "MS", "ME"}:
+            return [12 / n]
+        if name in {"Q", "QS", "QE"}:
+            return [4 / n]
+        return []
+
+    @staticmethod
+    def _absolute_steps(timestamps: pd.DatetimeIndex, freq) -> np.ndarray:
+        """Absolute time in units of the sampling step (common origin for every series)."""
+        _, name, n = _offset_parts(freq)
+        if name in {"M", "MS", "ME"}:
+            months = timestamps.year * 12 + timestamps.month - 1
+            return (months + (timestamps.day - 1) / 31.0).to_numpy(float) / n
+        if name in {"Q", "QS", "QE"}:
+            quarters = timestamps.year * 4 + timestamps.quarter - 1
+            return (quarters + (timestamps.month - 1) % 3 / 3.0).to_numpy(float) / n
+        if name == "W":
+            step = pd.Timedelta(weeks=n)
+        else:
+            step = pd.Timedelta(pd.tseries.frequencies.to_offset(freq))
+        return ((timestamps - pd.Timestamp("2000-01-03")) / step).to_numpy(float)
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        timestamps = pd.DatetimeIndex(df.index.get_level_values("timestamp"))
+        freq = self.freq or _infer_freq(
+            timestamps, df.index.get_level_values("item_id")
+        )
+        periods = self.freq_periods(freq) if freq is not None else []
+        if not periods:
+            return df.copy()
+
+        t = self._absolute_steps(timestamps, freq)
+        columns = {}
+        for period in periods:
+            for k in range(1, self.harmonics + 1):
+                if 2 * k > period:
+                    break
+                angle = 2 * np.pi * k * t / period
+                columns[f"fourier_sin_{period:g}_{k}"] = np.sin(angle)
+                columns[f"fourier_cos_{period:g}_{k}"] = np.cos(angle)
+
+        if not columns:
+            return df.copy()
+        return pd.concat([df, pd.DataFrame(columns, index=df.index)], axis=1)
