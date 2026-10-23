@@ -33,6 +33,7 @@ from tabpfn_time_series.defaults import (
 from tabpfn_time_series.features import (
     AutoSeasonalFeature,
     CalendarFeature,
+    FrequencyFourierFeature,
     RunningIndexFeature,
 )
 from tabpfn_time_series.predictor import TimeSeriesPredictor
@@ -49,11 +50,13 @@ These features are automatically applied to time series data:
 - RunningIndexFeature: Timestep index
 - CalendarFeature: Temporal patterns (hour-of-the-day, day-of-the-week, etc.)
 - AutoSeasonalFeature: Automatic detection and encoding of seasonal patterns
+- FrequencyFourierFeature: Sin/cos of the periods implied by the sampling frequency
 """
 TABPFN_TS_DEFAULT_FEATURES = [
     RunningIndexFeature(),
     CalendarFeature(),
     AutoSeasonalFeature(),
+    FrequencyFourierFeature(),
 ]
 
 

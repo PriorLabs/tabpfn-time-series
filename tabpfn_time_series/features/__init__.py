@@ -3,6 +3,7 @@ from .basic_features import (
     CalendarFeature,
     AdditionalCalendarFeature,
     PeriodicSinCosineFeature,
+    FrequencyFourierFeature,
 )
 from .auto_features import AutoSeasonalFeature
 from .feature_transformer import FeatureTransformer
@@ -13,5 +14,6 @@ __all__ = [
     "AdditionalCalendarFeature",
     "AutoSeasonalFeature",
     "PeriodicSinCosineFeature",
+    "FrequencyFourierFeature",
     "FeatureTransformer",
 ]
