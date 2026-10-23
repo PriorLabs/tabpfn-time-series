@@ -227,6 +227,9 @@ def test_default_pipeline_config_pins_v3_5():
     custom = {"model_path": "my.ckpt"}
     assert resolve_default_model_path(custom, client=False) == custom
 
-    # AutoSeasonalFeature is the third default temporal feature
-    autoseason = TABPFN_TS_DEFAULT_FEATURES[2]
+    from tabpfn_time_series.features import AutoSeasonalFeature
+
+    (autoseason,) = [
+        f for f in TABPFN_TS_DEFAULT_FEATURES if isinstance(f, AutoSeasonalFeature)
+    ]
     assert autoseason.config["max_top_k"] == 12
