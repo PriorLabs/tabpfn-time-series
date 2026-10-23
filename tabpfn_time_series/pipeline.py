@@ -33,6 +33,7 @@ from tabpfn_time_series.defaults import (
 from tabpfn_time_series.features import (
     AutoSeasonalFeature,
     CalendarFeature,
+    KnownCovariateLagFeature,
     RunningIndexFeature,
 )
 from tabpfn_time_series.predictor import TimeSeriesPredictor
@@ -46,11 +47,14 @@ if TYPE_CHECKING:
 Default temporal feature generators for TabPFN-TS.
 
 These features are automatically applied to time series data:
+- KnownCovariateLagFeature: Lags {1, season} and a trailing mean of known covariates
+  (no-op without covariates; runs first so it only sees the input columns)
 - RunningIndexFeature: Timestep index
 - CalendarFeature: Temporal patterns (hour-of-the-day, day-of-the-week, etc.)
 - AutoSeasonalFeature: Automatic detection and encoding of seasonal patterns
 """
 TABPFN_TS_DEFAULT_FEATURES = [
+    KnownCovariateLagFeature(),
     RunningIndexFeature(),
     CalendarFeature(),
     AutoSeasonalFeature(),
