@@ -111,6 +111,16 @@ def test_season_inferred_from_timestamps():
     assert {"temp_lag_1", "temp_lag_7", "temp_mean_7"} <= set(out.columns)
 
 
+@pytest.mark.parametrize("freq,season", [("h", 24), ("D", 7), ("MS", 12)])
+def test_season_inferred_with_gaps(freq, season):
+    # The pipeline drops NaN-target context rows; one gap per series must not
+    # send the season to the fallback of 4.
+    ctx, fut = make_frames(freq=freq)
+    ctx = ctx[ctx.groupby("item_id").cumcount() != 5]
+    out = KnownCovariateLagFeature()(joint_frame(ctx, fut))
+    assert {f"temp_lag_{season}", f"temp_mean_{season}"} <= set(out.columns)
+
+
 def test_feature_transformer_split():
     ctx, fut = make_frames()
     ctx = ctx.drop(columns=["past_only", "label"])

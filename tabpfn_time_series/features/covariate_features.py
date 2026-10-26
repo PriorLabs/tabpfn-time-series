@@ -36,16 +36,36 @@ def season_from_freq(freq) -> int:
     return max(4, int(round(season)))
 
 
-def _infer_freq(timestamps: pd.DatetimeIndex, item_ids: pd.Index) -> Optional[str]:
-    """Sampling frequency from the first series pandas can infer it on."""
+def _freq_from_step(step: pd.Timedelta):
+    """Frequency for a typical timestamp step; calendar steps snap to M / Q."""
+    days = step / pd.Timedelta(days=1)
+    if 28 <= days <= 31:
+        return "MS"
+    if 89 <= days <= 92:
+        return "QS"
+    return pd.tseries.frequencies.to_offset(step)
+
+
+def _infer_freq(timestamps: pd.DatetimeIndex, item_ids: pd.Index):
+    """Sampling frequency from the first series pandas can infer it on.
+
+    pd.infer_freq needs a gap-free series, and the pipeline drops NaN-target context
+    rows, so when no series is gap-free fall back to the median step over all series.
+    """
     by_item = pd.Series(timestamps, index=item_ids).groupby(level=0, sort=False)
+    steps = []
     for _, ts in by_item:
         ts = pd.DatetimeIndex(ts.unique()).sort_values()
         if len(ts) >= 3:
             freq = pd.infer_freq(ts)
             if freq is not None:
                 return freq
-    return None
+        if len(ts) >= 2:
+            steps.append(ts.to_series().diff().dropna())
+    if not steps:
+        return None
+    step = pd.concat(steps).median()
+    return _freq_from_step(step) if step > pd.Timedelta(0) else None
 
 
 class KnownCovariateLagFeature(FeatureGenerator):
