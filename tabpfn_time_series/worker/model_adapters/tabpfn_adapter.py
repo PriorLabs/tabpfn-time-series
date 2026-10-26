@@ -1,8 +1,9 @@
-import numpy as np
 from typing import Dict, Type
 
+import numpy as np
 from sklearn.base import RegressorMixin
 from tabpfn import TabPFNRegressor
+from tabpfn.base import ModelSpecs
 from tabpfn_client import (
     init as tabpfn_client_init,
     TabPFNRegressor as TabPFNClientRegressor,
@@ -31,7 +32,16 @@ class TabPFNModelAdapter(BaseModelAdapter):
         model_class: Type[RegressorMixin],
         model_config: dict,
         tabpfn_output_selection: str,
-    ):
+    ) -> None:
+        model_path = model_config.get("model_path")
+        if isinstance(model_path, ModelSpecs):
+            if model_class == TabPFNClientRegressor:
+                raise ValueError(
+                    "ModelSpecs requires local inference. Use TabPFNMode.LOCAL "
+                    "or pass a server model name for client inference."
+                )
+            # The base adapter copies configuration; live weights must stay shared.
+            model_config = {**model_config, "model_path": None}
         super().__init__(
             model_class,
             model_config,
@@ -41,6 +51,9 @@ class TabPFNModelAdapter(BaseModelAdapter):
                 }
             },
         )
+
+        if isinstance(model_path, ModelSpecs):
+            self.model_config["model_path"] = model_path
 
         self.tabpfn_output_selection = tabpfn_output_selection
 
@@ -80,7 +93,7 @@ class TabPFNModelAdapter(BaseModelAdapter):
             tabpfn_config["model_path"] = model_name
 
     @staticmethod
-    def _init_local_tabpfn_regressor(tabpfn_config: dict):
+    def _init_local_tabpfn_regressor(tabpfn_config: dict) -> None:
         from tabpfn.model_loading import (
             download_model,
             resolve_model_path,
@@ -88,6 +101,8 @@ class TabPFNModelAdapter(BaseModelAdapter):
         )
 
         model_path = tabpfn_config.get("model_path")
+        if isinstance(model_path, ModelSpecs):
+            return
         model_version = resolve_model_version(model_path)
         resolved_model_paths, _, model_names, which = resolve_model_path(
             model_path,
