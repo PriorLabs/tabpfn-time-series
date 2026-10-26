@@ -89,6 +89,11 @@ dev = [
 "Homepage" = "https://github.com/PriorLabs/tabpfn-time-series"
 "Bug Tracker" = "https://github.com/PriorLabs/tabpfn-time-series/issues"
 
+[tool.uv]
+# autogluon-timeseries 1.6.x caps torch<2.11 on macOS. Without this, a single
+# torch>=2.11 lock pushes macOS onto an AutoGluon prerelease that lacks the cap.
+constraint-dependencies = ["torch<2.11; sys_platform == 'darwin'"]
+
 [tool.pytest.ini_options]
 markers = [
     "uses_tabpfn_client: These tests require a TabPFN API key.",
