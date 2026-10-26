@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'darwin'",
@@ -11,6 +11,9 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and sys_platform != 'darwin'",
 ]
+
+[manifest]
+constraints = [{ name = "torch", marker = "sys_platform == 'darwin'", specifier = "<2.11" }]
 
 [[package]]
 name = "absl-py"
@@ -32,7 +35,8 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/b5/1d3ed029ac71d3f2961346829a268da923698e9fd63f218f78841f216bfd/accelerate-1.15.0.tar.gz", hash = "sha256:5654f8c5eaa0d4fa68b33e287a97765da6849bf6d51dcac874e73fbbddfb6134", size = 422615, upload-time = "2026-09-09T13:04:49.078Z" }
 wheels = [
@@ -374,14 +378,8 @@ wheels = [
 
 [[package]]
 name = "autogluon-common"
-version = "1.6.0b20260804"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
 dependencies = [
     { name = "boto3" },
     { name = "joblib" },
@@ -395,52 +393,18 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/f9/89f118d8f9e19339e6af2e34cc81075a460ab8be8c17d3a29db1731e12b1/autogluon_common-1.6.0b20260804.tar.gz", hash = "sha256:3a33f5c34ff762ca730e2dbbe20dddd70a6436e56c22910fe67cdbf299a65855", size = 80220, upload-time = "2026-08-04T09:54:46.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/2f/11fedc7db5b3479df1c67fb8f311cf7c50840c627c70f3447800817b6c1a/autogluon_common-1.6.3.tar.gz", hash = "sha256:ef0146a862464c20f8780239ca8ac39b401d110bd1fd41130f0c5445c4625e04", size = 80954, upload-time = "2026-09-18T08:43:49.414Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/28/8e3d5fd046452ce7abf6d1992a82e899fbdec94361226210a5c4f127a560/autogluon_common-1.6.0b20260804-py3-none-any.whl", hash = "sha256:f679db1a69c8a3fa7c5b8bc3d81bbbbf53274df822c89eb8ac6461986a7737d8", size = 90452, upload-time = "2026-08-04T09:54:44.788Z" },
-]
-
-[[package]]
-name = "autogluon-common"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform != 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
-    "python_full_version < '3.11' and sys_platform != 'darwin'",
-]
-dependencies = [
-    { name = "boto3" },
-    { name = "joblib" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pandas" },
-    { name = "psutil" },
-    { name = "pyarrow" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/11/42/84b9fd41f01d3b0227b8d3da973b14f9f64b6b4bc46fd1eac446de145814/autogluon_common-1.6.1.tar.gz", hash = "sha256:593c514582e2d5d5374648fb0c38d8dd64457cf381618016d86e96ea0f847357", size = 80939, upload-time = "2026-08-06T08:50:40.399Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/96/c19f32652c3a5025aaf977067812bde3d52e04fb530f610af64386a09c45/autogluon_common-1.6.1-py3-none-any.whl", hash = "sha256:b2f0dce58e2a255997cdaaba2a67e9b64ab171f1e4e5c53ecc4ee265c7725095", size = 90706, upload-time = "2026-08-06T08:50:38.677Z" },
+    { url = "https://files.pythonhosted.org/packages/72/0f/8fd1183011c18844b247c1fbe345777619524161643462c4265e07dc322d/autogluon_common-1.6.3-py3-none-any.whl", hash = "sha256:140fdd669ad8c45e3c2a34e153f01261b6fa284ff277185dcbcee6a914d2e42e", size = 90708, upload-time = "2026-09-18T08:43:48.069Z" },
 ]
 
 [[package]]
 name = "autogluon-core"
-version = "1.6.0b20260804"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
 dependencies = [
-    { name = "autogluon-common", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
+    { name = "autogluon-common" },
+    { name = "autogluon-features" },
     { name = "boto3" },
     { name = "matplotlib" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -454,97 +418,33 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/c5/6fc877c89efad6ae919e556aaaaf10de2eba7fb005f950aa972ecc86bdfa/autogluon_core-1.6.0b20260804.tar.gz", hash = "sha256:f87b8f8b2274a5c50b8a5cc723f2ec856f1a2f6f8db84c4e0d5739c6245982ef", size = 220640, upload-time = "2026-08-04T09:54:50.948Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/89/8d/3343b392b83d17f410f5b6f7340339df5dfe1b4a00c73a2bb1bbade9fce0/autogluon_core-1.6.3.tar.gz", hash = "sha256:90d4f518e64a1bd2864dd85793846457953df7a69b6b179c637b39f5b21036ba", size = 220146, upload-time = "2026-09-18T08:43:53.354Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/c6/9da3688f2db5d6048e261d4963ad8f3141411d3a3e835c271737d110d661/autogluon_core-1.6.0b20260804-py3-none-any.whl", hash = "sha256:f88a63099d4f8c46e7fb323dccbf1b80b7670c3bf18443c6a5f4f6737b762d92", size = 248942, upload-time = "2026-08-04T09:54:48.812Z" },
-]
-
-[[package]]
-name = "autogluon-core"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform != 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
-    "python_full_version < '3.11' and sys_platform != 'darwin'",
-]
-dependencies = [
-    { name = "autogluon-common", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "boto3" },
-    { name = "matplotlib" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "tqdm" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/21/cc/ec2265c9234d8964af14b5c3de8706a348ae282bc96722ee754297ddc311/autogluon_core-1.6.1.tar.gz", hash = "sha256:0687ab7bb4961a7c0f24909cad65c9949fded7554d3fe6249f5ac75da4e7f530", size = 220096, upload-time = "2026-08-06T08:50:44.224Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/99/9bbb407bd851ae3027cd741588dca6e5c67d154fe103570c4fcc758cc265/autogluon_core-1.6.1-py3-none-any.whl", hash = "sha256:8f6b9aa135a3ac5ee58eedb2f8763ca2ac0f244812c077d0bc1aa34763127243", size = 248392, upload-time = "2026-08-06T08:50:42.104Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/cf/69c6543c65e7f5f3a43b6cef732c9b6c692e1500c47f621a29c25b89cf80/autogluon_core-1.6.3-py3-none-any.whl", hash = "sha256:74db0b6ce97a4bd7810d533331b0001794ef6b7b7bc498c7fc56dc32babc64d6", size = 248395, upload-time = "2026-09-18T08:43:51.152Z" },
 ]
 
 [[package]]
 name = "autogluon-features"
-version = "1.6.0b20260804"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
 dependencies = [
-    { name = "autogluon-common", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
+    { name = "autogluon-common" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "scikit-learn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/dd/5b22fe7e27ede58a03a7cce9549e22a518ba4e12bd4c2e6acd76ad68d048/autogluon_features-1.6.0b20260804.tar.gz", hash = "sha256:312983dafb951b753ba92d8e43c049bf5a4f5eba169ad0705318bd0b7d26f694", size = 96960, upload-time = "2026-08-04T09:54:54.588Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/6f/a7f80e9963a118334a102639ad6f47e4b3c1bf72b646f32a4b965419a171/autogluon_features-1.6.3.tar.gz", hash = "sha256:0c8d197073ed2a7f8555eb359e9ec198fcffaf599a9a254e09e8597efb16289e", size = 93012, upload-time = "2026-09-18T08:43:56.303Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/83/94/9f94a6f832ccf51b8df9d99340ff9f6dda7971228847e4b99c5c32b08cfe/autogluon_features-1.6.0b20260804-py3-none-any.whl", hash = "sha256:0e94bdd31287add902d630b8b7c8f610725e2e52b7f504e9d7fd6a1e51dc84ab", size = 116548, upload-time = "2026-08-04T09:54:52.803Z" },
-]
-
-[[package]]
-name = "autogluon-features"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform != 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
-    "python_full_version < '3.11' and sys_platform != 'darwin'",
-]
-dependencies = [
-    { name = "autogluon-common", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scikit-learn" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/46/cf988f750b949baef9b81fff3354253936ba048c7993c10ebb69a50856ef/autogluon_features-1.6.1.tar.gz", hash = "sha256:eb2435e1dc3b5a5125bac051d996d76a0af86938f16bec22053afa98169cdddb", size = 93007, upload-time = "2026-08-06T08:50:47.775Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/db/a9006a14843f3edf2d85128954929ec24ff184c461de4c65f3c713a71325/autogluon_features-1.6.1-py3-none-any.whl", hash = "sha256:0ccf26fb6d3dc3f31ca479112061791cda7668497947806614ad6993f2bcf2ea", size = 112291, upload-time = "2026-08-06T08:50:45.933Z" },
+    { url = "https://files.pythonhosted.org/packages/99/27/f543b10e525c15f338a2a9ca2cad913955dca4430f786be786cf997f0396/autogluon_features-1.6.3-py3-none-any.whl", hash = "sha256:b9f4f5cb5162ab7f04930ddc1ab8e44191adec86ae468c51abecaffab95e9a3e", size = 112291, upload-time = "2026-09-18T08:43:55.046Z" },
 ]
 
 [[package]]
 name = "autogluon-tabular"
-version = "1.6.0b20260804"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
 dependencies = [
-    { name = "autogluon-core", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
+    { name = "autogluon-core" },
+    { name = "autogluon-features" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "numpy" },
@@ -553,9 +453,9 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/9e/737bcf8c109b95daf433fa06bae7dcac5b6716d8f5ed5d67209eeb1e6724/autogluon_tabular-1.6.0b20260804.tar.gz", hash = "sha256:4a195681e263d2468254c48d638c157b81661b077514d9ccf4b04d6d07907d36", size = 436037, upload-time = "2026-08-04T09:54:59.168Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/74/63741857614f658fd37b6c3e98daffc3a37ed226b1024783c9fdab736e12/autogluon_tabular-1.6.3.tar.gz", hash = "sha256:606027382338fbf91af1c0672d4b0dce111f8bda0c6fe0d0d8ef3f24a6145b2b", size = 442867, upload-time = "2026-09-18T08:44:00.236Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/11/21aa05bbb58dbec6dacb0e579e9917924f0648feb2af47cb4553f400a9bc/autogluon_tabular-1.6.0b20260804-py3-none-any.whl", hash = "sha256:35e4e9247ef91acbe66d0a0706b7c72b65d3a525e8a4a8ac8d21a21cbb085a8e", size = 506625, upload-time = "2026-08-04T09:54:56.99Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/86/007552ef0077e8fe45a38112fd0c7b67030f5a3576e9d270147169c1e9a8/autogluon_tabular-1.6.3-py3-none-any.whl", hash = "sha256:6511e7e3edf9a93bf7b214f2f6782c1e00f3755c2150f4863f031fd0b3f44895", size = 514811, upload-time = "2026-09-18T08:43:58.533Z" },
 ]
 
 [package.optional-dependencies]
@@ -566,64 +466,22 @@ lightgbm = [
     { name = "lightgbm" },
 ]
 xgboost = [
-    { name = "xgboost", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "xgboost", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-]
-
-[[package]]
-name = "autogluon-tabular"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform != 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
-    "python_full_version < '3.11' and sys_platform != 'darwin'",
-]
-dependencies = [
-    { name = "autogluon-core", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scikit-learn" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/60/b5/5a13680ee30a65805342d2e02765c86912db7036d647cff29e15a58eb979/autogluon_tabular-1.6.1.tar.gz", hash = "sha256:2a1cd53fde4f54e962b711b76a3dea913190df06e7f2d023b145afe63ff25ff5", size = 442649, upload-time = "2026-08-06T08:50:52.038Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/78/0d4e7fc37cb9030da45e2a1e4045e8aa88d315cfb34fe90bd2f36929aae0/autogluon_tabular-1.6.1-py3-none-any.whl", hash = "sha256:4f8757d0817efff6133788afc201c18e218e487324a37c62905c2c8f3203feb5", size = 514784, upload-time = "2026-08-06T08:50:50.111Z" },
-]
-
-[package.optional-dependencies]
-catboost = [
-    { name = "catboost" },
-]
-lightgbm = [
-    { name = "lightgbm" },
-]
-xgboost = [
-    { name = "xgboost-cpu", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "xgboost-cpu", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "xgboost", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' and sys_platform == 'darwin'" },
+    { name = "xgboost", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform == 'darwin'" },
+    { name = "xgboost-cpu", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' and sys_platform != 'darwin'" },
+    { name = "xgboost-cpu", version = "3.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and sys_platform != 'darwin'" },
 ]
 
 [[package]]
 name = "autogluon-timeseries"
-version = "1.6.0b20260804"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
 dependencies = [
     { name = "accelerate" },
-    { name = "autogluon-common", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-core", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-tabular", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" }, extra = ["catboost", "lightgbm", "xgboost"] },
+    { name = "autogluon-common" },
+    { name = "autogluon-core" },
+    { name = "autogluon-features" },
+    { name = "autogluon-tabular", extra = ["catboost", "lightgbm", "xgboost"] },
     { name = "chronos-forecasting" },
     { name = "coreforecast" },
     { name = "einops" },
@@ -644,60 +502,15 @@ dependencies = [
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "statsforecast" },
     { name = "tensorboard" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "tqdm" },
     { name = "transformers", extra = ["sentencepiece"] },
     { name = "utilsforecast" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/63/cf57298ce87d09b7472cf29f091da4dbe42a1ace40a4995708fb78043175/autogluon_timeseries-1.6.0b20260804.tar.gz", hash = "sha256:af52a9986533b4b2ed29946ab1670daf4e41d6ecd07ab668210da3892163b0e9", size = 230511, upload-time = "2026-08-04T09:55:08.211Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/a6/05d652b39cd049c976418f49cfacc005ff1aacb70b4e550b9395a311a9e1/autogluon_timeseries-1.6.3.tar.gz", hash = "sha256:4121f8f1f6e9401b53fdaa194531fe1b7f7d39f4d4ab27750fbd6ea497cefcf3", size = 228234, upload-time = "2026-09-18T08:44:07.927Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/6a/2f28d3bde4fb5a98c0e7005c4a7662416760ce881c025d62c32587bf98a2/autogluon_timeseries-1.6.0b20260804-py3-none-any.whl", hash = "sha256:b74f84be72108cf5023e403af3de4b9e707ff05ca5db2de2f769d0cee40d8da6", size = 276830, upload-time = "2026-08-04T09:55:06.316Z" },
-]
-
-[[package]]
-name = "autogluon-timeseries"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform != 'darwin'",
-    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
-    "python_full_version < '3.11' and sys_platform != 'darwin'",
-]
-dependencies = [
-    { name = "accelerate" },
-    { name = "autogluon-common", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-core", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-features", version = "1.6.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "autogluon-tabular", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["catboost", "lightgbm", "xgboost"] },
-    { name = "chronos-forecasting" },
-    { name = "coreforecast" },
-    { name = "einops" },
-    { name = "fugue" },
-    { name = "gluonts" },
-    { name = "huggingface-hub", extra = ["torch"] },
-    { name = "joblib" },
-    { name = "lightning" },
-    { name = "mlforecast" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "numpy" },
-    { name = "orjson" },
-    { name = "pandas" },
-    { name = "peft" },
-    { name = "safetensors" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "statsforecast" },
-    { name = "tensorboard" },
-    { name = "torch" },
-    { name = "tqdm" },
-    { name = "transformers", extra = ["sentencepiece"] },
-    { name = "utilsforecast" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/26/80639f161ae5b7668b52063ef06acd4d813e8c3b863798ed2f57d6ee14f5/autogluon_timeseries-1.6.1.tar.gz", hash = "sha256:ae39024c61bbceb0b1998c44b1010e46e8297c9c3707e8037d655e91ce4da63d", size = 228239, upload-time = "2026-08-06T08:50:59.014Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/2c/4ba0a7ddbfad4486c7eb03fd40453f7724daf5b88f50203a2fbb9b7b30b7/autogluon_timeseries-1.6.1-py3-none-any.whl", hash = "sha256:48856697bfe7e4b825e996412507a48253b4fa7dfbe31d2c6c4ad37d82b986a3", size = 274440, upload-time = "2026-08-06T08:50:57.414Z" },
+    { url = "https://files.pythonhosted.org/packages/41/5e/64049d68118b39d5efeb2694a0e6bebdf7a52608deeb2466b6fcefb8149d/autogluon_timeseries-1.6.3-py3-none-any.whl", hash = "sha256:8bcfaa7075d50507681fc5f7e0c3bb13503c94a6c63754992aa5f752654f6973", size = 274440, upload-time = "2026-09-18T08:44:06.087Z" },
 ]
 
 [[package]]
@@ -1146,7 +959,8 @@ dependencies = [
     { name = "einops" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a6/71/609ff332069de0580a8a1fa357558975a91be786d612ce179c2797a00a52/chronos_forecasting-2.3.1.tar.gz", hash = "sha256:785116f3f10aaac44a315700c5e4de71a5fe6385c9c771722d688f402fe75083", size = 726426, upload-time = "2026-07-02T08:22:58.672Z" }
@@ -2298,7 +2112,8 @@ wheels = [
 [package.optional-dependencies]
 torch = [
     { name = "safetensors", extra = ["torch"] },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
 ]
 
 [[package]]
@@ -3014,7 +2829,8 @@ dependencies = [
     { name = "packaging" },
     { name = "pytorch-lightning" },
     { name = "pyyaml" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
@@ -4229,7 +4045,8 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "tqdm" },
     { name = "transformers" },
 ]
@@ -4947,7 +4764,8 @@ dependencies = [
     { name = "lightning-utilities" },
     { name = "packaging" },
     { name = "pyyaml" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
@@ -5556,7 +5374,8 @@ wheels = [
 torch = [
     { name = "numpy" },
     { name = "packaging" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
 ]
 
 [[package]]
@@ -6194,7 +6013,8 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "skrub" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
@@ -6272,8 +6092,7 @@ dependencies = [
 
 [package.optional-dependencies]
 benchmarking = [
-    { name = "autogluon-timeseries", version = "1.6.0b20260804", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
-    { name = "autogluon-timeseries", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
+    { name = "autogluon-timeseries" },
 ]
 explainability = [
     { name = "matplotlib" },
@@ -6521,8 +6340,48 @@ wheels = [
 
 [[package]]
 name = "torch"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.11' and sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "setuptools", marker = "python_full_version >= '3.12'" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/30/bfebdd8ec77db9a79775121789992d6b3b75ee5494971294d7b4b7c999bc/torch-2.10.0-2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:2b980edd8d7c0a68c4e951ee1856334a43193f98730d97408fbd148c1a933313", size = 79411457, upload-time = "2026-02-10T21:44:59.189Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/8b/4b61d6e13f7108f36910df9ab4b58fd389cc2520d54d81b88660804aad99/torch-2.10.0-2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:418997cb02d0a0f1497cf6a09f63166f9f5df9f3e16c8a716ab76a72127c714f", size = 79423467, upload-time = "2026-02-10T21:44:48.711Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/54/a2ba279afcca44bbd320d4e73675b282fcee3d81400ea1b53934efca6462/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:13ec4add8c3faaed8d13e0574f5cd4a323c11655546f91fbe6afa77b57423574", size = 79498202, upload-time = "2026-02-10T21:44:52.603Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/23/2c9fe0c9c27f7f6cb865abcea8a4568f29f00acaeadfc6a37f6801f84cb4/torch-2.10.0-2-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:e521c9f030a3774ed770a9c011751fb47c4d12029a3d6522116e48431f2ff89e", size = 79498254, upload-time = "2026-02-10T21:44:44.095Z" },
+    { url = "https://files.pythonhosted.org/packages/76/bb/d820f90e69cda6c8169b32a0c6a3ab7b17bf7990b8f2c680077c24a3c14c/torch-2.10.0-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:35e407430795c8d3edb07a1d711c41cc1f9eaddc8b2f1cc0a165a6767a8fb73d", size = 79411450, upload-time = "2026-01-21T16:25:30.692Z" },
+    { url = "https://files.pythonhosted.org/packages/61/d8/15b9d9d3a6b0c01b883787bd056acbe5cc321090d4b216d3ea89a8fcfdf3/torch-2.10.0-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:b7bd80f3477b830dd166c707c5b0b82a898e7b16f59a7d9d42778dd058272e8b", size = 79423461, upload-time = "2026-01-21T16:24:50.266Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/5c/dee910b87c4d5c0fcb41b50839ae04df87c1cfc663cf1b5fca7ea565eeaa/torch-2.10.0-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:6d3707a61863d1c4d6ebba7be4ca320f42b869ee657e9b2c21c736bf17000294", size = 79498198, upload-time = "2026-01-21T16:24:34.704Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/0b/39929b148f4824bc3ad6f9f72a29d4ad865bcf7ebfc2fa67584773e083d2/torch-2.10.0-cp313-cp313t-macosx_14_0_arm64.whl", hash = "sha256:3202429f58309b9fa96a614885eace4b7995729f44beb54d3e4a47773649d382", size = 79851305, upload-time = "2026-01-21T16:24:09.209Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/13/e76b4d9c160e89fff48bf16b449ea324bda84745d2ab30294c37c2434c0d/torch-2.10.0-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:cdf2a523d699b70d613243211ecaac14fe9c5df8a0b0a9c02add60fb2a413e0f", size = 79498248, upload-time = "2026-01-21T16:23:09.315Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/93/716b5ac0155f1be70ed81bacc21269c3ece8dba0c249b9994094110bfc51/torch-2.10.0-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:bf0d9ff448b0218e0433aeb198805192346c4fd659c852370d5cc245f602a06a", size = 79464992, upload-time = "2026-01-21T16:23:05.162Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/94/71994e7d0d5238393df9732fdab607e37e2b56d26a746cb59fdb415f8966/torch-2.10.0-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:f5ab4ba32383061be0fb74bda772d470140a12c1c3b58a0cfbf3dae94d164c28", size = 79850324, upload-time = "2026-01-21T16:22:09.494Z" },
+]
+
+[[package]]
+name = "torch"
 version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform != 'darwin'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform != 'darwin'",
+    "python_full_version < '3.11' and sys_platform != 'darwin'",
+]
 dependencies = [
     { name = "cuda-bindings", marker = "python_full_version < '3.15' and sys_platform == 'linux'" },
     { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvjitlink", "nvrtc", "nvtx"], marker = "sys_platform == 'linux'" },
@@ -6541,27 +6400,21 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/e7/19894fdb51c7dbaf94f5a79bb0871da0992e8e4241e579cb006da46d2e58/torch-2.13.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:94f0de129916f77b8dc2c7a8eff644cfeddfe59e39c9f55e9f6e17543410281d", size = 111178962, upload-time = "2026-07-08T16:05:49.855Z" },
     { url = "https://files.pythonhosted.org/packages/d1/5c/b1d5de470c54e339b30a92d96683a71bcebd78f5f2a7fc714cd6dc6bbd68/torch-2.13.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:0ab4b69f3ee03a62a002cfbf77b1ca5e88aceb4ea64cb4388bb28f638ddbb045", size = 427198333, upload-time = "2026-07-08T16:05:36.847Z" },
     { url = "https://files.pythonhosted.org/packages/50/c0/68a84105e1fcb8970144b388ff3d3e5dc15a3be28c1e247841f7d7247e41/torch-2.13.0-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:c78b7b4d04461855a764cf01bae9a462bb88bc93defcfa11235cbc8fdf3e12c4", size = 526555154, upload-time = "2026-07-08T16:05:06.507Z" },
     { url = "https://files.pythonhosted.org/packages/2e/c9/0bb9d097b03cbaf96bb75b15e867347b8e41bfcdfe0539452d17d9e63993/torch-2.13.0-cp310-cp310-win_amd64.whl", hash = "sha256:2bd30b6b730d987fa386ce3898933762c5cb8cc82eb0535211d787cc3ce2dfeb", size = 122015602, upload-time = "2026-07-08T16:05:45.25Z" },
-    { url = "https://files.pythonhosted.org/packages/5b/fe/cba54dc58523434919b66f13a667e36e436deddd77ca519e96553617d4ec/torch-2.13.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:e76f9bcecc52b8ff711239a2f7547d5353df95878ab232f0773c1d95928b92f8", size = 111187938, upload-time = "2026-07-08T16:05:17.065Z" },
     { url = "https://files.pythonhosted.org/packages/c2/59/1e3160e18e12aa3038390efab3ce02b36a9d4d6a527ecdd8520dca2e68d8/torch-2.13.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:092790c696a760c729fd5722835f50b9d81fd7c8f141571f3f3cf4081a8f664c", size = 427199369, upload-time = "2026-07-08T16:04:51.054Z" },
     { url = "https://files.pythonhosted.org/packages/01/79/1f2d34ad7034ee1c7ffc1cf8bf0f8213af2a81df6ecdb3997ecec107c09d/torch-2.13.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:60fcdcb2f3876e21146cb4524ef06397d727ca9ad5f020818547e25075fe3cb7", size = 526574961, upload-time = "2026-07-08T16:04:07.075Z" },
     { url = "https://files.pythonhosted.org/packages/6c/fd/0f2ce40f58aefbdb3392f9acce3c8171940943ae2d661f70558bfa73befb/torch-2.13.0-cp311-cp311-win_amd64.whl", hash = "sha256:a0d8b11f16a48d60e2015d8213aa0390744cbebb98e58b62b3514dddc656e330", size = 122015870, upload-time = "2026-07-08T16:05:27.59Z" },
-    { url = "https://files.pythonhosted.org/packages/c4/3a/ed0f4d4d1dcde03bced7aac9a28e800abcdc0cbd06b6775044c9fbd877b7/torch-2.13.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:2fe228aba290d14b9f31b049be550dbd469c3fd3013d7a19705b30454da97027", size = 111213045, upload-time = "2026-07-08T16:05:22.997Z" },
     { url = "https://files.pythonhosted.org/packages/df/a9/f6a2a4d763ff1df02e9a64c477029db614295bc9367f4131223791ccc243/torch-2.13.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:572df8be8ffb4599c88cbd6a0726f1f854f4da65d2e3c09f0e2c2283333cd6d4", size = 427210998, upload-time = "2026-07-08T16:04:37.708Z" },
     { url = "https://files.pythonhosted.org/packages/f3/82/fea946351658e6534db52d2cc12bc53087cbf87f9440c5f180f367c1950b/torch-2.13.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:796633c4cdf0fe2cdced72d8f88f22e73dbcfce83132763162f6d4bff13b820b", size = 526605292, upload-time = "2026-07-08T16:04:22.81Z" },
     { url = "https://files.pythonhosted.org/packages/21/d6/e8f3c6f7e01f626f77259de9860d2a78bc84c40539e28e79b7e98b0bb659/torch-2.13.0-cp312-cp312-win_amd64.whl", hash = "sha256:024c6cc0c1b085f2f91f20a3dc27b0471d021c31ce84b81be3afdc39f791fd9d", size = 122057313, upload-time = "2026-07-08T16:03:53.43Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/fa/c1c10b7aff4a9a3e8956d4f0a5f468fa6db7abc3208805719076772b4833/torch-2.13.0-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:33449899ce5496c1b84b4853179d94fd102028ae1407314d9fb956bb79e70d09", size = 111213743, upload-time = "2026-07-08T16:03:28.579Z" },
     { url = "https://files.pythonhosted.org/packages/11/18/9ecb37b56293a0be8d80f810bf672a72fe7e02f8b475d5ef1b9bf8a0d748/torch-2.13.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:1e09d6a722504957c694faceca843acde562786df1144ebcc5a74075ec7f6005", size = 427213008, upload-time = "2026-07-08T16:03:44.106Z" },
     { url = "https://files.pythonhosted.org/packages/d4/5a/7c50ba1b7b713d71d34669c6d13dab0a11531a3eceb0307a5162dbfec0f7/torch-2.13.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:a3a9a21312872af8a26950b2c15680335a386a1f56ed03e780653d78b9607e9e", size = 526602329, upload-time = "2026-07-08T16:03:12.649Z" },
     { url = "https://files.pythonhosted.org/packages/91/3d/e7adcc6aaf36961cd18f56cf8ad0f3058c3a5c84ccf391762176c94581b8/torch-2.13.0-cp313-cp313-win_amd64.whl", hash = "sha256:49b58f1e2c52440abb6f17c28f0335fe6c6d01ad1a7f55b0183b81e4b34d64e6", size = 122057920, upload-time = "2026-07-08T16:03:01.808Z" },
-    { url = "https://files.pythonhosted.org/packages/36/76/6dcc7f0c07052102dd36f83cbc5800842a909c8c3fbf1a7f8a5844954de9/torch-2.13.0-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:d849b390e07d8d333ce8ecaf91b273c656c598379a19c9acf1318a883f6b391c", size = 111227066, upload-time = "2026-07-08T16:03:33.6Z" },
     { url = "https://files.pythonhosted.org/packages/e9/09/2c10e8cd0e00fa5d23c052df6ce467eaa7182399f5e0f824f1e4ff42ccae/torch-2.13.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:a3893dc2da0a972a8ca5d698c85a9f967559ac5f8ee1797b77408aa8734d073c", size = 427226309, upload-time = "2026-07-08T16:02:53.127Z" },
     { url = "https://files.pythonhosted.org/packages/76/c6/22c2102bbef14ca6a6cb4c20e42f088e49c5f812be4e160ae57502e325f9/torch-2.13.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:49f1ea385c754e54919408a9bb3b5a72b0b755bbe2c916c1d6f70afbec4908a2", size = 526614507, upload-time = "2026-07-08T16:02:16.441Z" },
     { url = "https://files.pythonhosted.org/packages/2b/0c/7d1deb6bce5bc3e6042caf39100ac768eba3b9a098e1dddd16f75bd6489b/torch-2.13.0-cp314-cp314-win_amd64.whl", hash = "sha256:4f8573e3ce9ebcd53fe922f01077a6085ccdfbe5f12fd215883a9d87d7a744fd", size = 122051871, upload-time = "2026-07-08T16:03:23.521Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/ce/aa8b7f9949d32e0f2f624f342bc3b48112c1b8a130288465938bc83bcbf9/torch-2.13.0-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:c28def70706c2f9ecc752574766e8ae4da9b810ab6676b611166761a78a9f1e1", size = 111537025, upload-time = "2026-07-08T16:02:44.28Z" },
     { url = "https://files.pythonhosted.org/packages/69/d1/491e3a0389430946145888b0203f2b6a759ce2a61481b96a85c2da4f2ced/torch-2.13.0-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:31061ff56ed8fbf26c749806905aeb749ebeb819810fd5d52508aa5afd90dddc", size = 427219769, upload-time = "2026-07-08T16:02:31.18Z" },
     { url = "https://files.pythonhosted.org/packages/9a/1d/38006e045bf0a1fc28ef01e757c554e59e59a8770c284bc4f47b14e60441/torch-2.13.0-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:cc26eead4cf51d0b544e31e364dcf000846549c273bd148936fe9d24d29acb92", size = 526571320, upload-time = "2026-07-08T16:01:59.348Z" },
     { url = "https://files.pythonhosted.org/packages/56/94/655c91992a882bd5071aa0b5d22a07dbb130d801e872be97c0b627a7c693/torch-2.13.0-cp314-cp314t-win_amd64.whl", hash = "sha256:a7de8a313090dc5c7d7ba4bfe5c3be222528f9a4dba1acc83bddb1157360c4b8", size = 122306773, upload-time = "2026-07-08T16:02:39.832Z" },
@@ -6575,7 +6428,8 @@ dependencies = [
     { name = "lightning-utilities" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "torch" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/34/39b8b749333db56c0585d7a11fa62a283c087bb1dfc897d69fb8cedbefb1/torchmetrics-1.9.0.tar.gz", hash = "sha256:a488609948600df52d3db4fcdab02e62aab2a85ef34da67037dc3e65b8512faa", size = 581765, upload-time = "2026-03-09T17:41:22.443Z" }
 wheels = [
