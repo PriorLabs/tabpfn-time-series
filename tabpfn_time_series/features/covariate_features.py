@@ -50,7 +50,8 @@ def _infer_freq(timestamps: pd.DatetimeIndex, item_ids: pd.Index):
     """Sampling frequency from the first series pandas can infer it on.
 
     pd.infer_freq needs a gap-free series, and the pipeline drops NaN-target context
-    rows, so when no series is gap-free fall back to the median step over all series.
+    rows, so when no series is gap-free fall back to the most common step over all
+    series.
     """
     by_item = pd.Series(timestamps, index=item_ids).groupby(level=0, sort=False)
     steps = []
@@ -64,7 +65,7 @@ def _infer_freq(timestamps: pd.DatetimeIndex, item_ids: pd.Index):
             steps.append(ts.to_series().diff().dropna())
     if not steps:
         return None
-    step = pd.concat(steps).median()
+    step = pd.concat(steps).mode().iloc[0]
     return _freq_from_step(step) if step > pd.Timedelta(0) else None
 
 
