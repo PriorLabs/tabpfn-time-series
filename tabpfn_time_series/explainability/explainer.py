@@ -31,6 +31,7 @@ mode, where one window can otherwise produce a very large single request.
 
 from __future__ import annotations
 
+import re
 import warnings
 
 import numpy as np
@@ -190,6 +191,7 @@ class TabPFNTSExplainer:
         - ``trend``: ``running_index`` and ``year`` (the non-periodic drift terms);
         - ``auto_seasonal``: the auto-detected Fourier columns (``sin_#.../cos_#...``);
         - one group per remaining column, treated as a user covariate.
+          Its lags and trailing means (``{c}_lag_k``, ``{c}_mean_k``) join that group.
 
         Pass an explicit ``groups`` mapping to ``window_shap`` to override this.
         """
@@ -210,6 +212,13 @@ class TabPFNTSExplainer:
         for c in feature_cols:
             if c not in owned:  # leftover columns are user covariates
                 groups[c] = [c]
+        # Fold KnownCovariateLagFeature columns ({c}_lag_k / {c}_mean_k) into their
+        # covariate's group, so each covariate stays one player.
+        for c in list(groups):
+            source = re.fullmatch(r"(.+)_(?:lag|mean)_\d+", c)
+            if source and groups[c] == [c] and source[1] in groups:
+                groups[source[1]].append(c)
+                del groups[c]
         return groups
 
     # -- partial dependence --------------------------------------------------

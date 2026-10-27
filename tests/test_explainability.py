@@ -91,7 +91,16 @@ def test_feature_groups_detects_calendar_trend_auto_and_covariate(explainer_fact
     assert groups["hour_of_day"] == ["hour_of_day_sin", "hour_of_day_cos"]
     assert "trend" in groups and "running_index" in groups["trend"]
     assert "auto_seasonal" in groups
-    assert groups["temp"] == ["temp"]  # covariate becomes its own group
+    assert groups["temp"][0] == "temp"  # covariate (and its lags) is its own group
+
+
+def test_feature_groups_folds_covariate_lags_into_covariate(explainer_factory):
+    exp = explainer_factory({"hour_of_day_sin": 1.0})
+    cols = ["running_index", "temp", "temp_lag_1", "temp_lag_24", "temp_mean_24"]
+    groups = exp.feature_groups(cols)
+
+    assert groups["temp"] == ["temp", "temp_lag_1", "temp_lag_24", "temp_mean_24"]
+    assert not any(g.startswith("temp_") for g in groups)
 
 
 def test_pdp_hour_recovers_sine_shape(explainer_factory):
