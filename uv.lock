@@ -5994,7 +5994,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn"
-version = "9.1.0"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
@@ -6018,9 +6018,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/e0/23dbce1a12ed23c45a2e2edd2f226142327f969e200b113d0c2646d1637c/tabpfn-9.1.0.tar.gz", hash = "sha256:399cb8fad4f8eb3773ef856232721c8234ee7ae6df54eb5f0ad4e2ed6c64a4bd", size = 935273, upload-time = "2026-10-02T09:23:35.203Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/03/1b48e093811877c651f731ac64e36a71b3ac44ec5c5c67a395422a6cbfed/tabpfn-9.2.0.tar.gz", hash = "sha256:e7fb2c6293ffef664c69838eb4cb215c79c85a0c0bd449fdf22489045d32b9eb", size = 937644, upload-time = "2026-10-12T15:12:56.56Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/7d/fa98749f072dc6b88656b5f953ee86f734a90ca5c78966c8033fb2ed6c0d/tabpfn-9.1.0-py3-none-any.whl", hash = "sha256:dea759756eb2d8cc9e5a5e3e85ed95984ae1eae34e310b339edd452691e39ae4", size = 849266, upload-time = "2026-10-02T09:23:33.481Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/a7/5c403c9fec9f726c91eaeaebaa8905530813ab58cb134a043c4b17afbd6a/tabpfn-9.2.0-py3-none-any.whl", hash = "sha256:bf8edb860cf490ab021d0ba6e91a9798f1b549bdb220066599661c8fc6d6089f", size = 850035, upload-time = "2026-10-12T15:12:54.671Z" },
 ]
 
 [[package]]
@@ -6134,7 +6134,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "shapiq", marker = "extra == 'explainability'", specifier = ">=1.4" },
     { name = "statsmodels", specifier = ">=0.14.5" },
-    { name = "tabpfn", specifier = ">=9.1.0" },
+    { name = "tabpfn", specifier = ">=9.2.0" },
     { name = "tabpfn-client", specifier = ">=0.5.3" },
     { name = "tabpfn-common-utils", extras = ["telemetry-interactive"], specifier = ">=0.2.2" },
     { name = "tqdm", specifier = ">=4.66" },
