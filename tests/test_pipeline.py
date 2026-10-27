@@ -233,3 +233,14 @@ def test_default_pipeline_config_pins_v3_5():
         f for f in TABPFN_TS_DEFAULT_FEATURES if isinstance(f, AutoSeasonalFeature)
     ]
     assert autoseason.config["max_top_k"] == 12
+
+
+@pytest.mark.parametrize("cuda", [True, False])
+def test_compile_on_cuda_by_default(monkeypatch, cuda):
+    import torch
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: cuda)
+    monkeypatch.setattr(torch.cuda, "device_count", lambda: 1)
+    for kwargs, expected in [({}, cuda), ({"compile": False}, False)]:
+        adapter = TabPFNTSPipeline(**kwargs).predictor.inference_routine.__self__
+        assert adapter.model_config.get("enable_torch_compile", False) is expected

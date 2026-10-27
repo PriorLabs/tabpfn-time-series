@@ -1,14 +1,19 @@
 """GPU-based parallel worker for time series prediction."""
 
+import os
+
 import torch
-import numpy as np
 import pandas as pd
 from typing import Callable
-from joblib import Parallel, delayed
+from joblib.externals.loky import get_reusable_executor
 from tqdm import tqdm
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.worker.parallel_workers.base import ParallelWorker
+
+
+def _init_process(num_threads: int) -> None:
+    torch.set_num_threads(num_threads)
 
 
 class GPUParallelWorker(ParallelWorker):
@@ -55,10 +60,9 @@ class GPUParallelWorker(ParallelWorker):
         Returns:
             TimeSeriesDataFrame with predictions
         """
-        if (
-            self.total_num_workers == 1
-            or len(train_tsdf.item_ids) < self.total_num_workers
-        ):
+        item_ids = train_tsdf.item_ids
+        num_chunks = min(self.total_num_workers, len(item_ids))
+        if num_chunks == 1:
             predictions = self._prediction_routine_per_gpu(
                 train_tsdf,
                 test_tsdf,
@@ -67,33 +71,31 @@ class GPUParallelWorker(ParallelWorker):
             )
             return TimeSeriesDataFrame(predictions)
 
-        # Split data into chunks for parallel inference on each GPU
-        #   since the time series are of different lengths, we shuffle
-        #   the item_ids s.t. the workload is distributed evenly across GPUs
-        # Also, using 'min' since num_workers could be larger than the number of time series
-        np.random.seed(0)
-        item_ids_chunks = np.array_split(
-            np.random.permutation(train_tsdf.item_ids),
-            min(self.total_num_workers, len(train_tsdf.item_ids)),
+        # The pool is reused across calls (no idle timeout, fixed size), so each
+        # process loads and compiles TabPFN once rather than once per call.
+        executor = get_reusable_executor(
+            max_workers=self.total_num_workers,
+            timeout=None,
+            initializer=_init_process,
+            initargs=(max(1, (os.cpu_count() or 1) // self.total_num_workers),),
         )
-
-        # Run predictions in parallel
-        predictions = Parallel(
-            n_jobs=len(item_ids_chunks),
-            backend="loky",
-        )(
-            delayed(self._prediction_routine_per_gpu)(
+        # Round-robin, so long and short series spread evenly over the workers.
+        chunks = [item_ids[i::num_chunks] for i in range(num_chunks)]
+        futures = [
+            executor.submit(
+                self._prediction_routine_per_gpu,
                 train_tsdf.loc[chunk],
                 test_tsdf.loc[chunk],
                 gpu_id=i % self.num_gpus,  # Alternate between available GPUs
+                memory_fraction=1 / self.num_workers_per_gpu,
+                **kwargs,
             )
-            for i, chunk in enumerate(item_ids_chunks)
-        )
-
-        predictions = pd.concat(predictions)
+            for i, chunk in enumerate(chunks)
+        ]
+        predictions = pd.concat([f.result() for f in futures])
 
         # Sort predictions according to original item_ids order
-        predictions = predictions.loc[train_tsdf.item_ids]
+        predictions = predictions.loc[item_ids]
 
         return TimeSeriesDataFrame(predictions)
 
@@ -102,6 +104,7 @@ class GPUParallelWorker(ParallelWorker):
         train_tsdf: TimeSeriesDataFrame,
         test_tsdf: TimeSeriesDataFrame,
         gpu_id: int,
+        memory_fraction: float | None = None,
         **kwargs,
     ):
         """Run predictions on a specific GPU.
@@ -110,6 +113,8 @@ class GPUParallelWorker(ParallelWorker):
             train_tsdf: Training time series data subset
             test_tsdf: Test time series data subset
             gpu_id: ID of the GPU to use
+            memory_fraction: Share of the GPU memory this process may use, set when
+                several workers share the GPU (default: no limit)
             **kwargs: Additional arguments passed to inference routine
 
         Returns:
@@ -117,6 +122,10 @@ class GPUParallelWorker(ParallelWorker):
         """
         # Set GPU
         torch.cuda.set_device(gpu_id)
+        if memory_fraction is not None:
+            # Otherwise each worker's caching allocator holds several times what
+            # TabPFN uses and starves the others sharing the GPU.
+            torch.cuda.set_per_process_memory_fraction(memory_fraction, gpu_id)
 
         all_pred = []
         for item_id in tqdm(train_tsdf.item_ids, desc=f"GPU {gpu_id}:"):
