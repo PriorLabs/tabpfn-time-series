@@ -57,35 +57,40 @@ def _tsdf(num_series):
 
 
 @pytest.mark.parametrize(
-    ("num_series", "expected_chunks"),
-    [(3, [[0], [1], [2]]), (6, [[0, 4], [1, 5], [2], [3]])],
+    ("num_gpus", "num_series", "expected_calls"),
+    [
+        (1, 1, [(0, [0])]),
+        (1, 3, [(0, [0]), (0, [1]), (0, [2])]),
+        (1, 6, [(0, [0, 4]), (0, [1, 5]), (0, [2]), (0, [3])]),
+        (2, 3, [(0, [0]), (1, [1]), (0, [2])]),
+    ],
 )
-def test_series_split_round_robin_over_a_fixed_pool(
-    fake_cuda, monkeypatch, num_series, expected_chunks
+def test_series_split_round_robin_over_per_gpu_pools(
+    fake_cuda, monkeypatch, num_gpus, num_series, expected_calls
 ):
-    """Series are split even when fewer than the workers. Each chunk gets the
-    inference kwargs (e.g. quantiles) and 1/K of the GPU, and the pool is always
-    requested at full size so it is reused across calls."""
-    executor, pool_sizes, calls = _InlineExecutor(), [], []
+    """Series always go to the pools, even one, so the parent never shares the
+    GPU with the workers. Each chunk is sent to the fixed pool of its GPU, so a
+    process stays on one device, and gets the inference kwargs (e.g. quantiles)."""
+    executor, pools, calls = _InlineExecutor(), set(), []
 
-    def fake_get_executor(max_workers, **_):
-        pool_sizes.append(max_workers)
+    def fake_get_pool(gpu_id, num_workers, num_threads):
+        pools.add((gpu_id, num_workers))
         return executor
 
     def fake_routine(self, train_tsdf, test_tsdf, gpu_id, **kwargs):
-        calls.append((list(train_tsdf.item_ids), kwargs))
+        calls.append((gpu_id, list(train_tsdf.item_ids), kwargs))
         return pd.DataFrame(test_tsdf)
 
-    monkeypatch.setattr(gpu_worker, "get_reusable_executor", fake_get_executor)
+    monkeypatch.setattr(gpu_worker, "_get_pool", fake_get_pool)
     monkeypatch.setattr(GPUParallelWorker, "_prediction_routine_per_gpu", fake_routine)
 
     tsdf = _tsdf(num_series)
-    worker = GPUParallelWorker(inference_routine=None, num_workers_per_gpu=4)
+    worker = GPUParallelWorker(
+        inference_routine=None, num_gpus=num_gpus, num_workers_per_gpu=4 // num_gpus
+    )
     out = worker.predict(tsdf, tsdf, quantiles=[0.1, 0.9])
 
     assert list(out.item_ids) == list(range(num_series))
-    assert pool_sizes == [4]
-    assert [chunk for chunk, _ in calls] == expected_chunks
-    assert all(
-        kw == {"memory_fraction": 0.25, "quantiles": [0.1, 0.9]} for _, kw in calls
-    )
+    assert [(gpu, chunk) for gpu, chunk, _ in calls] == expected_calls
+    assert pools == {(gpu, 4 // num_gpus) for gpu, _ in expected_calls}
+    assert all(kw == {"quantiles": [0.1, 0.9]} for _, _, kw in calls)
