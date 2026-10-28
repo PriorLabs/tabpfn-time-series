@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-28
+
+### Added
+
+- Support in-memory TabPFN ModelSpecs for local forecasts without copying weights or loading checkpoints. ([#185](https://github.com/PriorLabs/tabpfn-time-series/pull/185))
+- Add `KnownCovariateLagFeature` (lags {1, season} and a trailing mean of every numeric known covariate, over context + horizon) as the first default TabPFN-TS feature. ([#195](https://github.com/PriorLabs/tabpfn-time-series/pull/195))
+- Add `num_workers_per_gpu` to `TabPFNTSPipeline` to run several worker processes per GPU, each capped at its share of GPU memory and kept alive across `predict` calls. ([#197](https://github.com/PriorLabs/tabpfn-time-series/pull/197))
+
+### Changed
+
+- Require TabPFN 9.1.0 or newer from PyPI instead of a fixed Git commit. ([#186](https://github.com/PriorLabs/tabpfn-time-series/pull/186))
+- `TabPFNTSPipeline` now compiles TabPFN with `torch.compile` on CUDA by default (`compile=True`), which requires TabPFN 9.2.0 or newer. ([#197](https://github.com/PriorLabs/tabpfn-time-series/pull/197))
+
+### Fixed
+
+- Development and release tooling no longer trusts the compromised eMudhra (emSign) CAs: pinned certifi, uv, pip and pypa/gh-action-pypi-publish are bumped to their fixed releases. ([#193](https://github.com/PriorLabs/tabpfn-time-series/pull/193))
+- Custom quantiles are no longer replaced by the defaults when predicting with several GPU workers. ([#197](https://github.com/PriorLabs/tabpfn-time-series/pull/197))
+
+
 ## [1.3.0] - 2026-09-16
 
 ### Breaking Changes
