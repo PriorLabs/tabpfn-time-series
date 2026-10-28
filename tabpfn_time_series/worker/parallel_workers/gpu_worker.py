@@ -1,14 +1,38 @@
 """GPU-based parallel worker for time series prediction."""
 
+import os
+
 import torch
-import numpy as np
 import pandas as pd
 from typing import Callable
-from joblib import Parallel, delayed
+from joblib.externals.loky import ProcessPoolExecutor
 from tqdm import tqdm
 
 from tabpfn_time_series.ts_dataframe import TimeSeriesDataFrame
 from tabpfn_time_series.worker.parallel_workers.base import ParallelWorker
+
+# One pool per (GPU, size), kept alive across calls so each process loads and
+# compiles TabPFN once rather than once per call.
+_POOLS: dict[tuple[int, int], ProcessPoolExecutor] = {}
+
+
+def _init_process(num_threads: int, gpu_id: int, memory_fraction: float) -> None:
+    torch.set_num_threads(num_threads)
+    torch.cuda.set_device(gpu_id)
+    # Otherwise each worker's caching allocator holds several times what TabPFN
+    # uses and starves the others sharing the GPU.
+    torch.cuda.set_per_process_memory_fraction(memory_fraction, gpu_id)
+
+
+def _get_pool(gpu_id: int, num_workers: int, num_threads: int) -> ProcessPoolExecutor:
+    key = (gpu_id, num_workers)
+    if key not in _POOLS:
+        _POOLS[key] = ProcessPoolExecutor(
+            max_workers=num_workers,
+            initializer=_init_process,
+            initargs=(num_threads, gpu_id, 1 / num_workers),
+        )
+    return _POOLS[key]
 
 
 class GPUParallelWorker(ParallelWorker):
@@ -55,10 +79,7 @@ class GPUParallelWorker(ParallelWorker):
         Returns:
             TimeSeriesDataFrame with predictions
         """
-        if (
-            self.total_num_workers == 1
-            or len(train_tsdf.item_ids) < self.total_num_workers
-        ):
+        if self.total_num_workers == 1:
             predictions = self._prediction_routine_per_gpu(
                 train_tsdf,
                 test_tsdf,
@@ -67,33 +88,30 @@ class GPUParallelWorker(ParallelWorker):
             )
             return TimeSeriesDataFrame(predictions)
 
-        # Split data into chunks for parallel inference on each GPU
-        #   since the time series are of different lengths, we shuffle
-        #   the item_ids s.t. the workload is distributed evenly across GPUs
-        # Also, using 'min' since num_workers could be larger than the number of time series
-        np.random.seed(0)
-        item_ids_chunks = np.array_split(
-            np.random.permutation(train_tsdf.item_ids),
-            min(self.total_num_workers, len(train_tsdf.item_ids)),
-        )
-
-        # Run predictions in parallel
-        predictions = Parallel(
-            n_jobs=len(item_ids_chunks),
-            backend="loky",
-        )(
-            delayed(self._prediction_routine_per_gpu)(
-                train_tsdf.loc[chunk],
-                test_tsdf.loc[chunk],
-                gpu_id=i % self.num_gpus,  # Alternate between available GPUs
+        # Always go through the pools, even for one series, so the parent never
+        # loads TabPFN next to the workers on the GPU.
+        item_ids = train_tsdf.item_ids
+        num_chunks = min(self.total_num_workers, len(item_ids))
+        num_threads = max(1, (os.cpu_count() or 1) // self.total_num_workers)
+        # Round-robin, so long and short series spread evenly over the workers.
+        chunks = [item_ids[i::num_chunks] for i in range(num_chunks)]
+        futures = []
+        for i, chunk in enumerate(chunks):
+            gpu_id = i % self.num_gpus  # Alternate between available GPUs
+            pool = _get_pool(gpu_id, self.num_workers_per_gpu, num_threads)
+            futures.append(
+                pool.submit(
+                    self._prediction_routine_per_gpu,
+                    train_tsdf.loc[chunk],
+                    test_tsdf.loc[chunk],
+                    gpu_id=gpu_id,
+                    **kwargs,
+                )
             )
-            for i, chunk in enumerate(item_ids_chunks)
-        )
-
-        predictions = pd.concat(predictions)
+        predictions = pd.concat([f.result() for f in futures])
 
         # Sort predictions according to original item_ids order
-        predictions = predictions.loc[train_tsdf.item_ids]
+        predictions = predictions.loc[item_ids]
 
         return TimeSeriesDataFrame(predictions)
 

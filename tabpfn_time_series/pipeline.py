@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 import datasets
+import torch
 
 from tabpfn_time_series import (
     TabPFNMode,
@@ -249,6 +250,8 @@ class TabPFNTSPipeline:
         tabpfn_output_selection: Literal["mean", "median", "mode"] = "median",
         tabpfn_model_config: dict = TABPFN_DEFAULT_CONFIG,
         max_featurize_rows: int | None = DEFAULT_MAX_FEATURIZE_ROWS,
+        num_workers_per_gpu: int = 1,
+        compile: bool = True,
     ):
         """
         Initialize the TabPFN-TS forecasting pipeline.
@@ -277,6 +280,16 @@ class TabPFNTSPipeline:
                 this, series are processed in row-bounded batches to cap peak host RAM
                 (results are identical, since series are featurized/predicted
                 independently). Default: 10_000_000. Set to None to disable batching.
+            num_workers_per_gpu: Number of processes that share each GPU, each predicting
+                a subset of the series. A single process leaves the GPU idle while it
+                preprocesses each series on CPU; 4 workers cut runtime by ~40-70% on an
+                A100 (most for short contexts) with identical predictions. Each worker
+                is capped at 1/num_workers_per_gpu of the GPU memory. Only used with
+                local CUDA inference. Default: 1.
+            compile: Compile TabPFN's attention/MLP blocks with torch.compile, once
+                per process (~1 min). Speeds up GPU-bound runs, e.g. another ~25% with
+                4 workers per A100; forecasts can shift by float rounding. Applies to
+                local CUDA inference only. Default: True.
 
         Note:
             - When using TabPFNMode.CLIENT, you'll be prompted to login or create an account
@@ -290,12 +303,15 @@ class TabPFNTSPipeline:
         self.max_featurize_rows = max_featurize_rows
 
         is_client = tabpfn_mode == TabPFNMode.CLIENT
+        if compile and not is_client and torch.cuda.is_available():
+            tabpfn_model_config = {**tabpfn_model_config, "enable_torch_compile": True}
         self.predictor = TimeSeriesPredictor.from_tabpfn_family(
             tabpfn_class=TabPFNClientRegressor if is_client else TabPFNRegressor,
             tabpfn_config=resolve_default_model_path(
                 tabpfn_model_config, client=is_client
             ),
             tabpfn_output_selection=tabpfn_output_selection,
+            num_workers_per_gpu=num_workers_per_gpu,
         )
         self.feature_transformer = FeatureTransformer(temporal_features)
 

@@ -76,6 +76,7 @@ class TimeSeriesPredictor:
         tabpfn_class: Type[RegressorMixin],
         tabpfn_config: Dict[str, Any] = {},
         tabpfn_output_selection: str = "median",  # mean or median
+        num_workers_per_gpu: int = 1,
     ):
         from tabpfn import TabPFNRegressor
         from tabpfn.base import ModelSpecs
@@ -105,7 +106,16 @@ class TimeSeriesPredictor:
         else:
             raise ValueError(f"Expected TabPFN-family regressor, got {tabpfn_class}")
 
-        return cls(model_adapter=model_adapter, worker_class=worker_class)
+        worker_kwargs = (
+            {"num_workers_per_gpu": num_workers_per_gpu}
+            if worker_class is GPUParallelWorker
+            else {}
+        )
+        return cls(
+            model_adapter=model_adapter,
+            worker_class=worker_class,
+            worker_kwargs=worker_kwargs,
+        )
 
     @classmethod
     def from_point_prediction_regressor(
