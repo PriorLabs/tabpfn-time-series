@@ -78,7 +78,7 @@ dev = [
     "jupyter",
     "wandb>=0.19.8",
     "submitit>=1.5.2",
-    "ruff~=0.12.0",
+    "ruff>=0.12,<0.18",
     "pre-commit",
     "twine",
     "build",
