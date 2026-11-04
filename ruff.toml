@@ -3,4 +3,30 @@ indent-width = 4
 target-version = "py310"
 
 [lint]
-ignore = ["E402"]
+ignore = [
+    "E402",
+    # Rules in ruff's default set that the code does not follow yet.
+    "B006",
+    "B017",
+    "B026",
+    "BLE001",
+    "I001",
+    "PIE790",
+    "RUF010",
+    "RUF012",
+    "RUF013",
+    "RUF022",
+    "RUF046",
+    "RUF059",
+    "RUF100",
+    "SIM115",
+    "SIM211",
+    "SIM905",
+    "TRY004",
+    "UP006",
+    "UP007",
+    "UP024",
+    "UP035",
+    "UP037",
+    "UP045",
+]
