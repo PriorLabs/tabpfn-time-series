@@ -50,8 +50,7 @@ uv run pytest tests -ra
 Mark tests that rely on `tabpfn-client` with
 ```python
 @pytest.mark.uses_tabpfn_client
-def test__my_test() -> None:
-    ...
+def test__my_test() -> None: ...
 ```
 This allows these tests to skip when access an API key or Internet access is not available.
 

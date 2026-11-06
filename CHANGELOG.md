@@ -32,7 +32,9 @@
     ```python
     TabPFNTSPipeline(
         tabpfn_mode=TabPFNMode.LOCAL,
-        tabpfn_model_config={"model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"},
+        tabpfn_model_config={
+            "model_path": "tabpfn-v3-regressor-v3_20260506_timeseries.ckpt"
+        },
     )
     ```
 
