@@ -6276,7 +6276,7 @@ wheels = [
 
 [[package]]
 name = "tabpfn-client"
-version = "0.5.3"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -6297,9 +6297,9 @@ dependencies = [
     { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/3e/88099b11d24b14538a60bff7826a10ca6caba02e5d6ac6d761d40cdbcd21/tabpfn_client-0.5.3.tar.gz", hash = "sha256:6c964255b7f98e42427dc67957a32ae28014320c03f841fcf154bfcc7a1683c6", size = 275590, upload-time = "2026-09-05T22:10:43.588Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/73/41b4053084e15dfd0ca59dc09007caeee33d40fe9eba23fdcca78ebda4ea/tabpfn_client-0.7.1.tar.gz", hash = "sha256:cd92d93dc02b4e209d7b8570bf4584084b00feb334dca8b60f5c84f5f8dda04c", size = 402795, upload-time = "2026-11-02T09:51:43.95Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/99/ad062fe71cb11ce1286dddaf985104f883cf17495faa8e3cfb7e6816d90b/tabpfn_client-0.5.3-py3-none-any.whl", hash = "sha256:9b4f7af7d58e40b401ae6fcae503e95555c8c05de55e09e38789bc20104bc39c", size = 76000, upload-time = "2026-09-05T22:10:42.246Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/c9/46c3ea3e32720d0df9bc449b9a69211236dcaa194852195607f621e3cde3/tabpfn_client-0.7.1-py3-none-any.whl", hash = "sha256:5c642c2aee8276e7e953f3082e50e7b72499e1d76c432ccbd3bc45e6684d8730", size = 119676, upload-time = "2026-11-02T09:51:42.481Z" },
 ]
 
 [[package]]
