@@ -2035,7 +2035,7 @@ wheels = [
 
 [[package]]
 name = "hatch"
-version = "1.18.0"
+version = "1.18.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-zstd", marker = "python_full_version < '3.14'" },
@@ -2058,9 +2058,9 @@ dependencies = [
     { name = "uv" },
     { name = "virtualenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/fd/634c575b5becad2dfa7135f3ad66d57102cd77d834cf473756d868a808ff/hatch-1.18.0.tar.gz", hash = "sha256:463d214cb068391454be198e58d3cc0846f71e39d68c5568ba650af7781e8ae3", size = 5275084, upload-time = "2026-08-11T05:06:41.513Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/55/45033136574fc89bce07e2c64e4ffb151df5007518b2739b54c95838e14f/hatch-1.18.2.tar.gz", hash = "sha256:7f365f1a5b8f1a8162813daed9bf9fce83f15dc933fc99c6d04cbb942e64f4d0", size = 5280209, upload-time = "2026-10-28T02:29:49.598Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/b1/d14265cb26c57af1485c01fd95037a35f13748b718617405cdefc6150429/hatch-1.18.0-py3-none-any.whl", hash = "sha256:75874c0905fe76b44fd39585c49bc9bd2b9fee638abb11f1f3d087042e7f9122", size = 171310, upload-time = "2026-08-11T05:06:39.807Z" },
+    { url = "https://files.pythonhosted.org/packages/92/b9/6b281cc90e60a095d16a990a3c54d18dfb2e39772e4c5d657e4950b9974d/hatch-1.18.2-py3-none-any.whl", hash = "sha256:3991c741a2746d1e62345c403cb1f873a58d9c38fd25e3c3ad740437014f56b4", size = 172627, upload-time = "2026-10-28T02:29:48.034Z" },
 ]
 
 [[package]]
