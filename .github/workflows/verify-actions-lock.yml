@@ -1,0 +1,18 @@
+# Verify that the GitHub Actions lockfile matches the workflow files, and that its pins
+# still match upstream.
+name: verify-actions-lock
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Verify actions lockfile
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/gh-actions-lock@5fa07d19c267d19e29f4341f10fdf7f516375038 # verify/v0.5.1
